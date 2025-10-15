@@ -28,6 +28,10 @@
         </span>
         <span v-if="sIndex < text.length - 1"> </span>
       </template>
+      
+      <span v-if="streamingText" class="opacity-50 animate-pulse">
+        {{ streamingText }}
+      </span>
     </div>
   </div>
 </template>
@@ -41,6 +45,10 @@ const props = defineProps({
   settings: {
     type: Object,
     required: true
+  },
+  streamingText: {
+    type: String,
+    default: ''
   }
 })
 

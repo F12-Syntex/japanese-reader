@@ -1,7 +1,7 @@
 <template>
   <div class="h-full bg-base-100 flex flex-col">
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div v-if="japaneseText.length > 0" class="w-full">
+      <div v-if="japaneseText.length > 0 || streamingText" class="w-full">
         <div v-if="!hasSeenInfo" class="px-6 sm:px-12 pt-6">
           <div class="alert alert-info shadow-sm">
             <IconInfo class="w-5 h-5" />
@@ -25,6 +25,7 @@
         <ReaderContent 
           :text="japaneseText"
           :settings="localSettings"
+          :streaming-text="streamingText"
           @word-click="handleWordClick"
         />
       </div>
@@ -86,7 +87,7 @@ import IconX from '~icons/lucide/x'
 import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
 
-const { japaneseText, isGenerating, generationError, generateText, clearText } = useJapaneseText()
+const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText } = useJapaneseText()
 const { getApiKey } = useOpenAI()
 
 const hasSeenInfo = ref(false)

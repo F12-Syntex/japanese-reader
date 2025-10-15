@@ -17,21 +17,22 @@ export default defineEventHandler(async (event) => {
       messages: [
         {
           role: 'system',
-          content: `You are a Japanese language teacher. Generate Japanese text suitable for ${level} learners. Return ONLY valid JSON in this exact format, no markdown, no code blocks:
-{"sentences": [{"words": [{"kanji": "string", "kana": "string", "meaning": "string", "pos": "noun|verb|adjective|particle|adverb"}]}]}
+          content: `Generate Japanese text for ${level} learners. Return ONLY this JSON structure with NO markdown, NO code blocks, NO explanations:
+{"sentences":[{"words":[{"kanji":"今日","kana":"きょう","meaning":"today","pos":"noun"}]}]}
 
 Rules:
-- pos must be one of: noun, verb, adjective, particle, adverb
-- Include 6-10 sentences
-- Use appropriate ${level} vocabulary
-- Each word must have all fields`
+- pos: noun, verb, adjective, particle, adverb
+- 3-4 sentences only
+- ${level} vocabulary
+- Start output immediately with {`
         },
         {
           role: 'user',
-          content: `Generate a short story or text passage for ${level} level Japanese learners. Return only the JSON object.`
+          content: `Generate ${level} Japanese text now:`
         }
       ],
-      temperature: 0.8,
+      temperature: 0.7,
+      max_tokens: 800,
       stream: true
     })
 
@@ -56,7 +57,6 @@ Rules:
           controller.close()
         } catch (error) {
           console.error('Stream error:', error)
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`))
           controller.close()
         }
       }
