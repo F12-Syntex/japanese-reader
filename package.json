@@ -19,6 +19,6 @@
     "@iconify-json/lucide": "^1.2.13",
     "@nuxtjs/tailwindcss": "^6.12.2",
     "daisyui": "^4.12.14",
-    "unplugin-icons": "^0.20.3"
+    "unplugin-icons": "^22.4.2"
   }
 }
