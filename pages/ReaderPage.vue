@@ -40,7 +40,7 @@
 
     <div v-if="japaneseText.length > 0" class="fixed bottom-8 right-8 flex gap-3 z-[50]">
       <button 
-        @click="showSettings = true" 
+        @click="openSettings" 
         class="btn btn-circle btn-ghost shadow-lg bg-base-100 border border-base-300"
         title="Reader settings"
       >
@@ -81,8 +81,6 @@
     <SentenceAnalysisModal
       v-model="showAnalysisModal"
       :sentence="selectedSentence"
-      :analysis="sentenceAnalysis"
-      :is-loading="isAnalyzing"
     />
   </div>
 </template>
@@ -98,7 +96,6 @@ import IconAlertCircle from '~icons/lucide/alert-circle'
 const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText } = useJapaneseText()
 const { getApiKey } = useOpenAI()
 const { loadFromStorage } = useAnki()
-const { analyzeSentence } = useSentenceAnalysis()
 
 const hasSeenInfo = ref(false)
 const showSettings = ref(false)
@@ -106,8 +103,6 @@ const showWordModal = ref(false)
 const selectedWord = ref(null)
 const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
-const sentenceAnalysis = ref(null)
-const isAnalyzing = ref(false)
 
 const defaultSettings = {
   fontFamily: 'Noto Sans JP',
@@ -149,6 +144,17 @@ const defaultSettings = {
 
 const localSettings = ref({ ...defaultSettings })
 
+const closeAllModals = () => {
+  showSettings.value = false
+  showWordModal.value = false
+  showAnalysisModal.value = false
+}
+
+const openSettings = () => {
+  closeAllModals()
+  showSettings.value = true
+}
+
 const handleGenerate = async () => {
   const apiKey = getApiKey()
   if (!apiKey) {
@@ -159,25 +165,15 @@ const handleGenerate = async () => {
 }
 
 const handleWordClick = (word) => {
+  closeAllModals()
   selectedWord.value = word
   showWordModal.value = true
 }
 
-const handleSentenceAnalyze = async ({ index, sentence }) => {
+const handleSentenceAnalyze = ({ index, sentence }) => {
+  closeAllModals()
   selectedSentence.value = sentence
   showAnalysisModal.value = true
-  isAnalyzing.value = true
-  sentenceAnalysis.value = null
-
-  try {
-    const analysis = await analyzeSentence(sentence)
-    sentenceAnalysis.value = analysis
-  } catch (error) {
-    console.error('Analysis error:', error)
-    sentenceAnalysis.value = { error: 'Failed to analyze sentence' }
-  } finally {
-    isAnalyzing.value = false
-  }
 }
 
 const dismissInfo = () => {

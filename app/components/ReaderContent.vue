@@ -1,4 +1,3 @@
-// components/ReaderContent.vue
 <template>
   <div 
     class="px-6 sm:px-12 py-8 sm:py-12 pb-32 mx-auto"
@@ -14,17 +13,19 @@
     >
       <template v-for="(sentence, sIndex) in text" :key="sIndex">
         <span 
-          class="inline-block transition-all duration-200 rounded px-1 leading-relaxed"
-          :class="{ 'bg-primary/10': hoveredSentence === sIndex, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex }"
+          class="inline-block transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
+          :class="{ 'bg-primary/10': hoveredSentence === sIndex && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex && isCtrlPressed }"
           @mouseenter="handleSentenceHover(sIndex, $event)"
           @mouseleave="hoveredSentence = null"
+          @click="handleSentenceClick(sIndex, sentence, $event)"
         >
           <ReaderWord
             v-for="(word, wIndex) in sentence.words" 
             :key="wIndex"
             :word="word"
             :settings="settings"
-            @click="handleWordClick(word)"
+            :disable-hover="isCtrlPressed"
+            @click="handleWordClick(word, $event)"
           />
         </span>
         <span v-if="sIndex < text.length - 1" class="inline-block w-4"></span>
@@ -53,9 +54,10 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['word-click'])
+const emit = defineEmits(['word-click', 'sentence-analyze'])
 
 const hoveredSentence = ref(null)
+const isCtrlPressed = ref(false)
 
 const maxWidthClass = computed(() => {
   const widths = {
@@ -96,9 +98,41 @@ const handleSentenceHover = (index, event) => {
   }
 }
 
-const handleWordClick = (word) => {
-  emit('word-click', word)
+const handleSentenceClick = (index, sentence, event) => {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('sentence-analyze', { index, sentence })
+  }
 }
+
+const handleWordClick = (word, event) => {
+  if (!isCtrlPressed.value) {
+    emit('word-click', word)
+  }
+}
+
+const handleKeyDown = (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    isCtrlPressed.value = true
+  }
+}
+
+const handleKeyUp = (e) => {
+  if (!e.ctrlKey && !e.metaKey) {
+    isCtrlPressed.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
+})
 </script>
 
 <style scoped>

@@ -1,4 +1,3 @@
-// pages/settings.vue
 <template>
   <div class="min-h-screen bg-base-200">
     <header class="bg-base-100 border-b border-base-300 sticky top-0 z-50 shadow-sm">
@@ -36,7 +35,7 @@
                 <span class="hidden sm:inline">Get Key</span>
               </a>
               <button 
-                @click="showApiKeyInput = !showApiKeyInput"
+                @click="toggleApiKeyInput"
                 class="btn btn-ghost btn-sm"
               >
                 <IconChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showApiKeyInput }" />
@@ -118,7 +117,7 @@
             </div>
             <div class="flex items-center gap-2">
               <button 
-                @click="showAnkiImport = true"
+                @click="openAnkiImport"
                 class="btn btn-primary btn-sm gap-2"
               >
                 <IconUpload class="w-4 h-4" />
@@ -126,7 +125,7 @@
               </button>
               <button 
                 v-if="knownWords.size > 0"
-                @click="showAnkiVisualizer = true"
+                @click="openAnkiVisualizer"
                 class="btn btn-ghost btn-sm gap-2"
               >
                 <IconEye class="w-4 h-4" />
@@ -179,9 +178,28 @@ const showAnkiVisualizer = ref(false)
 const showAnkiImport = ref(false)
 const showApiKeyInput = ref(false)
 
+const closeAllModals = () => {
+  showAnkiImport.value = false
+  showAnkiVisualizer.value = false
+}
+
+const openAnkiImport = () => {
+  closeAllModals()
+  showAnkiImport.value = true
+}
+
+const openAnkiVisualizer = () => {
+  closeAllModals()
+  showAnkiVisualizer.value = true
+}
+
+const toggleApiKeyInput = () => {
+  showApiKeyInput.value = !showApiKeyInput.value
+}
+
 const setTheme = (theme) => {
   currentTheme.value = theme
-  if (process.client) {
+  if (import.meta.client) {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }
@@ -193,7 +211,7 @@ const saveApiKey = async () => {
   isSaving.value = true
   
   setTimeout(() => {
-    if (process.client) {
+    if (import.meta.client) {
       localStorage.setItem('openai_api_key', apiKey.value)
       isSaving.value = false
     }
@@ -202,7 +220,7 @@ const saveApiKey = async () => {
 
 const clearApiKey = () => {
   apiKey.value = ''
-  if (process.client) {
+  if (import.meta.client) {
     localStorage.removeItem('openai_api_key')
   }
 }

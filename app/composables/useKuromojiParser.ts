@@ -9,25 +9,32 @@ export const useKuromojiParser = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ 
+          text,
+          knownWords: Array.from(knownWords.value.keys())
+        })
       })
       
       if (!response.ok) {
-        const error = await response.text()
-        console.error('Parse error:', error)
         throw new Error('Failed to parse text')
       }
       
       const data = await response.json()
       
+      console.log('Parsed words:', data.words)
+      
       return data.words.map((word: any) => {
-        const knownWordData = knownWords.value.get(word.surface)
+        const surfaceMatch = knownWords.value.get(word.surface)
+        const baseMatch = knownWords.value.get(word.baseForm)
+        const knownWordData = baseMatch || surfaceMatch
+        
+        console.log(`Word: ${word.surface} (${word.baseForm}), Known: ${!!knownWordData}`, knownWordData)
         
         return {
           kanji: word.surface,
-          kana: word.reading || word.surface,
+          kana: word.reading,
           meaning: knownWordData?.meaning || '',
-          pos: knownWordData?.pos || word.pos,
+          pos: word.pos,
           isKnown: !!knownWordData
         }
       })

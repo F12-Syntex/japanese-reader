@@ -1,61 +1,35 @@
-// server/api/generate.post.ts
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { apiKey, level, knownWords } = body
+  const { apiKey, level, knownWords } = await readBody(event)
 
-  if (!apiKey) {
-    throw createError({
-      statusCode: 400,
-      message: 'API key is required'
-    })
-  }
+  const wordListText = knownWords?.length > 0 
+    ? `Use ONLY these known words: ${knownWords.slice(0, 100).join(', ')}`
+    : ''
 
-  const hasKnownWords = knownWords && knownWords.length > 0
+  const prompt = `Generate a coherent SHORT STORY (5-7 sentences) in Japanese at JLPT ${level} level.
 
-  let prompt = ''
-  
-  if (hasKnownWords) {
-    prompt = `You are a Japanese language teacher. Generate a short story (4-6 sentences) in Japanese using ONLY these words that the student knows:
+${wordListText}
 
-${knownWords.slice(0, 200).join(', ')}
+IMPORTANT STORY REQUIREMENTS:
+- Create a connected narrative with a beginning, middle, and end
+- Characters, objects, and places should be referenced across multiple sentences
+- Use pronouns (彼, 彼女, それ, etc.) to refer back to previously mentioned things
+- Each sentence should build on the previous ones
+- Include cause and effect relationships between sentences
+- Use connecting words like だから, それで, しかし when appropriate
 
-Requirements:
-- Use ONLY words from the list above
-- Generate natural, interesting sentences
-- Make the story coherent and engaging
-- JLPT ${level} grammar level
-- Return ONLY Japanese text in the specified JSON format
-
-Return this exact JSON structure:
+Return ONLY valid JSON (no markdown):
 {
   "sentences": [
-    {
-      "text": "完全な日本語の文"
-    }
+    {"text": "sentence in Japanese"}
   ]
 }
 
-Each sentence object should only have the "text" field with the complete Japanese sentence. Do not include any English translations, meanings, or word breakdowns.`
-  } else {
-    prompt = `Generate a short story (4-6 sentences) in Japanese at JLPT ${level} level.
-
-Requirements:
-- Natural, interesting sentences
-- Coherent and engaging story
-- Appropriate for ${level} level
-- Return ONLY Japanese text in the specified JSON format
-
-Return this exact JSON structure:
-{
-  "sentences": [
-    {
-      "text": "完全な日本語の文"
-    }
-  ]
-}
-
-Each sentence object should only have the "text" field with the complete Japanese sentence. Do not include any English translations, meanings, or word breakdowns.`
-  }
+Example of good story flow:
+1. Introduce character/setting
+2. Describe action/event
+3. Show consequence
+4. Continue with related action
+5. Conclude the mini-story`
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -68,7 +42,7 @@ Each sentence object should only have the "text" field with the complete Japanes
       messages: [
         {
           role: 'system',
-          content: 'You are a Japanese language teacher. Always respond with valid JSON only.'
+          content: 'You are a Japanese language teacher creating coherent stories for learners. Always respond with valid JSON only.'
         },
         {
           role: 'user',
@@ -76,6 +50,7 @@ Each sentence object should only have the "text" field with the complete Japanes
         }
       ],
       temperature: 0.8,
+      max_tokens: 1000,
       stream: true
     })
   })
@@ -87,43 +62,55 @@ Each sentence object should only have the "text" field with the complete Japanes
     })
   }
 
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      const reader = response.body?.getReader()
-      if (!reader) return
+  setResponseHeaders(event, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  })
 
+  const stream = response.body
+  if (!stream) {
+    throw createError({
+      statusCode: 500,
+      message: 'No response stream'
+    })
+  }
+
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+
+  const readable = new ReadableStream({
+    async pull(controller) {
       try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const text = new TextDecoder().decode(value)
-          const lines = text.split('\n').filter(line => line.trim() !== '')
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n').filter(line => line.trim() !== '')
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
-              if (data === '[DONE]') {
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-                continue
-              }
+              if (data === '[DONE]') continue
 
               try {
                 const parsed = JSON.parse(data)
-                const content = parsed.choices?.[0]?.delta?.content
+                const content = parsed.choices?.[0]?.delta?.content || ''
                 if (content) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
+                  controller.enqueue(`data: ${JSON.stringify({ content })}\n\n`)
                 }
               } catch (e) {}
             }
           }
         }
       } finally {
+        controller.enqueue('data: [DONE]\n\n')
+        reader.releaseLock()
         controller.close()
       }
     }
   })
 
-  return sendStream(event, stream)
+  return sendStream(event, readable)
 })

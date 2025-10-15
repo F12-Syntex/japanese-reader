@@ -203,36 +203,49 @@
             </div>
 
             <div v-show="activeTab === 'highlighting'" class="space-y-4 sm:space-y-6">
-              <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4">Highlighting Options</h3>
+              <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4">Color Highlighting</h3>
 
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm sm:text-base">Highlight on Hover</span>
-                  <input v-model="localSettings.highlightOnHover" type="checkbox" class="toggle toggle-primary toggle-sm sm:toggle-md" />
-                </label>
+              <div class="alert alert-info text-sm">
+                <IconInfo class="w-4 h-4" />
+                <span>Words will be colored based on their grammatical function</span>
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm sm:text-base">Highlight Particles</span>
-                  <input v-model="localSettings.highlightParticles" type="checkbox" class="toggle toggle-primary toggle-sm sm:toggle-md" />
+                  <input v-model="localSettings.highlightParticles" type="checkbox" class="toggle toggle-sm sm:toggle-md" style="--tglbg: #F59E0B" />
                 </label>
                 <label class="label">
-                  <span class="label-text-alt text-xs sm:text-sm">は、を、が、の, etc.</span>
+                  <span class="label-text-alt text-xs sm:text-sm flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" style="background: #F59E0B"></span>
+                    は、を、に、で, etc. (Orange)
+                  </span>
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm sm:text-base">Highlight Verbs</span>
-                  <input v-model="localSettings.highlightVerbs" type="checkbox" class="toggle toggle-primary toggle-sm sm:toggle-md" />
+                  <input v-model="localSettings.highlightVerbs" type="checkbox" class="toggle toggle-sm sm:toggle-md" style="--tglbg: #10B981" />
+                </label>
+                <label class="label">
+                  <span class="label-text-alt text-xs sm:text-sm flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" style="background: #10B981"></span>
+                    Action words (Green)
+                  </span>
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm sm:text-base">Highlight Adjectives</span>
-                  <input v-model="localSettings.highlightAdjectives" type="checkbox" class="toggle toggle-primary toggle-sm sm:toggle-md" />
+                  <input v-model="localSettings.highlightAdjectives" type="checkbox" class="toggle toggle-sm sm:toggle-md" style="--tglbg: #8B5CF6" />
+                </label>
+                <label class="label">
+                  <span class="label-text-alt text-xs sm:text-sm flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" style="background: #8B5CF6"></span>
+                    Describing words (Purple)
+                  </span>
                 </label>
               </div>
 
@@ -375,6 +388,7 @@ import IconSettings from '~icons/lucide/settings'
 import IconCheck from '~icons/lucide/check'
 import IconRotateCcw from '~icons/lucide/rotate-ccw'
 import IconFileText from '~icons/lucide/file-text'
+import IconInfo from '~icons/lucide/info'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -421,4 +435,8 @@ watch(() => props.modelValue, (newVal) => {
     localSettings.value = { ...props.settings }
   }
 })
+
+watch(localSettings, (newSettings) => {
+  emit('update:settings', { ...newSettings })
+}, { deep: true })
 </script>

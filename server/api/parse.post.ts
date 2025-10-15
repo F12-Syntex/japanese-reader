@@ -1,7 +1,8 @@
 // server/api/parse.post.ts
 import kuromoji from 'kuromoji'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { join } from 'path'
+import wanakana from 'wanakana'
+import { existsSync } from 'fs'
 
 let tokenizer: any = null
 
@@ -14,12 +15,21 @@ const getTokenizer = (): Promise<any> => {
 
     const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
     
+    if (!existsSync(dicPath)) {
+      console.error('Dictionary path does not exist:', dicPath)
+      reject(new Error('Kuromoji dictionary not found'))
+      return
+    }
+
+    console.log('Building tokenizer with dictionary path:', dicPath)
+    
     kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
       if (err) {
         console.error('Kuromoji build error:', err)
         reject(err)
         return
       }
+      console.log('Tokenizer built successfully')
       tokenizer = _tokenizer
       resolve(tokenizer)
     })
@@ -29,7 +39,7 @@ const getTokenizer = (): Promise<any> => {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { text } = body
+    const { text, knownWords } = body
 
     if (!text) {
       throw createError({
@@ -41,11 +51,25 @@ export default defineEventHandler(async (event) => {
     const tokenizer = await getTokenizer()
     const tokens = tokenizer.tokenize(text)
     
-    const words = tokens.map((token: any) => ({
-      surface: token.surface_form,
-      reading: token.reading || token.surface_form,
-      pos: mapPos(token.pos)
-    }))
+    console.log('Parsed tokens:', tokens.map((t: any) => ({
+      surface: t.surface_form,
+      base: t.basic_form,
+      reading: t.reading,
+      pos: t.pos
+    })))
+    
+    const words = tokens.map((token: any) => {
+      const surface = token.surface_form
+      const baseForm = token.basic_form || surface
+      const reading = token.reading || surface
+      
+      return {
+        surface,
+        baseForm,
+        reading: wanakana.toHiragana(reading),
+        pos: mapPos(token.pos)
+      }
+    })
 
     return { words }
   } catch (error: any) {

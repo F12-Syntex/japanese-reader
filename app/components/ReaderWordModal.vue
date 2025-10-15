@@ -1,4 +1,3 @@
-// components/ReaderWordModal.vue
 <template>
   <div v-if="modelValue && word" class="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4" @click.self="closeModal">
     <div class="bg-base-100 rounded-lg shadow-xl w-full max-w-md">
@@ -14,20 +13,42 @@
         </div>
 
         <div class="space-y-4">
-          <div>
+          <div v-if="word.meaning">
             <div class="text-sm font-medium text-base-content/60 mb-1">Meaning</div>
             <div class="text-lg">{{ word.meaning }}</div>
           </div>
 
-          <div>
+          <div v-if="word.pos">
             <div class="text-sm font-medium text-base-content/60 mb-1">Part of Speech</div>
             <div class="badge badge-primary">{{ formatPos(word.pos) }}</div>
           </div>
 
-          <div v-if="word.pos === 'verb'">
-            <div class="text-sm font-medium text-base-content/60 mb-1">Type</div>
-            <div class="text-base">{{ getVerbType(word.kana) }}</div>
+          <div v-if="word.isKnown !== undefined">
+            <div class="text-sm font-medium text-base-content/60 mb-1">Status</div>
+            <div class="badge" :class="word.isKnown ? 'badge-success' : 'badge-ghost'">
+              {{ word.isKnown ? 'Known (from Anki)' : 'Unknown' }}
+            </div>
           </div>
+
+          <div class="divider"></div>
+
+          <a 
+            :href="`https://www.japandict.com/${encodeURIComponent(word.kanji)}`"
+            target="_blank"
+            class="btn btn-primary btn-block gap-2"
+          >
+            <IconExternalLink class="w-5 h-5" />
+            View in JapanDict
+          </a>
+
+          <a 
+            :href="`https://jisho.org/search/${encodeURIComponent(word.kanji)}`"
+            target="_blank"
+            class="btn btn-outline btn-block gap-2"
+          >
+            <IconExternalLink class="w-5 h-5" />
+            View in Jisho
+          </a>
         </div>
       </div>
     </div>
@@ -36,6 +57,7 @@
 
 <script setup>
 import IconX from '~icons/lucide/x'
+import IconExternalLink from '~icons/lucide/external-link'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -60,14 +82,5 @@ const formatPos = (pos) => {
     adverb: 'Adverb'
   }
   return mapping[pos] || pos
-}
-
-const getVerbType = (kana) => {
-  const lastChar = kana.slice(-1)
-  if (lastChar === 'る') return 'Ichidan (ru-verb)'
-  if (['う', 'く', 'ぐ', 'す', 'つ', 'ぬ', 'ぶ', 'む', 'る'].includes(lastChar)) {
-    return 'Godan (u-verb)'
-  }
-  return 'Unknown type'
 }
 </script>
