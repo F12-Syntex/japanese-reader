@@ -89,6 +89,7 @@ import IconAlertCircle from '~icons/lucide/alert-circle'
 
 const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText } = useJapaneseText()
 const { getApiKey } = useOpenAI()
+const { loadFromStorage } = useAnki()
 
 const hasSeenInfo = ref(false)
 const showSettings = ref(false)
@@ -127,7 +128,10 @@ const defaultSettings = {
   showPartOfSpeech: true,
   focusModeOpacity: 30,
   autoScroll: false,
-  jlptLevel: 'N5'
+  jlptLevel: 'N5',
+  highlightKnownWords: true,
+  dimKnownWords: false,
+  strikethroughKnown: false
 }
 
 const localSettings = ref({ ...defaultSettings })
@@ -148,21 +152,21 @@ const handleWordClick = (word) => {
 
 const dismissInfo = () => {
   hasSeenInfo.value = true
-  if (process.client) {
+  if (import.meta.client) {
     localStorage.setItem('hasSeenInfo', 'true')
   }
 }
 
 const updateSettings = (newSettings) => {
   localSettings.value = { ...newSettings }
-  if (process.client) {
+  if (import.meta.client) {
     localStorage.setItem('readerSettings', JSON.stringify(localSettings.value))
   }
 }
 
 const resetSettings = () => {
   localSettings.value = { ...defaultSettings }
-  if (process.client) {
+  if (import.meta.client) {
     localStorage.setItem('readerSettings', JSON.stringify(localSettings.value))
   }
 }
@@ -175,5 +179,7 @@ onMounted(() => {
   if (savedSettings) {
     localSettings.value = { ...defaultSettings, ...JSON.parse(savedSettings) }
   }
+
+  loadFromStorage()
 })
 </script>
