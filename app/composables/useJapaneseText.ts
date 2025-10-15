@@ -1,9 +1,12 @@
+// composables/useJapaneseText.ts
 export const useJapaneseText = () => {
   const japaneseText = useState<any[]>('japaneseText', () => [])
   const isGenerating = useState('isGenerating', () => false)
   const generationError = useState<string | null>('generationError', () => null)
   const streamingText = useState('streamingText', () => '')
   const { streamGenerateText } = useOpenAI()
+  const { knownWords } = useAnki()
+  const { parseSentences } = useKuromojiParser()
 
   const generateText = async (level: string = 'N5') => {
     isGenerating.value = true
@@ -11,9 +14,12 @@ export const useJapaneseText = () => {
     japaneseText.value = []
     streamingText.value = ''
     let accumulatedText = ''
+    let rawSentences: Array<{ text: string }> = []
 
     try {
-      await streamGenerateText(level, (chunk: string) => {
+      const knownWordsList = Array.from(knownWords.value.keys())
+      
+      await streamGenerateText(level, knownWordsList, (chunk: string) => {
         accumulatedText += chunk
         streamingText.value = accumulatedText
         
@@ -28,15 +34,19 @@ export const useJapaneseText = () => {
           if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
             const parsed = JSON.parse(cleaned)
             if (parsed.sentences && Array.isArray(parsed.sentences)) {
-              japaneseText.value = [...parsed.sentences]
+              rawSentences = parsed.sentences
             }
           }
         } catch (e) {}
       })
 
-      if (japaneseText.value.length === 0) {
+      if (rawSentences.length === 0) {
         throw new Error('Failed to parse generated text')
       }
+
+      const parsedSentences = await parseSentences(rawSentences)
+      japaneseText.value = parsedSentences
+
     } catch (error: any) {
       generationError.value = error.message
       console.error('Generation error:', error)

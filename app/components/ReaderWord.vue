@@ -1,8 +1,9 @@
+// components/ReaderWord.vue
 <template>
   <span 
-    class="inline-block relative transition-all align-top cursor-pointer rounded px-1"
+    class="inline-block relative transition-all cursor-pointer"
     :class="{ 
-      'mr-2': settings.showWordSpacing,
+      'mr-0': !settings.showWordSpacing,
       'mx-1': settings.alwaysShowTranslation
     }"
     :style="wordContainerStyle"
@@ -11,24 +12,28 @@
     @mouseleave="showTooltip = false"
   >
     <span 
-      v-if="settings.alwaysShowTranslation"
+      v-if="settings.alwaysShowTranslation && word.meaning"
       class="block text-center opacity-50 whitespace-nowrap mb-1 pointer-events-none"
       :style="translationStyle"
     >
-      <span v-if="!isParticle">{{ word.meaning }}</span>
-      <span v-else class="opacity-0 select-none">{{ word.kanji }}</span>
+      {{ word.meaning }}
     </span>
     
     <span
       class="inline-block relative group transition-all"
-      :class="[wordHighlightClass, { 'hover:bg-primary/5': !isParticle }]"
+      :class="[wordHighlightClass, { 'hover:bg-primary/5': !isParticle && word.meaning }]"
     >
       <ruby class="[ruby-align:center]">
-        <span :class="{ 'underline decoration-dashed decoration-1 underline-offset-4': settings.underlineUnknown }">
+        <span :class="{ 
+          'underline decoration-dashed decoration-1 underline-offset-4': settings.underlineUnknown && !word.isKnown,
+          'bg-success/20 rounded px-0.5': settings.highlightKnownWords && word.isKnown,
+          'opacity-40': settings.dimKnownWords && word.isKnown,
+          'line-through': settings.strikethroughKnown && word.isKnown
+        }">
           {{ word.kanji }}
         </span>
         <rt 
-          v-if="!isParticle && settings.showFurigana"
+          v-if="!isParticle && settings.showFurigana && word.kana !== word.kanji"
           class="select-none transition-opacity duration-200 opacity-100"
           :style="{ 
             fontSize: `${settings.furiganaSize}em`,
@@ -40,18 +45,18 @@
       </ruby>
       
       <div 
-        v-if="settings.showTooltip && showTooltip && !isParticle"
-        class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-neutral text-neutral-content rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none"
+        v-if="settings.showTooltip && showTooltip && !isParticle && word.meaning"
+        class="fixed bg-neutral text-neutral-content rounded-lg shadow-xl whitespace-nowrap pointer-events-none z-[100]"
         :class="{
-          'text-xs': settings.tooltipSize === 'sm',
-          'text-sm': settings.tooltipSize === 'md',
-          'text-base': settings.tooltipSize === 'lg'
+          'text-xs px-2 py-1': settings.tooltipSize === 'sm',
+          'text-sm px-3 py-2': settings.tooltipSize === 'md',
+          'text-base px-4 py-3': settings.tooltipSize === 'lg'
         }"
+        :style="tooltipStyle"
       >
         <div class="font-bold mb-1">{{ word.kanji }}</div>
-        <div class="opacity-90">{{ word.kana }}</div>
+        <div class="opacity-90" v-if="word.kana !== word.kanji">{{ word.kana }}</div>
         <div class="opacity-75 mt-1">{{ word.meaning }}</div>
-        <div class="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-neutral"></div>
       </div>
       
       <span 
@@ -85,6 +90,7 @@ const props = defineProps({
 defineEmits(['click'])
 
 const showTooltip = ref(false)
+const tooltipStyle = ref({})
 
 const isParticle = computed(() => props.word.pos === 'particle')
 const isVerb = computed(() => props.word.pos === 'verb')
@@ -110,4 +116,35 @@ const translationStyle = computed(() => ({
   fontSize: `${props.settings.translationSize}px`,
   marginBottom: `${props.settings.translationGap}px`
 }))
+
+const updateTooltipPosition = (event) => {
+  if (!showTooltip.value) return
+  
+  const rect = event.target.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  
+  let top = rect.top - 10
+  let left = rect.left + (rect.width / 2)
+  
+  tooltipStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    transform: 'translate(-50%, -100%)'
+  }
+}
+
+watch(showTooltip, (val) => {
+  if (val) {
+    nextTick(() => {
+      window.addEventListener('mousemove', updateTooltipPosition)
+    })
+  } else {
+    window.removeEventListener('mousemove', updateTooltipPosition)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', updateTooltipPosition)
+})
 </script>

@@ -1,10 +1,10 @@
+// composables/useOpenAI.ts
 export const useOpenAI = () => {
   const getApiKey = () => {
     return localStorage.getItem('openai_api_key') || ''
   }
 
-  const streamGenerateText = async (level: string = 'N5', onChunk: (chunk: string) => void) => {
-
+  const streamGenerateText = async (level: string = 'N5', knownWords: string[], onChunk: (chunk: string) => void) => {
     const apiKey = getApiKey()
     if (!apiKey) {
       throw new Error('API key not found')
@@ -15,7 +15,7 @@ export const useOpenAI = () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ apiKey, level })
+      body: JSON.stringify({ apiKey, level, knownWords })
     })
 
     if (!response.ok) {

@@ -1,3 +1,4 @@
+// components/ReaderContent.vue
 <template>
   <div 
     class="px-6 sm:px-12 py-8 sm:py-12 pb-32 mx-auto"
@@ -13,7 +14,7 @@
     >
       <template v-for="(sentence, sIndex) in text" :key="sIndex">
         <span 
-          class="inline transition-all duration-200 rounded px-1"
+          class="inline-block transition-all duration-200 rounded px-1 leading-relaxed"
           :class="{ 'bg-primary/10': hoveredSentence === sIndex, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex }"
           @mouseenter="handleSentenceHover(sIndex, $event)"
           @mouseleave="hoveredSentence = null"
@@ -26,7 +27,7 @@
             @click="handleWordClick(word)"
           />
         </span>
-        <span v-if="sIndex < text.length - 1"> </span>
+        <span v-if="sIndex < text.length - 1" class="inline-block w-4"></span>
       </template>
       
       <span v-if="streamingText" class="opacity-50 animate-pulse">
