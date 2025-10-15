@@ -1,31 +1,56 @@
+// components/ReaderWord.vue
 <template>
   <span 
-    class="inline-block relative group cursor-pointer transition-all"
-    @mouseenter="$emit('hover', word)"
-    @mouseleave="$emit('leave')"
+    class="inline-block relative transition-all align-top cursor-pointer hover:bg-primary/5 rounded px-1"
+    :class="{ 
+      'mr-2': settings.showWordSpacing,
+      'mx-1': settings.alwaysShowTranslation
+    }"
+    :style="wordContainerStyle"
+    @click="$emit('click')"
   >
-    <ruby class="[ruby-align:center]">
-      {{ word.kanji }}
-      <rt 
-        class="select-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        :class="{ 'opacity-100': settings.showFurigana }"
-        :style="{ fontSize: settings.furiganaSize }"
-      >
-        {{ word.kana }}
-      </rt>
-    </ruby>
     <span 
-      v-if="settings.showTooltip"
-      class="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-2 bg-neutral text-neutral-content rounded shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50"
+      v-if="settings.alwaysShowTranslation"
+      class="block text-center opacity-50 whitespace-nowrap mb-1 pointer-events-none"
+      :style="translationStyle"
     >
-      <div class="font-medium text-sm">{{ word.kana }}</div>
-      <div class="text-xs opacity-70">{{ word.meaning }}</div>
-      <div class="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-neutral rotate-45"></div>
+      <span v-if="!isParticle">{{ word.meaning }}</span>
+      <span v-else class="opacity-0 select-none">{{ word.kanji }}</span>
     </span>
-    <span 
-      v-if="settings.highlightParticles && isParticle"
-      class="absolute inset-0 bg-warning/20 rounded"
-    ></span>
+    
+    <span
+      class="inline-block relative group transition-all"
+      :class="wordHighlightClass"
+    >
+      <ruby class="[ruby-align:center]">
+        <span :class="{ 'underline decoration-dashed decoration-1 underline-offset-4': settings.underlineUnknown }">
+          {{ word.kanji }}
+        </span>
+        <rt 
+          v-if="!isParticle && settings.showFurigana"
+          class="select-none transition-opacity duration-200 opacity-100"
+          :style="{ 
+            fontSize: `${settings.furiganaSize}em`,
+            color: settings.furiganaColor || undefined
+          }"
+        >
+          {{ word.kana }}
+        </rt>
+      </ruby>
+      
+      <span 
+        v-if="settings.highlightParticles && isParticle"
+        class="absolute inset-0 bg-warning/20 rounded pointer-events-none"
+      ></span>
+      <span 
+        v-if="settings.highlightVerbs && isVerb"
+        class="absolute inset-0 bg-success/20 rounded pointer-events-none"
+      ></span>
+      <span 
+        v-if="settings.highlightAdjectives && isAdjective"
+        class="absolute inset-0 bg-info/20 rounded pointer-events-none"
+      ></span>
+    </span>
   </span>
 </template>
 
@@ -41,9 +66,32 @@ const props = defineProps({
   }
 })
 
-const particles = ['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'から', 'まで', 'の', 'も', 'や', 'か', 'な', 'ね', 'よ']
+defineEmits(['click'])
 
-const isParticle = computed(() => particles.includes(props.word.kanji))
+const particles = ['は', 'が', 'を', 'に', 'へ', 'と', 'で', 'から', 'まで', 'の', 'も', 'や', 'か', 'ね', 'ね', 'よ']
 
-defineEmits(['hover', 'leave'])
+const isParticle = computed(() => props.word.pos === 'particle')
+const isVerb = computed(() => props.word.pos === 'verb')
+const isAdjective = computed(() => props.word.pos === 'adjective')
+
+const wordHighlightClass = computed(() => {
+  if (props.settings.highlightOnHover) {
+    return 'hover:bg-primary/10'
+  }
+  return ''
+})
+
+const wordContainerStyle = computed(() => {
+  if (props.settings.alwaysShowTranslation) {
+    return {
+      paddingTop: `${props.settings.translationSize + props.settings.translationGap}px`
+    }
+  }
+  return {}
+})
+
+const translationStyle = computed(() => ({
+  fontSize: `${props.settings.translationSize}px`,
+  marginBottom: `${props.settings.translationGap}px`
+}))
 </script>

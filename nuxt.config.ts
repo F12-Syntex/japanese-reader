@@ -1,16 +1,27 @@
-import { defineNuxtConfig } from 'nuxt/config'
-import Icons from 'unplugin-icons/vite'
-
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss'],
+  
+  modules: [
+    '@nuxtjs/tailwindcss',
+    'unplugin-icons/nuxt'
+  ],
+  
   css: ['~/assets/css/main.css'],
-  vite: {
-    plugins: [
-      Icons({
-        autoInstall: true,
-      }),
-    ],
+  
+  app: {
+    head: {
+      title: 'Japanese Reader',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+      ]
+    }
   },
+
+  srcDir: 'app/',
+
+  nitro: {
+    preset: 'node-server'
+  }
 })

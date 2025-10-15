@@ -2,18 +2,31 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 
-function getAllFiles(dirPath, arrayOfFiles = []) {
+function getAllFiles(dirPath, arrayOfFiles = [], isRoot = false) {
   const files = fs.readdirSync(dirPath);
 
   files.forEach(file => {
     const fullPath = path.join(dirPath, file);
-    if (fs.statSync(fullPath).isDirectory()) {
-      if (file === 'node_modules') return; // Skip node_modules
-      if (file.startsWith('.')) return; // Skip .* paths
+    const stat = fs.statSync(fullPath);
 
-      arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+    // Skip node_modules, hidden folders, and ignored file types
+    if (stat.isDirectory()) {
+      if (file === 'node_modules' || file.startsWith('.')) return;
+
+      // Recurse into subdirectories — mark as not root anymore
+      arrayOfFiles = getAllFiles(fullPath, arrayOfFiles, false);
     } else {
-      if (file.endsWith('.lock') || file.endsWith('.md') || file === '.gitignore') return;
+      // Skip unwanted files
+      if (
+        file.endsWith('.lock') ||
+        file.endsWith('.md') ||
+        file === '.gitignore' ||
+        file.endsWith('.json')
+      ) return;
+
+      // Skip root-level files
+      if (isRoot) return;
+
       arrayOfFiles.push(fullPath);
     }
   });
@@ -21,9 +34,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   return arrayOfFiles;
 }
 
-
 function copyToClipboard(text, fileList) {
-  // Detect OS and use appropriate clipboard command
   const platform = process.platform;
   let command;
   
@@ -57,11 +68,12 @@ function copyToClipboard(text, fileList) {
 function main() {
   try {
     const currentDir = process.cwd();
-    const files = getAllFiles(currentDir);
-    let output = '';
-
     console.log('🔄 Processing files...');
     
+    // Mark root scan as root=true
+    const files = getAllFiles(currentDir, [], true);
+    let output = '';
+
     files.forEach(filePath => {
       const content = fs.readFileSync(filePath, 'utf8');
       output += `File: ${filePath}\n`;
