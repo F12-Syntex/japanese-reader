@@ -13,7 +13,7 @@
     >
       <template v-for="(sentence, sIndex) in text" :key="sIndex">
         <span 
-          class="inline-block transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
+          class="inline transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
           :class="{ 'bg-primary/10': hoveredSentence === sIndex && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex && isCtrlPressed }"
           @mouseenter="handleSentenceHover(sIndex, $event)"
           @mouseleave="hoveredSentence = null"
@@ -28,7 +28,7 @@
             @click="handleWordClick(word, $event)"
           />
         </span>
-        <span v-if="sIndex < text.length - 1" class="inline-block w-4"></span>
+        <span v-if="sIndex < text.length - 1" class="inline px-1">&nbsp;</span>
       </template>
       
       <span v-if="streamingText" class="opacity-50 animate-pulse">
@@ -62,10 +62,9 @@ const isCtrlPressed = ref(false)
 const maxWidthClass = computed(() => {
   const widths = {
     full: 'max-w-full',
-    '4xl': 'max-w-4xl',
-    '3xl': 'max-w-3xl',
     '2xl': 'max-w-2xl',
-    xl: 'max-w-xl'
+    '4xl': 'max-w-4xl',
+    '6xl': 'max-w-6xl'
   }
   return widths[props.settings.maxWidth] || widths.full
 })
@@ -74,6 +73,7 @@ const textAlignClass = computed(() => {
   const aligns = {
     left: 'text-left',
     center: 'text-center',
+    right: 'text-right',
     justify: 'text-justify'
   }
   return aligns[props.settings.textAlign] || aligns.left
@@ -88,7 +88,7 @@ const textStyles = computed(() => ({
   fontSize: `${props.settings.fontSize}px`,
   lineHeight: props.settings.lineHeight,
   fontWeight: props.settings.fontWeight,
-  letterSpacing: `${props.settings.letterSpacing}em`,
+  letterSpacing: `${props.settings.letterSpacing}px`,
   color: props.settings.textColor || undefined
 }))
 

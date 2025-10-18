@@ -33,7 +33,7 @@
                   <label class="label">
                     <span class="label-text font-medium text-sm">Font Family</span>
                   </label>
-                  <select v-model="localSettings.fontFamily" class="select select-bordered select-sm w-full">
+                  <select v-model="settings.fontFamily" class="select select-bordered select-sm w-full">
                     <option v-for="font in availableFonts" :key="font.value" :value="font.value">
                       {{ font.name }}
                     </option>
@@ -46,37 +46,37 @@
 
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text font-medium text-sm">Font Size: {{ localSettings.fontSize }}px</span>
+                    <span class="label-text font-medium text-sm">Font Size: {{ settings.fontSize }}px</span>
                   </label>
-                  <input v-model.number="localSettings.fontSize" type="range" min="16" max="48" class="range range-primary range-xs" />
+                  <input v-model.number="settings.fontSize" type="range" min="16" max="48" class="range range-primary range-xs" />
                 </div>
 
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text font-medium text-sm">Font Weight: {{ localSettings.fontWeight }}</span>
+                    <span class="label-text font-medium text-sm">Font Weight: {{ settings.fontWeight }}</span>
                   </label>
-                  <input v-model.number="localSettings.fontWeight" type="range" min="300" max="700" step="100" class="range range-primary range-xs" />
+                  <input v-model.number="settings.fontWeight" type="range" min="300" max="700" step="100" class="range range-primary range-xs" />
                 </div>
 
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text font-medium text-sm">Line Height: {{ localSettings.lineHeight.toFixed(1) }}</span>
+                    <span class="label-text font-medium text-sm">Line Height: {{ settings.lineHeight.toFixed(1) }}</span>
                   </label>
-                  <input v-model.number="localSettings.lineHeight" type="range" min="1.5" max="3.5" step="0.1" class="range range-primary range-xs" />
+                  <input v-model.number="settings.lineHeight" type="range" min="1.5" max="3.5" step="0.1" class="range range-primary range-xs" />
                 </div>
 
                 <div class="form-control">
                   <label class="label">
-                    <span class="label-text font-medium text-sm">Letter Spacing: {{ localSettings.letterSpacing }}px</span>
+                    <span class="label-text font-medium text-sm">Letter Spacing: {{ settings.letterSpacing }}px</span>
                   </label>
-                  <input v-model.number="localSettings.letterSpacing" type="range" min="0" max="8" step="1" class="range range-primary range-xs" />
+                  <input v-model.number="settings.letterSpacing" type="range" min="0" max="8" step="1" class="range range-primary range-xs" />
                 </div>
 
                 <div class="form-control">
                   <label class="label">
                     <span class="label-text font-medium text-sm">Text Align</span>
                   </label>
-                  <select v-model="localSettings.textAlign" class="select select-bordered select-sm w-full">
+                  <select v-model="settings.textAlign" class="select select-bordered select-sm w-full">
                     <option value="left">Left</option>
                     <option value="center">Center</option>
                     <option value="right">Right</option>
@@ -88,7 +88,7 @@
                   <label class="label">
                     <span class="label-text font-medium text-sm">Max Width</span>
                   </label>
-                  <select v-model="localSettings.maxWidth" class="select select-bordered select-sm w-full">
+                  <select v-model="settings.maxWidth" class="select select-bordered select-sm w-full">
                     <option value="full">Full Width</option>
                     <option value="2xl">Reading Width (42rem)</option>
                     <option value="4xl">Wide (56rem)</option>
@@ -99,14 +99,14 @@
                 <div class="form-control">
                   <label class="label cursor-pointer">
                     <span class="label-text font-medium text-sm">Word Spacing</span>
-                    <input v-model="localSettings.showWordSpacing" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                    <input v-model="settings.showWordSpacing" type="checkbox" class="toggle toggle-primary toggle-sm" />
                   </label>
                 </div>
 
                 <div class="form-control">
                   <label class="label cursor-pointer">
                     <span class="label-text font-medium text-sm">Vertical Text</span>
-                    <input v-model="localSettings.verticalText" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                    <input v-model="settings.verticalText" type="checkbox" class="toggle toggle-primary toggle-sm" />
                   </label>
                 </div>
               </div>
@@ -140,6 +140,9 @@
                 <a class="tab tab-sm" :class="{ 'tab-active': marketplaceTab === 'installed' }" @click="marketplaceTab = 'installed'">
                   Installed ({{ installedFonts.length }})
                 </a>
+                <a class="tab tab-sm" :class="{ 'tab-active': marketplaceTab === 'custom' }" @click="marketplaceTab = 'custom'">
+                  Custom
+                </a>
               </div>
 
               <div v-if="marketplaceTab === 'available'" class="space-y-3">
@@ -153,7 +156,7 @@
                   <p class="text-sm text-base-content/60">No fonts found matching "{{ marketplaceSearch }}"</p>
                 </div>
 
-                <div v-else class="grid gap-3">
+                <div v-else class="grid grid-cols-1 gap-3">
                   <div 
                     v-for="font in filteredDownloadableFonts" 
                     :key="font.value"
@@ -164,10 +167,10 @@
                         <div class="flex-1 min-w-0">
                           <h4 class="font-bold text-sm mb-2">{{ font.name }}</h4>
                           <div 
-                            class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300"
+                            class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300 whitespace-nowrap overflow-hidden text-ellipsis"
                             :style="{ fontFamily: font.value }"
                           >
-                            日本語のサンプルテキスト
+                            こんにちは、世界！ 日本語のフォントテストです。
                           </div>
                         </div>
                         <button
@@ -194,7 +197,7 @@
                   </button>
                 </div>
 
-                <div v-else class="grid gap-3">
+                <div v-else class="grid grid-cols-1 gap-3">
                   <div 
                     v-for="font in installedFonts" 
                     :key="font.value"
@@ -205,23 +208,23 @@
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center gap-2 mb-2">
                             <h4 class="font-bold text-sm">{{ font.name }}</h4>
-                            <span v-if="localSettings.fontFamily === font.value" class="badge badge-primary badge-xs">Active</span>
+                            <span v-if="settings.fontFamily === font.value" class="badge badge-primary badge-xs">Active</span>
                           </div>
                           <div 
-                            class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300"
+                            class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300 whitespace-nowrap overflow-hidden text-ellipsis"
                             :style="{ fontFamily: font.value }"
                           >
-                            日本語のサンプルテキスト
+                            こんにちは、世界！ 日本語のフォントテストです。
                           </div>
                         </div>
                         <div class="flex flex-col gap-2 flex-shrink-0">
                           <button
                             @click="selectFont(font)"
                             class="btn btn-sm gap-2"
-                            :class="localSettings.fontFamily === font.value ? 'btn-success' : 'btn-ghost'"
+                            :class="settings.fontFamily === font.value ? 'btn-success' : 'btn-ghost'"
                           >
                             <IconCheck class="w-4 h-4" />
-                            {{ localSettings.fontFamily === font.value ? 'Active' : 'Use' }}
+                            {{ settings.fontFamily === font.value ? 'Active' : 'Use' }}
                           </button>
                           <button
                             v-if="font.value !== systemFont"
@@ -237,6 +240,46 @@
                   </div>
                 </div>
               </div>
+
+              <div v-if="marketplaceTab === 'custom'" class="space-y-4">
+                <div class="alert alert-info text-xs">
+                  <IconInfo class="w-4 h-4" />
+                  <span>
+                    To add a custom font:<br>
+                    1. Go to <a href="https://fonts.google.com" target="_blank" class="link link-primary">fonts.google.com</a>.<br>
+                    2. Search for a Japanese font.<br>
+                    3. Select the font and styles (e.g., weights 300-700).<br>
+                    4. In the right panel, copy the &lt;link&gt; href URL (e.g., https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&display=swap).<br>
+                    5. Paste it below and click Add.
+                  </span>
+                </div>
+
+                <div class="form-control">
+                  <label class="label">
+                    <span class="label-text font-medium text-sm">Custom Font URL</span>
+                  </label>
+                  <div class="join">
+                    <input
+                      v-model="customUrl"
+                      type="text"
+                      placeholder="Paste Google Fonts URL here"
+                      class="input input-bordered input-sm w-full join-item"
+                    />
+                    <button
+                      @click="addCustomFont"
+                      :disabled="!customUrl || isLoadingCustom"
+                      class="btn btn-primary btn-sm join-item"
+                    >
+                      <span v-if="isLoadingCustom" class="loading loading-spinner loading-xs"></span>
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="customError" class="alert alert-error text-xs">
+                  {{ customError }}
+                </div>
+              </div>
             </div>
 
             <div v-show="activeTab === 'furigana'" class="space-y-4">
@@ -245,22 +288,22 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Show Furigana</span>
-                  <input v-model="localSettings.showFurigana" type="checkbox" class="toggle toggle-secondary toggle-sm" />
+                  <input v-model="settings.showFurigana" type="checkbox" class="toggle toggle-secondary toggle-sm" />
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Furigana Size: {{ (localSettings.furiganaSize * 100).toFixed(0) }}%</span>
+                  <span class="label-text font-medium text-sm">Furigana Size: {{ (settings.furiganaSize * 100).toFixed(0) }}%</span>
                 </label>
-                <input v-model.number="localSettings.furiganaSize" type="range" min="0.3" max="0.7" step="0.05" class="range range-secondary range-xs" />
+                <input v-model.number="settings.furiganaSize" type="range" min="0.3" max="0.7" step="0.05" class="range range-secondary range-xs" />
               </div>
 
               <div class="form-control">
                 <label class="label">
                   <span class="label-text font-medium text-sm">Furigana Color</span>
                 </label>
-                <input v-model="localSettings.furiganaColor" type="color" class="input input-bordered input-sm w-full h-10" />
+                <input v-model="settings.furiganaColor" type="color" class="input input-bordered input-sm w-full h-10" />
                 <label class="label">
                   <span class="label-text-alt text-xs">Leave empty for default color</span>
                 </label>
@@ -269,7 +312,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Show Pitch Accent</span>
-                  <input v-model="localSettings.showPitchAccent" type="checkbox" class="toggle toggle-accent toggle-sm" />
+                  <input v-model="settings.showPitchAccent" type="checkbox" class="toggle toggle-accent toggle-sm" />
                 </label>
               </div>
             </div>
@@ -280,7 +323,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Always Show Translation</span>
-                  <input v-model="localSettings.alwaysShowTranslation" type="checkbox" class="toggle toggle-info toggle-sm" />
+                  <input v-model="settings.alwaysShowTranslation" type="checkbox" class="toggle toggle-info toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs">Display English above each word</span>
@@ -289,22 +332,22 @@
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Translation Size: {{ localSettings.translationSize }}px</span>
+                  <span class="label-text font-medium text-sm">Translation Size: {{ settings.translationSize }}px</span>
                 </label>
-                <input v-model.number="localSettings.translationSize" type="range" min="8" max="16" step="1" class="range range-info range-xs" />
+                <input v-model.number="settings.translationSize" type="range" min="8" max="16" step="1" class="range range-info range-xs" />
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Translation Gap: {{ localSettings.translationGap }}px</span>
+                  <span class="label-text font-medium text-sm">Translation Gap: {{ settings.translationGap }}px</span>
                 </label>
-                <input v-model.number="localSettings.translationGap" type="range" min="0" max="12" step="1" class="range range-info range-xs" />
+                <input v-model.number="settings.translationGap" type="range" min="0" max="12" step="1" class="range range-info range-xs" />
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Show Tooltips</span>
-                  <input v-model="localSettings.showTooltip" type="checkbox" class="toggle toggle-info toggle-sm" />
+                  <input v-model="settings.showTooltip" type="checkbox" class="toggle toggle-info toggle-sm" />
                 </label>
               </div>
 
@@ -312,7 +355,7 @@
                 <label class="label">
                   <span class="label-text font-medium text-sm">Tooltip Size</span>
                 </label>
-                <select v-model="localSettings.tooltipSize" class="select select-bordered select-sm w-full">
+                <select v-model="settings.tooltipSize" class="select select-bordered select-sm w-full">
                   <option value="sm">Small</option>
                   <option value="md">Medium</option>
                   <option value="lg">Large</option>
@@ -322,7 +365,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Show Part of Speech</span>
-                  <input v-model="localSettings.showPartOfSpeech" type="checkbox" class="toggle toggle-info toggle-sm" />
+                  <input v-model="settings.showPartOfSpeech" type="checkbox" class="toggle toggle-info toggle-sm" />
                 </label>
               </div>
             </div>
@@ -338,12 +381,12 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Highlight Particles</span>
-                  <input v-model="localSettings.highlightParticles" type="checkbox" class="toggle toggle-warning toggle-sm" />
+                  <input v-model="settings.highlightParticles" type="checkbox" class="toggle toggle-warning toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs flex items-center gap-2">
                     <span class="badge badge-warning badge-xs"></span>
-                    は、を、が、に, etc. (Warning color)
+                   Particles, etc. (Warning color)
                   </span>
                 </label>
               </div>
@@ -351,7 +394,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Highlight Verbs</span>
-                  <input v-model="localSettings.highlightVerbs" type="checkbox" class="toggle toggle-success toggle-sm" />
+                  <input v-model="settings.highlightVerbs" type="checkbox" class="toggle toggle-success toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs flex items-center gap-2">
@@ -364,7 +407,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Highlight Adjectives</span>
-                  <input v-model="localSettings.highlightAdjectives" type="checkbox" class="toggle toggle-secondary toggle-sm" />
+                  <input v-model="settings.highlightAdjectives" type="checkbox" class="toggle toggle-secondary toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs flex items-center gap-2">
@@ -379,7 +422,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Highlight Known Words</span>
-                  <input v-model="localSettings.highlightKnownWords" type="checkbox" class="toggle toggle-success toggle-sm" />
+                  <input v-model="settings.highlightKnownWords" type="checkbox" class="toggle toggle-success toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs">Green background for words you know</span>
@@ -389,7 +432,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Dim Known Words</span>
-                  <input v-model="localSettings.dimKnownWords" type="checkbox" class="toggle toggle-accent toggle-sm" />
+                  <input v-model="settings.dimKnownWords" type="checkbox" class="toggle toggle-accent toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs">Lower opacity for known words</span>
@@ -399,7 +442,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Strikethrough Known Words</span>
-                  <input v-model="localSettings.strikethroughKnown" type="checkbox" class="toggle toggle-accent toggle-sm" />
+                  <input v-model="settings.strikethroughKnown" type="checkbox" class="toggle toggle-accent toggle-sm" />
                 </label>
                 <label class="label">
                   <span class="label-text-alt text-xs">Cross out words you already know</span>
@@ -409,7 +452,7 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Underline Unknown Words</span>
-                  <input v-model="localSettings.underlineUnknown" type="checkbox" class="toggle toggle-error toggle-sm" />
+                  <input v-model="settings.underlineUnknown" type="checkbox" class="toggle toggle-error toggle-sm" />
                 </label>
               </div>
             </div>
@@ -421,7 +464,7 @@
                 <label class="label">
                   <span class="label-text font-medium text-sm">Text Color</span>
                 </label>
-                <input v-model="localSettings.textColor" type="color" class="input input-bordered input-sm w-full h-10" />
+                <input v-model="settings.textColor" type="color" class="input input-bordered input-sm w-full h-10" />
                 <label class="label">
                   <span class="label-text-alt text-xs">Leave empty for theme default</span>
                 </label>
@@ -431,7 +474,7 @@
                 <label class="label">
                   <span class="label-text font-medium text-sm">Background Color</span>
                 </label>
-                <input v-model="localSettings.backgroundColor" type="color" class="input input-bordered input-sm w-full h-10" />
+                <input v-model="settings.backgroundColor" type="color" class="input input-bordered input-sm w-full h-10" />
                 <label class="label">
                   <span class="label-text-alt text-xs">Leave empty for theme default</span>
                 </label>
@@ -444,29 +487,29 @@
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Click to Toggle Details</span>
-                  <input v-model="localSettings.clickToToggle" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                  <input v-model="settings.clickToToggle" type="checkbox" class="toggle toggle-primary toggle-sm" />
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Show Sentence Numbers</span>
-                  <input v-model="localSettings.showSentenceNumbers" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                  <input v-model="settings.showSentenceNumbers" type="checkbox" class="toggle toggle-primary toggle-sm" />
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
                   <span class="label-text font-medium text-sm">Auto Scroll</span>
-                  <input v-model="localSettings.autoScroll" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                  <input v-model="settings.autoScroll" type="checkbox" class="toggle toggle-primary toggle-sm" />
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Focus Mode Opacity: {{ localSettings.focusModeOpacity }}%</span>
+                  <span class="label-text font-medium text-sm">Focus Mode Opacity: {{ settings.focusModeOpacity }}%</span>
                 </label>
-                <input v-model.number="localSettings.focusModeOpacity" type="range" min="10" max="80" step="5" class="range range-primary range-xs" />
+                <input v-model.number="settings.focusModeOpacity" type="range" min="10" max="80" step="5" class="range range-primary range-xs" />
               </div>
             </div>
           </div>
@@ -479,9 +522,9 @@
         <IconRotateCcw class="w-4 h-4" />
         Reset
       </button>
-      <button @click="handleSave" class="btn btn-primary btn-sm">
+      <button @click="modelValue = false" class="btn btn-primary btn-sm">
         <IconCheck class="w-4 h-4" />
-        Save
+        Close
       </button>
     </template>
   </BaseModal>
@@ -503,21 +546,17 @@ import IconArrowLeft from '~icons/lucide/arrow-left'
 import IconTrash from '~icons/lucide/trash-2'
 import IconSearch from '~icons/lucide/search'
 import IconPackage from '~icons/lucide/package'
+import { useReaderSettings } from '~/composables/useReaderSettings'
 
 const modelValue = defineModel()
-const props = defineProps({
-  settings: {
-    type: Object,
-    required: true
-  }
-})
-
-const emit = defineEmits(['update:settings', 'reset'])
+const { settings, resetSettings } = useReaderSettings()
 
 const activeTab = ref('typography')
-const localSettings = ref({ ...props.settings })
 const marketplaceTab = ref('available')
 const marketplaceSearch = ref('')
+const customUrl = ref('')
+const customError = ref('')
+const isLoadingCustom = ref(false)
 
 const tabs = [
   { id: 'typography', label: 'Typography', icon: IconType },
@@ -566,7 +605,7 @@ const filteredDownloadableFonts = computed(() => {
 const isLoadingFont = ref('')
 
 const selectFont = (font) => {
-  localSettings.value.fontFamily = font.value
+  settings.value.fontFamily = font.value
 }
 
 const deleteFont = (font) => {
@@ -586,10 +625,10 @@ const deleteFont = (font) => {
     linkElement.remove()
   }
 
-  if (localSettings.value.fontFamily === font.value) {
+  if (settings.value.fontFamily === font.value) {
     const defaultFont = availableFonts.value[0]
     if (defaultFont) {
-      localSettings.value.fontFamily = defaultFont.value
+      settings.value.fontFamily = defaultFont.value
     }
   }
 }
@@ -625,15 +664,70 @@ const loadFont = async (font) => {
   }
 }
 
-const handleSave = () => {
-  emit('update:settings', { ...localSettings.value })
-  modelValue.value = false
+const addCustomFont = async () => {
+  customError.value = ''
+  isLoadingCustom.value = true
+
+  const url = customUrl.value.trim()
+  if (!url.startsWith('https://fonts.googleapis.com/css2?')) {
+    customError.value = 'Invalid URL. Must be a Google Fonts CSS link.'
+    isLoadingCustom.value = false
+    return
+  }
+
+  const match = url.match(/family=([^&]+)/)
+  if (!match) {
+    customError.value = 'Could not extract font family from URL.'
+    isLoadingCustom.value = false
+    return
+  }
+
+  const familyEncoded = match[1]
+  const family = decodeURIComponent(familyEncoded).replace(/\+/g, ' ')
+
+  if (availableFonts.value.some(f => f.value === family)) {
+    customError.value = 'Font already installed.'
+    isLoadingCustom.value = false
+    return
+  }
+
+  try {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = url
+
+    link.onload = () => {
+      availableFonts.value.push({ name: family, value: family })
+      loadedFonts.value.push(family)
+      localStorage.setItem('loadedFonts', JSON.stringify(loadedFonts.value))
+      customUrl.value = ''
+      isLoadingCustom.value = false
+      marketplaceTab.value = 'installed' // Switch to installed tab after adding
+    }
+
+    link.onerror = () => {
+      customError.value = 'Failed to load custom font.'
+      isLoadingCustom.value = false
+    }
+
+    document.head.appendChild(link)
+  } catch (error) {
+    console.error('Custom font loading error:', error)
+    customError.value = 'Error loading custom font.'
+    isLoadingCustom.value = false
+  }
 }
 
 const handleReset = () => {
-  emit('reset')
+  resetSettings()
   modelValue.value = false
 }
+
+watch(modelValue, (newVal) => {
+  if (newVal) {
+    marketplaceSearch.value = ''
+  }
+})
 
 onMounted(async () => {
   if (import.meta.client) {
@@ -695,19 +789,4 @@ onMounted(async () => {
     }
   }
 })
-
-watch(modelValue, (newVal) => {
-  if (newVal) {
-    localSettings.value = { ...props.settings }
-    marketplaceSearch.value = ''
-  }
-})
-
-watch(() => props.settings, (newSettings) => {
-  localSettings.value = { ...newSettings }
-}, { deep: true })
-
-watch(localSettings, (newSettings) => {
-  emit('update:settings', { ...newSettings })
-}, { deep: true })
 </script>
