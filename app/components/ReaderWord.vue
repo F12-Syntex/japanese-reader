@@ -49,7 +49,7 @@
       </ruby>
       
       <div 
-        v-if="settings?.showTooltip && showTooltip && !isParticle && (localWord.meaning || isFetching)"
+        v-if="settings?.showTooltip && showTooltip && !isParticle"
         ref="tooltipRef"
         class="fixed bg-base-100 text-base-content rounded-lg shadow-xl max-w-[min(80vw,28rem)] p-3 border border-base-300 z-[100] pointer-events-auto break-words"
         :class="{
@@ -89,6 +89,7 @@
 <script setup>
 import { nextTick } from 'vue'
 import { useOpenAI } from '~/composables/useOpenAI'
+import { useAnki } from '~/composables/useAnki'
 
 const props = defineProps({
   word: {
@@ -125,27 +126,18 @@ const COLORS = {
 const isParticle = computed(() => localWord.value?.pos === 'particle')
 const isVerb = computed(() => localWord.value?.pos === 'verb')
 const isAdjective = computed(() => localWord.value?.pos === 'adjective')
-const isNoun = computed(() => localWord.value?.pos?.toLowerCase().includes('noun'))
 
 const wordColorStyle = computed(() => {
   const styles = {}
-  
-  if (props.settings?.highlightParticles && isParticle.value) {
-    styles.color = COLORS.particle
-  } else if (props.settings?.highlightVerbs && isVerb.value) {
-    styles.color = COLORS.verb
-  } else if (props.settings?.highlightAdjectives && isAdjective.value) {
-    styles.color = COLORS.adjective
-  }
-  
+  if (props.settings?.highlightParticles && isParticle.value) styles.color = COLORS.particle
+  else if (props.settings?.highlightVerbs && isVerb.value) styles.color = COLORS.verb
+  else if (props.settings?.highlightAdjectives && isAdjective.value) styles.color = COLORS.adjective
   return styles
 })
 
 const wordContainerStyle = computed(() => {
   if (props.settings?.alwaysShowTranslation) {
-    return {
-      paddingTop: `${(props.settings?.translationSize || 10) + (props.settings?.translationGap || 4)}px`
-    }
+    return { paddingTop: `${(props.settings?.translationSize || 10) + (props.settings?.translationGap || 4)}px` }
   }
   return {}
 })
@@ -157,82 +149,99 @@ const translationStyle = computed(() => ({
 
 const truncateMeaning = (meaning) => {
   if (!meaning) return ''
-  
   const cleaned = meaning.split(/[.,;]/).map(s => s.trim()).filter(Boolean)
-  
   if (cleaned.length === 0) {
     const words = meaning.trim().split(/\s+/)
     const firstWord = words[0]
     return firstWord.length > 12 ? firstWord.substring(0, 12) + '...' : firstWord
   }
-  
   const firstMeaning = cleaned[0]
-  
-  if (firstMeaning.length > 12) {
-    return firstMeaning.substring(0, 12) + '...'
-  }
-  
-  return firstMeaning
+  return firstMeaning.length > 12 ? firstMeaning.substring(0, 12) + '...' : firstMeaning
 }
 
 const handleClick = (e) => {
-  if (!props.disableHover) {
-    emit('click', localWord.value, e)
-  }
+  if (!props.disableHover) emit('click', localWord.value, e)
 }
 
 const { getApiKey } = useOpenAI()
+const { getWordData } = useAnki()
 
-const fetchWordInfo = async (wordText) => {
-  const cacheKey = 'wordInfoCache'
-  let cache = {}
+const readLocalCache = (key) => {
   try {
-    cache = JSON.parse(localStorage.getItem(cacheKey) || '{}')
-  } catch (e) {
-    cache = {}
-  }
-  if (cache[wordText]) {
-    return cache[wordText]
-  }
+    const cache1 = JSON.parse(localStorage.getItem('wordInfoCache') || '{}')
+    if (cache1 && cache1[key]) return cache1[key]
+  } catch {}
+  try {
+    const cache2 = JSON.parse(localStorage.getItem('dictionary') || '{}')
+    if (cache2 && cache2[key]) return cache2[key]
+  } catch {}
+  return null
+}
 
+const saveToCaches = (key, info) => {
+  try {
+    const cacheKey = 'wordInfoCache'
+    const cache = JSON.parse(localStorage.getItem(cacheKey) || '{}')
+    cache[key] = info
+    localStorage.setItem(cacheKey, JSON.stringify(cache))
+  } catch {}
+  try {
+    const dict = JSON.parse(localStorage.getItem('dictionary') || '{}')
+    dict[key] = info
+    localStorage.setItem('dictionary', JSON.stringify(dict))
+  } catch {}
+}
+
+const fetchBatchInfo = async (words) => {
   const apiKey = getApiKey()
   if (!apiKey) return null
-
-  isFetching.value = true
   try {
-    const res = await $fetch('/api/word-info', {
+    const res = await $fetch('/api/word-batch', {
       method: 'POST',
-      body: { apiKey, word: wordText }
+      body: { apiKey, words }
     })
-
-    if (res?.success && res.data) {
-      const info = res.data
-      cache[wordText] = info
-      localStorage.setItem(cacheKey, JSON.stringify(cache))
-      localStorage.setItem('dictionary', JSON.stringify({ ...(JSON.parse(localStorage.getItem('dictionary') || '{}')), [wordText]: info }))
-      return info
-    }
+    return res?.success ? res.data : null
+  } catch {
     return null
-  } catch (e) {
-    return null
-  } finally {
-    isFetching.value = false
   }
 }
 
 const handleMouseEnter = async () => {
-  const key = props.word.text || props.word.kanji
-  if (!localWord.value.meaning) {
-    const info = await fetchWordInfo(key)
-    if (info) {
-      localWord.value = { ...localWord.value, ...info }
-    }
-  }
+  const key = props.word.kanji || props.word.text || props.word.surface || ''
+  const ankiData = getWordData(key)
+  if (ankiData) localWord.value = { ...localWord.value, ...ankiData }
+
+  const localInfo = readLocalCache(key)
+  if (localInfo) localWord.value = { ...localWord.value, ...localInfo }
+
   showTooltip.value = true
   await nextTick()
   updateTooltipPosition()
   window.addEventListener('resize', updateTooltipPosition)
   window.addEventListener('scroll', updateTooltipPosition, true)
+
+  if (!localWord.value.meaning) {
+    isFetching.value = true
+    try {
+      const batch = await fetchBatchInfo([key])
+      const info = batch && batch[key] ? batch[key] : null
+      if (info) {
+        const normalized = {
+          kanji: info.kanji || key,
+          reading: info.reading || localWord.value.kana || '',
+          meaning: info.meaning || '',
+          pos: info.pos || localWord.value.pos || '',
+          example: info.example || '',
+          jlptLevel: info.jlptLevel || '',
+          pitchAccent: info.pitchAccent || ''
+        }
+        localWord.value = { ...localWord.value, ...normalized }
+        saveToCaches(key, normalized)
+      }
+    } finally {
+      isFetching.value = false
+    }
+  }
 }
 
 const onWrapperMouseLeave = () => {
@@ -243,10 +252,7 @@ const onWrapperMouseLeave = () => {
   }
 }
 
-const onTooltipMouseEnter = () => {
-  keepTooltip = true
-}
-
+const onTooltipMouseEnter = () => { keepTooltip = true }
 const onTooltipMouseLeave = () => {
   keepTooltip = false
   showTooltip.value = false
@@ -256,41 +262,29 @@ const onTooltipMouseLeave = () => {
 
 const updateTooltipPosition = () => {
   if (!tooltipRef.value || !wrapperRef.value) return
-
   const anchorRect = wrapperRef.value.getBoundingClientRect()
   const tooltipRect = tooltipRef.value.getBoundingClientRect()
   const vw = window.innerWidth
   const vh = window.innerHeight
   const margin = 10
-
   let top = anchorRect.top - tooltipRect.height - 8
   let left = anchorRect.left + (anchorRect.width / 2) - (tooltipRect.width / 2)
-
-  if (top < margin) {
-    top = anchorRect.bottom + 8
-  }
-  if (left < margin) {
-    left = margin
-  }
-  if (left + tooltipRect.width > vw - margin) {
-    left = vw - tooltipRect.width - margin
-  }
-  if (top + tooltipRect.height > vh - margin) {
-    top = vh - tooltipRect.height - margin
-  }
-
+  if (top < margin) top = anchorRect.bottom + 8
+  if (left < margin) left = margin
+  if (left + tooltipRect.width > vw - margin) left = vw - tooltipRect.width - margin
+  if (top + tooltipRect.height > vh - margin) top = vh - tooltipRect.height - margin
   tooltipRef.value.style.top = `${Math.max(margin, top)}px`
   tooltipRef.value.style.left = `${Math.max(margin, left)}px`
   tooltipRef.value.style.transform = 'none'
 }
 
 const openInJisho = () => {
-  const q = encodeURIComponent(localWord.value.kanji || localWord.value.text)
+  const q = encodeURIComponent(localWord.value.kanji || localWord.value.text || '')
   window.open(`https://jisho.org/search/${q}`, '_blank')
 }
 
 const openInJapanDict = () => {
-  const q = encodeURIComponent(localWord.value.kanji || localWord.value.text)
+  const q = encodeURIComponent(localWord.value.kanji || localWord.value.text || '')
   window.open(`https://www.japandict.com/${q}`, '_blank')
 }
 
@@ -299,7 +293,7 @@ const saveToDictionary = async () => {
   try {
     const dictKey = 'dictionary'
     const existing = JSON.parse(localStorage.getItem(dictKey) || '{}')
-    const key = localWord.value.kanji || localWord.value.text
+    const key = localWord.value.kanji || localWord.value.text || ''
     existing[key] = { ...(existing[key] || {}), ...localWord.value }
     localStorage.setItem(dictKey, JSON.stringify(existing))
   } finally {
@@ -307,9 +301,7 @@ const saveToDictionary = async () => {
   }
 }
 
-watch(() => props.word, (n) => {
-  localWord.value = { ...n }
-})
+watch(() => props.word, (n) => { localWord.value = { ...n } })
 </script>
 
 <style scoped>
