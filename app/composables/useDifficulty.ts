@@ -18,6 +18,11 @@ export const useDifficulty = () => {
     if (import.meta.client) localStorage.setItem('difficulty', String(difficulty.value))
   }
 
+  const setDifficulty = (newScore: number) => {
+    difficulty.value = Math.max(0, Math.min(100, newScore))
+    if (import.meta.client) localStorage.setItem('difficulty', String(difficulty.value))
+  }
+
   const loadDifficulty = () => {
     if (import.meta.client) {
       const saved = localStorage.getItem('difficulty')
@@ -33,6 +38,7 @@ export const useDifficulty = () => {
   return {
     difficulty,
     adjustDifficulty,
+    setDifficulty,
     loadDifficulty,
     getLevelFromScore,
     getProficiencyDescription

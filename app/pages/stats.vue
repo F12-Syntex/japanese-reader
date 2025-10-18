@@ -9,6 +9,45 @@
           </div>
           <div class="stat-value text-primary">{{ difficulty.toFixed(1) }}</div>
           <div class="stat-desc">{{ levelDescription }}</div>
+          <div v-if="editingProficiency" class="mt-2 space-y-2">
+            <input
+              v-model.number="tempProficiency"
+              type="range"
+              min="0"
+              max="100"
+              step="0.5"
+              class="range range-primary w-full"
+              @input="updateTempProficiency"
+            />
+            <div class="flex justify-between text-xs text-base-content/60">
+              <span>Beginner</span>
+              <span>{{ tempProficiency.toFixed(1) }}</span>
+              <span>Native</span>
+            </div>
+            <div class="flex gap-2 pt-2">
+              <button 
+                @click="saveProficiency" 
+                class="btn btn-primary btn-xs flex-1"
+                :disabled="tempProficiency === difficulty"
+              >
+                Save
+              </button>
+              <button 
+                @click="cancelEdit" 
+                class="btn btn-ghost btn-xs flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          <button 
+            v-else 
+            @click="startEditProficiency" 
+            class="btn btn-xs btn-ghost mt-1"
+          >
+            <IconEdit class="w-3 h-3" />
+            Edit
+          </button>
         </div>
 
         <div class="stat">
@@ -74,6 +113,7 @@
                   <th>Feedback</th>
                   <th>Proficiency</th>
                   <th>JLPT Level</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,8 +124,28 @@
                       {{ entry.feedback }}
                     </span>
                   </td>
-                  <td>{{ entry.score.toFixed(1) }}</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span>{{ entry.score.toFixed(1) }}</span>
+                      <button 
+                        @click="editHistoryEntry(i)"
+                        class="btn btn-xs btn-ghost btn-square"
+                        title="Edit proficiency"
+                      >
+                        <IconEdit class="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
                   <td>{{ getLevelFromScore(entry.score) }}</td>
+                  <td>
+                    <button 
+                      @click="deleteHistoryEntry(i)"
+                      class="btn btn-xs btn-ghost btn-square btn-error"
+                      title="Delete entry"
+                    >
+                      <IconTrash class="w-3 h-3" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -98,7 +158,7 @@
                 :disabled="currentPage === 1"
                 @click="currentPage--"
               >
-                «
+                ‹
               </button>
               <button class="join-item btn btn-sm">
                 Page {{ currentPage }} / {{ totalPages }}
@@ -108,7 +168,7 @@
                 :disabled="currentPage === totalPages"
                 @click="currentPage++"
               >
-                »
+                ›
               </button>
             </div>
           </div>
@@ -126,16 +186,22 @@ import IconBrain from '~icons/lucide/brain'
 import IconTrendingUp from '~icons/lucide/trending-up'
 import IconList from '~icons/lucide/list'
 import IconRuler from '~icons/lucide/ruler'
+import IconEdit from '~icons/lucide/edit-3'
 
 definePageMeta({
   layout: 'default'
 })
 
-const { difficulty, loadDifficulty, getLevelFromScore, getProficiencyDescription } = useDifficulty()
-const { history, loadHistory, getConsistency } = useStats()
+const { difficulty, loadDifficulty, getLevelFromScore, getProficiencyDescription, setDifficulty } = useDifficulty()
+const { history: rawHistory, loadHistory, getConsistency } = useStats()
 
+const history = ref(rawHistory.value)
 const currentPage = ref(1)
 const itemsPerPage = 5
+const editingProficiency = ref(false)
+const tempProficiency = ref(difficulty.value)
+const editingEntryIndex = ref(null)
+const tempEntryScore = ref(0)
 
 const consistency = computed(() => parseFloat(getConsistency()))
 const levelDescription = computed(() => getProficiencyDescription(difficulty.value))
@@ -148,6 +214,10 @@ const paginatedHistory = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
   return sortedHistory.value.slice(start, end)
+})
+
+watch(rawHistory, (newHistory) => {
+  history.value = newHistory
 })
 
 onMounted(() => {
@@ -206,6 +276,52 @@ const resetHistory = () => {
     localStorage.removeItem('readerHistory')
     history.value = []
     currentPage.value = 1
+  }
+}
+
+const startEditProficiency = () => {
+  editingProficiency.value = true
+  tempProficiency.value = difficulty.value
+}
+
+const updateTempProficiency = (event) => {
+  tempProficiency.value = parseFloat(event.target.value)
+}
+
+const saveProficiency = () => {
+  setDifficulty(tempProficiency.value)
+  editingProficiency.value = false
+}
+
+const cancelEdit = () => {
+  editingProficiency.value = false
+  tempProficiency.value = difficulty.value
+}
+
+const editHistoryEntry = (index) => {
+  editingEntryIndex.value = index
+  tempEntryScore.value = sortedHistory.value[index].score
+}
+
+const saveHistoryEntry = (index) => {
+  const actualIndex = sortedHistory.value.length - 1 - index // Adjust for reverse sort
+  history.value[actualIndex].score = tempEntryScore.value
+  if (import.meta.client) {
+    localStorage.setItem('readerHistory', JSON.stringify(history.value))
+  }
+  editingEntryIndex.value = null
+}
+
+const deleteHistoryEntry = (index) => {
+  if (confirm('Delete this session?')) {
+    const actualIndex = sortedHistory.value.length - 1 - index
+    history.value.splice(actualIndex, 1)
+    if (import.meta.client) {
+      localStorage.setItem('readerHistory', JSON.stringify(history.value))
+    }
+    if (sortedHistory.value.length <= (currentPage.value - 1) * itemsPerPage) {
+      currentPage.value--
+    }
   }
 }
 </script>

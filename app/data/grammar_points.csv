@@ -1,0 +1,926 @@
+Level,GrammarPoint,Japanese,English
+N5,だ,だ,To be
+N5,です,です,To be
+N5,は,は,As for... (Highlights ...
+N5,も,も,Also
+N5,これ,これ,This
+N5,それ,それ,That
+N5,あれ,あれ,That (over there)
+N5,の,の,Indicates possession
+N5,いい,いい,い-Adjective meaning &#39;g...
+N5,い-Adjectives,い-Adjectives,Adjectives ending in い
+N5,な-Adjectives,な-Adjectives,Adjectives that are al...
+N5,か,か,Question marking particle
+N5,が,が,Subject marking particle
+N5,よ,よ,Emphasis (Sentence end...
+N5,ね,ね,Isn&#39;t it?
+N5,る-Verb (Dictionary),る-Verb (Dict...,る + ます (Ichidan Verbs)
+N5,う-Verb (Dictionary),う-Verb (Dict...,う + ます (Godan Verbs)
+N5,を,を,Object marking particle
+N5,ます,ます,Polite Verb Endings
+N5,る-Verb (Negative),る-Verb (Nega...,Will/Does/Do (not)
+N5,う-Verb (Negative),う-Verb (Nega...,Will/Does/Do (not)
+N5,と,と,And
+N5,ここ,ここ,Here
+N5,そこ,そこ,There
+N5,あそこ,あそこ,Over there
+N5,で,で,At
+N5,に,に,In
+N5,か,か,Or
+N5,と,と,With
+N5,でしょう,でしょう,Right?
+N5,だろう,だろう,Right?
+N5,がある,がある,To be
+N5,がいる,がいる,To be
+N5,この,この,This
+N5,その,その,That
+N5,あの,あの,That (over there)
+N5,～んです・のです,～んです,Explanatory
+N5,い-Adjective (Past),い-Adjective ...,Was
+N5,の,の,Verb nominalizer
+N5,い-Adjective + Noun,い-Adjective ...,Describing a noun
+N5,な-Adjective + Noun,な-Adjective ...,Describing a noun
+N5,へいく,へいく,To go to
+N5,する,する,To do
+N5,くる,くる,To come
+N5,る-Verb (Past),る-Verb (Past),る - Verbs (Past tense)
+N5,う-Verb (Past),う-Verb (Past),う - Verbs (Past tense)
+N5,好き,好き,Like
+N5,きらい,きらい,Dislike
+N5,のがすき,のがすき,Like doing
+N5,がある + Noun,がある + Noun,Noun (B) that has Noun...
+N5,い-Adjectives くない,い-Adjectives...,Not (Adjective)
+N5,で,で,With
+N5,ので,ので,Because
+N5,から,から,Because
+N5,から,から,From
+N5,けど・だけど,けど,But
+N5,が,が,But
+N5,る-Verb (Negative-Past),る-Verb (Nega...,る - Verbs (Negative-pa...
+N5,う-Verb (Negative-Past),う-Verb (Nega...,う - Verbs (Negative-pa...
+N5,Verb + て,Verb + て,And
+N5,ている①,ている①,Is
+N5,へ,へ,To
+N5,Verb + にいく,Verb + にいく,To go ~
+N5,誰,誰,Who
+N5,い-Adjective (Predicate),い-Adjective ...,い-Adjective (Predicate)
+N5,な-Adjective だ,な-Adjective だ,な-Adjective (Predicate)
+N5,だった・でした,だった,Was
+N5,じゃない,じゃない,Is not
+N5,じゃなかった,じゃなかった,Was not
+N5,い-Adjective くなかった,い-Adjective ...,Was not
+N5,と,と,Quotation
+N5,って,って,Casual quotation
+N5,Verbs (Non-past),Verbs (Non-p...,(Non-past)
+N5,Verb［た・ている］+ Noun,Verb［た,Verb modified noun
+N5,の,の,Possessive use (Noun o...
+N5,な,な,Do not
+N5,だけ,だけ,Only
+N5,どれ,どれ,Which (of three or more)
+N5,どこ,どこ,Where
+N5,どの,どの,Which (of three or more)
+N5,ている②,ている②,State of being
+N5,てから,てから,Once...is done
+N5,Verb + て+ B,Verb + て+ B,And
+N5,もう,もう,Already
+N5,まだ,まだ,Still
+N5,まだ～ていません,まだ～ていません,Still haven&#39;t done (so...
+N5,てもいい,てもいい,It is alright/fine/oka...
+N5,たい,たい,Want to do
+N5,たり～たりする,たり～たりする,Things like ~ and ~
+N5,けっこう,けっこう,Quite
+N5,たくさん,たくさん,Many
+N5,まえに,まえに,Before
+N5,くらい ①,くらい ①,About
+N5,Noun + まで,Noun + まで,Until
+N5,Verb + まで,Verb + まで,Until (something) happens
+N5,すぎる,すぎる,Too much
+N5,にする,にする,To decide on
+N5,～になる・～くなる,～になる,To become (Adjective)
+N5,のなかで～がいちばん～,のなかで～がいちばん～,Out of ~
+N5,より～のほうが,より～のほうが,To be more ~ than ~
+N5,なにか・なにも,なにか,Something
+N5,誰か・どこか・誰も・どこも,誰か,Someone
+N5,ましょう,ましょう,Let&#39;s
+N5,～ましょうか,～ましょうか,Shall we
+N5,ませんか,ませんか,Won&#39;t you
+N5,Verb + てもいい,Verb + てもいい,It&#39;s okay to
+N5,てください,てください,Please do (Polite requ...
+N5,ないでください,ないでください,Please don&#39;t (Polite r...
+N5,てはいけない,てはいけない,Must not
+N5,なくてはいけない,なくてはいけない,Must do
+N5,なくてはならない,なくてはならない,Must do
+N5,たほうがいい,たほうがいい,It&#39;d be better to
+N5,ないほうがいい,ないほうがいい,It&#39;d be better not to
+N5,なくちゃ・なきゃ,なくちゃ,Must do
+N5,や,や,Things like
+N5,たことがある,たことがある,Have done before
+N5,ている③,ている③,Has/have done
+N5,Adjective + て・Noun + で,Adjective + て,And... (Conjunctive)
+N5,Adjective + て + B,Adjective + ...,And...
+N5,のがへた,のがへた,To be bad at
+N5,のがじょうず,のがじょうず,To be good at
+N5,Adjective + の(は),Adjective + ...,The &#39;one&#39; that... (Ind...
+N5,あげる,あげる,To give (away)
+N5,くれる,くれる,To give (me)
+N5,もらう,もらう,To receive
+N5,けれども,けれども,But
+N5,つもりだ,つもりだ,To plan to
+N4,でも,でも,Or something
+N4,やすい,やすい,Easy to
+N4,にくい,にくい,Difficult to
+N4,だんだん,だんだん,Gradually
+N4,どんどん,どんどん,Progressively
+N4,～ら,～ら,We
+N4,ていく,ていく,To ~ and go
+N4,てくる ,てくる,To come to
+N4,かた,かた,Way of ~ing
+N4,だけで,だけで,Just by
+N4,だが・ですが,だが,But
+N4,なくて,なくて,To not ~ and ~
+N4,なくて,なくて,Not ~ and
+N4,ないで,ないで,Without doing
+N4,Verb［れる・られる］,Verb［れる,Was done to ~ by ~
+N4,他動詞・自動詞,他動詞,Done through action vs...
+N4,なおす,なおす,To do over
+N4,ということ,ということ,~ing
+N4,とき,とき,When
+N4,まず,まず,To start with
+N4,まで,まで,Even
+N4,までに,までに,By ~
+N4,また,また,Also
+N4,はじめる,はじめる,To start
+N4,おわる,おわる,To finish
+N4,ごろ,ごろ,Around
+N4,あとで,あとで,After
+N4,ていた ,ていた,Was doing ~
+N4,に (Frequency),に (Frequency),Times (In each time pe...
+N4,とうとう,とうとう,Finally
+N4,より,より,More than
+N4,ごとに,ごとに,Each
+N4,なるべく,なるべく,As ~ as possible
+N4,るところだ,るところだ,About to
+N4,のに ,のに,Despite
+N4,とおもう,とおもう,I think
+N4,など,など,Such as
+N4,みたい,みたい,Like
+N4,こと,こと,Converting a verb into...
+N4,そう ,そう,Look like
+N4,さ,さ,Converting adjectives ...
+N4,とか～とか,とか～とか,Among other things
+N4,そういう,そういう,Like that
+N4,Verb[よう],Verb[よう],Let&#39;s
+N4,ようだ,ようだ,It seems that
+N4,ぜんぜん,ぜんぜん,(Not) at all
+N4,かな,かな,I wonder
+N4,あまり～ない,あまり～ない,Not very
+N4,ば,ば,If… then
+N4,なら,なら,Were it
+N4,がる,がる,To feel
+N4,がする,がする,To give off
+N4,たがる,たがる,To want to (Third person)
+N4,かもしれない,かもしれない,Might
+N4,みたいに・みたいな,みたいに,Like
+N4,そうに・そうな ,そうに,Seem
+N4,のように・のような ,のように,Like (Noun)
+N4,〜ようと思う・〜おうと思う,〜ようと思う,I think I will
+N4,く・に,く,～ly (Describing verbs)
+N4,～にする・～くする,～にする,Adjective + する
+N4,といい,といい,I hope
+N4,ようになる,ようになる,To reach the point that
+N4,まい～のように,まい～のように,Almost every ~
+N4,じゃないか,じゃないか,Isn&#39;t it?
+N4,らしい ①,らしい ①,Seems like
+N4,ておく,ておく,To do something in adv...
+N4,がほしい,がほしい,To want something
+N4,てほしい,てほしい,I want you to
+N4,ときいた,ときいた,I heard that
+N4,聞こえる,聞こえる,To be audible
+N4,見える,見える,To be visible
+N4,だす,だす,To suddenly begin
+N4,～代,～代,Teens
+N4,Number + も,Number + も,Emphasis
+N4,ほとんど,ほとんど,Almost all
+N4,そんな・こんな・あんな・どんな,そんな,Such a・Kind of
+N4,各,各,Each
+N4,以上 ①,以上 ①,More than (or equal to)
+N4,いか,いか,Less than (or equal to)
+N4,いがい,いがい,Except・besides
+N4,ずっと ①,ずっと ①,Continuously
+N4,だいたい,だいたい,Most・mostly
+N4,のなかで,のなかで,In
+N4,ように・ような,ように,As・like
+N4,Number/Amount + は,Number/Amoun...,At least
+N4,なん + counter + か,なん + counter...,Some
+N4,真(っ),真(っ),Completely
+N4,Number + しか〜ない,Number + しか〜ない,No more than
+N4,～は～の一つだ,～は～の一つだ,〜 is one of (many) 〜
+N4,～ない～はない,～ない～はない,There is not ~ that is...
+N4,すこしも～ない,すこしも～ない,Not even a little
+N4,すくなくない,すくなくない,Quite a few
+N4,ばあいは,ばあいは,In the event of
+N4,Verb[て],Verb[て],Please do for me (Casu...
+N4,てよかった,てよかった,I&#39;m glad that
+N4,Verb［せる・させる］,Verb［せる,To make/let/have (some...
+N4,といってもいい,といってもいい,You could say
+N4,ても,ても,Even if
+N4,てしまう・ちゃう,てしまう,To do something by acc...
+N4,Verb[て] + B,Verb[て] + B,And・and so
+N4,Causative-Passive,Causative-Pa...,Verbs (Causative-passi...
+N4,Verb[て]・Noun[で] + B,Verb[て],By
+N4,てある ,てある,Something is done
+N4,ように～てほしい,ように～てほしい,Want ~ to ~ like ~
+N4,ているあいだに,ているあいだに,While
+N4,なくてもいい,なくてもいい,Don&#39;t have to
+N4,てみる,てみる,To try to
+N4,てすみません,てすみません,I&#39;m sorry for
+N4,てあげる,てあげる,To do something for so...
+N4,てくれる,てくれる,To do something for so...
+N4,てもらう,てもらう,To get someone to do
+N4,なさい,なさい,Command to do
+N4,Verb[て] + B,Verb[て] + B,Non-sequence
+N4,Verb[ないで],Verb[ないで],(Please) do not (for me)
+N4,てくれてありがとう,てくれてありがとう,Thank you for ~ ing
+N4,てくれない・てもらえない,てくれない,Won&#39;t you?
+N4,～のだろうか,～のだろうか,I wonder...
+N4,お～になる ,お～になる,To do (Honorific)
+N4,なさる,なさる,To do (Honorific)
+N4,お～ください ,お～ください,Please do (Honorific)
+N4,いらっしゃる,いらっしゃる,To be (Honorific)
+N4,ございます,ございます,To be
+N4,でございます,でございます,To be
+N4,お〜する,お〜する,I humbly do
+N4,いたす,いたす,To do (Humble)
+N4,ていただけませんか,ていただけませんか,Won&#39;t you
+N4,たら,たら,When
+N4,ほかに(も)・ほか(に)は,ほかに(も),Other
+N4,がひつよう,がひつよう,Need
+N4,そんなに,そんなに,So (much)
+N4,ひつようがある,ひつようがある,It is necessary to
+N4,たとえば,たとえば,For example
+N4,れる・られる (Potential),れる,To be able
+N4,んだけど・んですが,んだけど,But...
+N4,はずだ,はずだ,Bound to (be)
+N4,かどうか,かどうか,Whether or not
+N4,と,と,If
+N4,ないと,ないと,Must
+N4,はずがない,はずがない,Hardly possible
+N4,しか～ない ,しか～ない,There&#39;s only
+N4,だけでなく,だけでなく,Not only… but also
+N4,ことができる,ことができる,Can
+N4,かい,かい,Question marker
+N4,もし,もし,If (For emphasis)
+N4,し～し ,し～し,And
+N4,でできる・からできる,でできる,Made of
+N4,ながら,ながら,While ~ing
+N4,たところだ,たところだ,Just finished doing
+N4,ているところだ,ているところだ,In the process of doin...
+N4,と～と、どちらが ,と～と、どちらが,Between ~ which one
+N4,ようにする,ようにする,To try to
+N4,なければいけない,なければいけない,Must do
+N4,なければならない,なければならない,Must do
+N4,つづける,つづける,To continue
+N4,ようにいう,ようにいう,To tell
+N4,よていだ,よていだ,Plan to
+N4,ようにいのる,ようにいのる,Pray that/for
+N4,たばかり,たばかり,Just did
+N4,化する,化する,-ification
+N4,命令形,命令形,(Verb)!
+N4,ように,ように,So that
+N4,かしら,かしら,I wonder
+N4,らしい ②,らしい ②,typical of
+N4,にみえる,にみえる,To look
+N4,とみえる,とみえる,It seems that
+N4,風,風,-style
+N4,がみられる,がみられる,Can see
+N4,にきがつく,にきがつく,To notice (that)
+N4,〜でも 〜でも,〜でも 〜でも,Whether ~ or
+N4,それに,それに,And
+N4,それで,それで,Because of that
+N4,Question-phrase + か,Question-phr...,Including questions wi...
+N4,それでも,それでも,But still
+N4,たらどう,たらどう,Why don&#39;t you...?
+N4,とかんがえられている,とかんがえられている,Is considered
+N4,とされている,とされている,To be considered
+N4,といわれている,といわれている,It is said that
+N4,ばよかった,ばよかった,Should have
+N3,ばいい,ばいい,Can
+N3,たらいい・といい,たらいい,It would be nice if
+N3,中,中,During
+N3,の間に,の間に,While
+N3,うちに,うちに,While
+N3,ないうちに,ないうちに,Before it becomes
+N3,べき,べき,Must
+N3,べきではない,べきではない,Should not
+N3,って,って,As for
+N3, なかなか,なかなか,Very
+N3,あまり,あまり,So much...that
+N3,なかなか～ない,なかなか～ない,Not really
+N3,によると・によれば,によると,According to
+N3,によって・による,によって,By means of
+N3,全く～ない,全く～ない,Not~at all
+N3,ことだ,ことだ,Should
+N3,そうだ ,そうだ,I heard that
+N3,すると,すると,Having done...
+N3,そうすると,そうすると,Having done that...
+N3,のはXの方だ,のはXの方だ,It is...that...
+N3,Noun＋型,Noun＋型,Model
+N3,てごらん,てごらん,(Please) try to
+N3,Particle + の,Particle + の,Combined particles
+N3,である,である,Formal or literary だ
+N3,ところが,ところが,Even so
+N3,ところで,ところで,By the way
+N3,ほど,ほど,The more
+N3,ば〜ほど,ば〜ほど,The more…the more
+N3,ほど～ない,ほど～ない,Is not as…as
+N3,では・それでは・じゃあ,では,If so
+N3,のに,のに,In order to
+N3,ため(に),ため(に),For
+N3,ために,ために,Due to
+N3,という,という,Called
+N3,ということだ,ということだ,I heard that
+N3,というのは,というのは,~ Known as ~ is
+N3,的,的,~ly・~like・~al
+N3,もの・もん,もの,Because
+N3,ものだ,ものだ,Supposed to
+N3,最中に,最中に,In the middle of
+N3,上で,上で,After
+N3,おかげで,おかげで,Thanks to
+N3,にもとづいて,にもとづいて,Based on
+N3,点,点,Aspect
+N3,なぜなら〜から,なぜなら〜から,Because
+N3,こそ,こそ,For sure
+N3,からこそ,からこそ,Emphasized because
+N3,ばかり,ばかり,Just
+N3,ばかりだ,ばかりだ,(Only) continue to
+N3,ばかりに,ばかりに,Simply because
+N3,ことがある,ことがある,Something is possible
+N3,ことにする,ことにする,To decide on
+N3,ことなの,ことなの,(A) is (Description of A)
+N3,ことになる,ことになる,It will end up being
+N3,～は～で有名,～は～で有名,Is famous for
+N3,ことはない,ことはない,There is no need to
+N3, ～と言っても,～と言っても,Although ~ might say t...
+N3,といえば,といえば,Speaking of
+N3,合う,合う,To do for one another
+N3,に合わせて・に合った,に合わせて,In accordance with
+N3,について,について,Concerning
+N3,～(の)姿,～(の)姿,Figure
+N3,と言える,と言える,Would or could say tha...
+N3,ちゃんと・きちんと,ちゃんと,Properly
+N3,そのため(に),そのため(に),For that reason
+N3,その結果,その結果,As a result
+N3,に比べて,に比べて,Compared to
+N3,どんなに〜ても,どんなに〜ても,No matter how
+N3,いくら〜でも,いくら〜でも,No matter how (much)
+N3,〜かは〜によって違う,〜かは〜によって違う,Depends on
+N3,かなり,かなり,Quite
+N3,あまりに,あまりに,So much...that
+N3,わけだ,わけだ,For that reason
+N3,わけではない,わけではない,It doesn&#39;t mean that
+N3,と同時に,と同時に,At the same time as
+N3,ところだった ①,ところだった ①,Almost
+N3,だって,だって,I heard/was said
+N3,んだって,んだって,I heard that
+N3,関係がある,関係がある,(Not) involved with
+N3,に関する・に関して,に関する,Related to
+N3,に対して,に対して,In contrast to
+N3,くらい ②,くらい ②,To the extent that
+N3,は～くらいです,は～くらいです,About the only
+N3,さ - Interjection,さ - Interjec...,All right
+N3,さ - Filler,さ - Filler,Like
+N3,さ - Casual よ,さ - Casual よ,Casual よ
+N3,それぞれ,それぞれ,Each
+N3,まま(に),まま(に),As is
+N3,そこで,そこで,Accordingly
+N3,しかない,しかない,Have no choice but
+N3,てもかまわない,てもかまわない,It doesn&#39;t matter if
+N3,～ても～なくても,～ても～なくても,Whether ~ or not
+N3,んじゃない,んじゃない,Don&#39;t
+N3,わけがない,わけがない,There is no way
+N3,としたら・とすれば・とすると,としたら,If it were the case that
+N3,として,として,As (i.e. in the role of)
+N3,にしては,にしては,(Even) considering
+N3,にしても,にしても,Even though
+N3,～というのは事実だ,～というのは事実だ,It is a fact that ~
+N3,から言うと,から言うと,Speaking in terms of
+N3,に取って,に取って,To
+N3,ことから,ことから,From the fact that
+N3,というより,というより,...is more of a... tha...
+N3,はもちろん,はもちろん,Not only but also
+N3,をはじめ,をはじめ,Not only...but also...
+N3,て初めて,て初めて,For the first time
+N3,さえ,さえ,Even
+N3,さえ〜ば,さえ〜ば,If only…then
+N3,たものだ,たものだ,Used to
+N3,さて,さて,Well
+N3,むしろ,むしろ,Rather
+N3,つまり,つまり,In short
+N3,即ち,即ち,In other words
+N3,却って,却って,All the more
+N3,まるで…ようだ,まるで…ようだ,It is entirely as if
+N3,ような気がする,ような気がする,Have a feeling that
+N3,とても～ない,とても～ない,Not ~ at all
+N3,別に〜ない,別に〜ない,Not really
+N3,ばかりでなく,ばかりでなく,Not only…but also
+N3,ではなくて・じゃなくて,ではなくて,Not A but B
+N3,だけでなく(て)～も,だけでなく(て)～も,Not only ~ but ~ also
+N3,だけしか,だけしか,To emphasize &#39;~only&#39;
+N3,は言うまでもない ①,は言うまでもない ①,It goes without saying...
+N3,決して〜ない,決して〜ない,Never
+N3,わけにはいかない,わけにはいかない,Cannot afford to
+N3,〜ようとしない,〜ようとしない,Not willing to
+N3,もしかしたら,もしかしたら,Perhaps
+N3,たとえ〜ても,たとえ〜ても,Even if…is the case
+N3,ことに,ことに,Extremely
+N3,ことか,ことか,How…
+N3,～かというと ①,～かというと ①,Why? Well...
+N3,～かというと ②,～かというと ②,If you ask me...
+N3,で言うと,で言うと,In
+N3,～ずつ,～ずつ,One at a time
+N3,ずっと ②,ずっと ②,By far
+N3,だらけ,だらけ,Completely covered in
+N3,もっとも,もっとも,Although
+N3,再び,再び,Again
+N3,み,み,~ness
+N3,と同じくらい,と同じくらい,About the same as
+N3,と同じで・と違って,と同じで,Like
+N3,と並んで,と並んで,In line with
+N3,に違いない,に違いない,There is no doubt that
+N3,当たり,当たり,Per~
+N3,に当たる,に当たる,Correspond to
+N3,に限る,に限る,Nothing better than
+N3,とは限らない,とは限らない,Not necessarily so
+N3,めったに〜ない,めったに〜ない,Hardly
+N3,割に,割に,Although
+N3,Verb[volitional]とする,Verb[volitio...,Try to
+N3,Verb[volitional] + としたが,Verb[volitio...,Tried to ~ but ~
+N3,言うまでもない ②,言うまでもない ②,It goes without saying
+N3,そうもない,そうもない,Very unlikely to
+N3,ないことはない,ないことはない,Is not impossible
+N3,なんか・なんて,なんか,Such as
+N3,又〜も,又〜も,Moreover
+N3,ついでに,ついでに,While you are at it
+N3,と共に,と共に,Together with
+N3,につれて,につれて,As…then
+N3,直ちに,直ちに,At once
+N3,たとたんに,たとたんに,The instant or moment
+N3,おきに,おきに,Repeated at intervals
+N3,たびに,たびに,Each time
+N3,あるいは,あるいは,Or
+N3,ながらも,ながらも,But
+N3,において・における,において,In
+N3,第一,第一,Start
+N3,ますます,ますます,Increasingly
+N3,一方だ,一方だ,More and more
+N3,一方で,一方で,On the other hand
+N3,遂に,遂に,Finally
+N3,すでに,すでに,Already
+N3,ずに,ずに,Without doing
+N3,ずにはいられない,ずにはいられない,Cannot help doing some...
+N3,なし,なし,Without
+N3,あり,あり,Possibility
+N3,考えられない,考えられない,Unthinkable
+N3,必ずしも ,必ずしも,Not always
+N3,連用形,連用形,Formal Conjunctive
+N3,向き,向き,Suitable for
+N3,向け,向け,Intended for
+N3,上がる・上げる,上がる,Something is finished
+N3,切る,切る,To do something comple...
+N3,切れない,切れない,Being unable to finish...
+N3,きり,きり,Only
+N3,かけ,かけ,Half-
+N3,にかけて,にかけて,Over (a period)
+N3,たて,たて,Freshly ~ed
+N3,込む ①,込む ①,To go into
+N3,込む ②,込む ②,Remain
+N3,ふりをする,ふりをする,To pretend
+N3,できれば・できたら,できれば,If possible
+N3,でよければ,でよければ,If it is alright
+N3,次第,次第,As soon as
+N3,とおり,とおり,In that way
+N3,でもある,でもある,Be also
+N3,どうしても,どうしても,Regardless of
+N3,もしも～なら・もしも～でも,もしも～なら,If
+N3,同士,同士,Fellow
+N3,がたい,がたい,Hard to
+N3,まさか,まさか,I never dreamed
+N3,前者は・後者は,前者は,The former ~ the latter
+N3,つい,つい,Accidentally
+N3,せいで,せいで,Because of
+N3,くせに,くせに,Even though
+N3,がち,がち,Apt to do
+N3,ぎみ,ぎみ,Looking
+N3,っぽい,っぽい,-ish
+N3,っぱなし,っぱなし,Leaving something in a...
+N3,わざわざ,わざわざ,Expressly
+N3,一体,一体,(What) the heck?
+N3,折角,折角,With trouble
+N3,っけ,っけ,What is…again?
+N3,代わりに,代わりに,Instead of
+N3,に代わって,に代わって,In place of
+N3,どころか,どころか,Far from
+N3,という理由で,という理由で,For (that) reason; on ...
+N3,～は～となっている,～は～となっている,It is (has been)
+N3,左右する,左右する,Influence
+N2,得る・得る,得る,Is able to
+N2,〜得ない,〜得ない,Unable to
+N2,ざるを得ない,ざるを得ない,Can&#39;t help doing
+N2,～ざる,～ざる,To not ~
+N2,つもりで,つもりで,With the intention of ...
+N2,どうせ,どうせ,Anyhow
+N2,せめて,せめて,At least
+N2,どうやら,どうやら,Apparently
+N2,なにやら,なにやら,Something (or other)
+N2,よりほかない,よりほかない,To have no choice but
+N2,確かに,確かに,Surely
+N2,一応 ①,一応 ①,Just in case
+N2,一応 ②,一応 ②,more or less
+N2,に相違ない,に相違ない,Without a doubt
+N2,万が一,万が一,Just in case
+N2,ようがない・ようもない,ようがない,There&#39;s no way to
+N2,にほかならない,にほかならない,Nothing but
+N2,っこない,っこない,There is no chance of
+N2,それなら,それなら,Then
+N2,ものなら①,ものなら①,If
+N2,～を～に任せる,～を～に任せる,Leave 〜 up to
+N2,活かす,活かす,To make use of (someth...
+N2,おおよそ,おおよそ,Approximately
+N2,まい,まい,Won&#39;t
+N2,上,上,From the standpoint of
+N2,上に,上に,As well
+N2,以上 ②,以上 ②,Since
+N2,以上に,以上に,More than
+N2,途中に・途中で,途中に,On the way
+N2,中を,中を,In
+N2,を中心に,を中心に,Focused on
+N2,その上,その上,Besides
+N2,上は,上は,Once
+N2,の下で,の下で,Under
+N2,後(の) Noun,後(の) Noun,…left
+N2,手前,手前,Before
+N2,を巡って,を巡って,Concerning
+N2,にわたって,にわたって,Across
+N2,に沿って,に沿って,Along
+N2,た末・の末,た末,After
+N2,にしたがって,にしたがって,As
+N2,に伴って・に伴い,に伴って,As
+N2,につき,につき,Due to
+N2,につけ,につけ,Whenever
+N2,にかかわる,にかかわる,To relate to
+N2,に向かって・に向けて,に向かって,Towards
+N2,が気になる,が気になる,To be interested in
+N2,に気をつける,に気をつける,Take care
+N2,も構わず,も構わず,Without worrying about
+N2,かねる,かねる,Cannot
+N2,かねない,かねない,Might
+N2,を除いて,を除いて,Except
+N2,にかかわらず,にかかわらず,Regardless of
+N2,にもかかわらず,にもかかわらず,Despite
+N2,に限って,に限って,Particularly when
+N2,に限らず,に限らず,Not just
+N2,なお①,なお①,Still
+N2,なお②,なお②,In addition
+N2,限り,限り,As long as
+N2,次第だ・次第で,次第だ,Depending on
+N2,次第に,次第に,Gradually
+N2,～てこそ,～てこそ,Only if
+N2,を問わず,を問わず,Regardless of
+N2,よりしかたがない,よりしかたがない,There is no choice but
+N2,に越したことはない,に越したことはない,There is nothing bette...
+N2,要するに,要するに,To sum up
+N2,てからでないと,てからでないと,(Not) unless ~ cannot
+N2,なくはない,なくはない,It&#39;s not that…
+N2,ないことには～ない,ないことには～ない,Unless you do something
+N2,ないではいられない,ないではいられない,Cannot help doing some...
+N2,ねばならない,ねばならない,Must
+N2,たまえ,たまえ,(Please) do!
+N2,～のうち(で),～のうち(で),Of the
+N2,つつ,つつ,While
+N2,つつ(も),つつ(も),Even while ~ing
+N2,に際して,に際して,On the occasion of
+N2,際に,際に,When
+N2,にあたり・にあたって,にあたり,When
+N2,を契機に,を契機に,Lead to
+N2,つつある,つつある,-ing
+N2,～ところに・～ところへ,～ところに,At the time
+N2,か〜ないかのうちに,か〜ないかのうちに,Right after
+N2,がけに,がけに,On the way to
+N2,ていては,ていては,If one keeps doing som...
+N2,ところだった ②,ところだった ②,Was just about to do s...
+N2,どころではない,どころではない,This is not the time for…
+N2,ぶりに,ぶりに,For the first time in
+N2,ては,ては,If
+N2,ては〜ては,ては〜ては,Repeating action
+N2,も又,も又,Too
+N2,結果・の結果,結果,As a result of
+N2,以来,以来,Since
+N2,に先立ち,に先立ち,Before
+N2,はたして,はたして,Wonder if ~ (really)?
+N2,甲斐がある,甲斐がある,To be (not) worth
+N2,やがて,やがて,Before long
+N2,したがって,したがって,Therefore
+N2,あげく,あげく,After
+N2,きっかけ,きっかけ,Lead to
+N2,にかけては,にかけては,When it comes to
+N2,とっくに,とっくに,Already
+N2,未だに,未だに,Still
+N2,をもとに,をもとに,Based on
+N2,からには,からには,As long as
+N2,いつの間にか,いつの間にか,Suddenly
+N2,一旦,一旦,Once …
+N2,はもとより,はもとより,Not only... but also
+N2,そうにない,そうにない,Unlikely to
+N2,に反して,に反して,Go against
+N2,逆に,逆に,On the contrary
+N2,反面,反面,While
+N2,抜く,抜く,All~
+N2,抜きで,抜きで,Without
+N2,いよいよ,いよいよ,At last
+N2,ずに済む,ずに済む,Get by without doing s...
+N2,に応じて,に応じて,Depending or based on
+N2,を通じて・を通して,を通じて,Through
+N2,に応えて,に応えて,In response to
+N2,それとも,それとも,Or
+N2,にしたら,にしたら,From the point of view of
+N2,にしても～にしても,にしても～にしても,Regardless of whether
+N2,としては,としては,As a
+N2,としても,としても,Even if (we assume)
+N2,それにしても,それにしても,Nevertheless
+N2,ぬ,ぬ,Classical negative
+N2,ことなく,ことなく,Without ~ing
+N2,にて,にて,In
+N2,には,には,In order to
+N2,思うように,思うように,As one hopes
+N2,かと思ったら・かと思うと,かと思ったら,Then again
+N2,というものでもない,というものでもない,There is no guarantee ...
+N2,と考えられる,と考えられる,Can be considered as
+N2,という点から考えると,という点から考えると,From the standpoint of
+N2,ということは,ということは,That means
+N2,ふうに,ふうに,~ way
+N2,という風に,という風に,As if to say
+N2,ものの,ものの,Although
+N2,というものだ,というものだ,Speaker&#39;s impression
+N2,から見ると,から見ると,From the point of view of
+N2,ところを見ると,ところを見ると,Judging from
+N2,からすると・からすれば,からすると,Judging from
+N2,からして,からして,Even...
+N2,からといって,からといって,Just because
+N2,そういえば,そういえば,Speaking of which
+N2,お～願う,お～願う,Please
+N2,～て頂戴,～て頂戴,Please do
+N2,とか,とか,I heard that… somethin...
+N2,〜ようではないか,〜ようではないか,Let&#39;s do something
+N2,かのようだ,かのようだ,As if
+N2,のではないだろうか,のではないだろうか,I think ... isn&#39;t it?
+N2,て当然だ,て当然だ,Natural
+N2,のも当然だ,のも当然だ,It is only natural that
+N2,たった(の),たった(の),Only
+N2,恐れがある,恐れがある,There is a risk or fea...
+N2,おそらく,おそらく,Probably
+N2,ものか,ものか,Definitely not
+N2,おまけに,おまけに,In addition
+N2,に決まっている,に決まっている,Surely
+N2,ことになっている,ことになっている,To be expected to
+N2,気,気,Feel like ~
+N2,げ,げ,Seemingly
+N2,ことだから,ことだから,It is exactly because
+N2,ものだから,ものだから,Because
+N2,ものですから・もので,ものですから,Because
+N2,ものがある,ものがある,Strong judgement
+N2,傾向がある,傾向がある,Tendency
+N2,～に値する,～に値する,Be worthy of
+N2,てしょうがない,てしょうがない,Extremely
+N2,だけましだ,だけましだ,At least
+N2,幸い・幸いなことに,幸い,Luckily
+N2,ようでは・ようじゃ,ようでは,If
+N2,さすが,さすが,as one would expect
+N2,ことは〜が,ことは〜が,It is true...but
+N2,更に,更に,Even more or further
+N2,精々,精々,(At) most
+N2,僅かに,僅かに,Only
+N2,および,および,And
+N2,たちまち,たちまち,Immediately
+N2,いきなり,いきなり,For no reason
+N2,といった,といった,Such as
+N2,を込めて,を込めて,Full of
+N2,に加えて,に加えて,Not only...but also
+N2,何から何まで,何から何まで,Everything and anything
+N2,は別として,は別として,Apart from
+N2,だけに,だけに,As might be expected
+N2,だけは,だけは,To do all that one can
+N2,だけあって,だけあって,Is only natural
+N2,何より,何より,Be glad
+N2,何といっても,何といっても,By any account
+N2,か何か,か何か,Or something
+N2,てならない,てならない,Very
+N2,のみならず,のみならず,Not only...but
+N2,それなのに,それなのに,And yet
+N2,いわゆる,いわゆる,What is called
+N2,にすぎない,にすぎない,No more than
+N2,も～ば～も,も～ば～も,…And…
+N2,でしかない,でしかない,Merely
+N2,てたまらない,てたまらない,Can&#39;t help but want to
+N2,にせよ・にしろ,にせよ,Even if
+N2,何しろ,何しろ,No wonder
+N2,にしろ～にしろ,にしろ～にしろ,Whether… or
+N2,はともかく,はともかく,Setting aside
+N2,ならともかく,ならともかく,If it&#39;s (A)
+N2,やら～やら,やら～やら,Whether or
+N2,しかしながら,しかしながら,However
+N2,ことにはならない,ことにはならない,Just because… doesn&#39;t ...
+N2,だけのことはある,だけのことはある,No wonder
+N2,てはならない,てはならない,Must not
+N2,てはいられない,てはいられない,Can&#39;t afford to
+N2,陸に～ない,陸に～ない,Not well or properly
+N2,しかも,しかも,Moreover
+N2,てでも,てでも,Even if I have to
+N2,とも,とも,Even if
+N2,ないわけにはいかない,ないわけにはいかない,Can&#39;t not
+N2,というわけではない,というわけではない,It is not that
+N2,のももっともだ,のももっともだ,May well
+N2,たって,たって,Even if
+N1,に至るまで,に至るまで,(Everything) from...to...
+N1,たところで,たところで,Even if ~ cannot or wi...
+N1,如く・如き・如し,如く,Like
+N1,に足る,に足る,To be worthy of
+N1,極まりない・極まる,極まりない,Extreme
+N1,といえども,といえども,Even (if)
+N1,を以て,を以て,By means of
+N1,きらいがある,きらいがある,Have a tendency to
+N1,ならまだしも,ならまだしも,A is fine...but B is not
+N1,までもない,までもない,There is no need to
+N1,ともなると・にもなると,ともなると,When
+N1,をいいことに,をいいことに,To take advantage of
+N1,如何,如何,Depending on
+N1,～るまでだ,～るまでだ,Just
+N1,にあって,にあって,At
+N1,を余儀なくされる,を余儀なくされる,To be forced to do som...
+N1,とは,とは,That...
+N1,じゃあるまいし,じゃあるまいし,You are not ~ so...
+N1,てからというもの,てからというもの,After
+N1,かたわら,かたわら,While
+N1,を皮切りに,を皮切りに,Beginning of
+N1,に至っては,に至っては,When it comes to
+N1,なり,なり,As soon as
+N1,ともなく・ともなしに,ともなく,Absentmindedly
+N1,塗れ,塗れ,Stained
+N1,ようが～まいが,ようが～まいが,Even if
+N1,からする,からする,About
+N1,にして①,にして①,At
+N1,ものを,ものを,But
+N1,であれ,であれ,Even if
+N1,をおいてほかに〜ない,をおいてほかに〜ない,No...but
+N1,をもって,をもって,As of
+N1,とはいえ,とはいえ,Though
+N1,ならでは,ならでは,Unique to
+N1,すら,すら,Even
+N1,あっての,あっての,Exist only because of ...
+N1,～たまでだ,～たまでだ,Just
+N1,を経て,を経て,Via
+N1,ながらに,ながらに,While being
+N1,たなり・なり,たなり,While... ~ing
+N1,の極み,の極み,Ultimate
+N1,にしてみれば,にしてみれば,For (A)
+N1,だの,だの,Things like
+N1,あくまでも,あくまでも,To the (bitter) end
+N1,べく,べく,For the purpose of
+N1,ところを,ところを,When
+N1,からある,からある,As much as
+N1,にして②,にして②,To be ~ and ~
+N1,つ〜つ,つ〜つ,two contrasting actions
+N1,飽くまで(も),飽くまで(も),Just
+N1,であれ〜であれ,であれ〜であれ,Whether or
+N1,たら最後,たら最後,Once
+N1,いかなる,いかなる,What kind of
+N1,なりに,なりに,In one&#39;s own way
+N1,れる・られる + ままに,れる,Do as (one is told or ...
+N1,にまつわる,にまつわる,Surrounding
+N1,たる,たる,To be (in a position of)
+N1,なら〜で,なら〜で,If ~ should
+N1,をものともせず,をものともせず,Making nothing of
+N1,には当たらない,には当たらない,No need to/for
+N1,ものと思う,ものと思う,Think that
+N1,を踏まえて,を踏まえて,Based on
+N1,ゆえに,ゆえに,Because
+N1,という,という,Every single
+N1,にとどまらず,にとどまらず,Not limited to
+N1,と思いきや,と思いきや,Thought...but
+N1,どうにも,どうにも,Cannot
+N1,ことだし,ことだし,(And) so
+N1,がん～,がん～,Totally
+N1,か否か,か否か,Whether or not
+N1,たら〜で,たら〜で,Even if
+N1,べくして,べくして,As expected
+N1,まま(に),まま(に),As (one likes
+N1,かれ〜かれ,かれ〜かれ,Or
+N1,〜に〜ない,〜に〜ない,Cannot even...if wants
+N1,なくして(は),なくして(は),Without
+N1,のなんのって,のなんのって,So much that
+N1,にかかっている,にかかっている,To depend on
+N1,てやまない,てやまない,Never cease to
+N1,ぐらいなら,ぐらいなら,Would rather...than
+N1,ってば・ったら,ってば,I said...!
+N1,ずとも,ずとも,Even if not
+N1,とあって,とあって,Since...(it is no wond...
+N1,でもなんでもない,でもなんでもない,Not at all
+N1,ぐるみで,ぐるみで,Whole
+N1,そばから,そばから,As soon as
+N1,訳あり(訳あって),訳あり(訳あって),～ with reasons
+N1,に至って・に至り,に至って,When it came to
+N1,だに + しない,だに + しない,Not even
+N1,がてら,がてら,On the occasion of
+N1,んがため(に),んがため(に),In order to
+N1,いかん〜ず,いかん〜ず,Regardless of (whateve...
+N1,にも～ない,にも～ない,Cannot... even if one ...
+N1,い-Adj[く] + もなんともない,い-Adj[く] + も...,Not... or anything
+N1,Verb + だに,Verb + だに,Just
+N1,～なり～なり,～なり～なり,Or
+N1,ないでもない,ないでもない,Kind of
+N1,もさることながら,もさることながら,It is a fact that
+N1,ものと思っていた,ものと思っていた,Was under the impressi...
+N1,でなくてなんだろう,でなくてなんだろう,If … is not … then wha...
+N1,はさておき・はさておいて,はさておき,(Leaving or putting) a...
+N1,折には,折には,When
+N1,とばかり（に）,とばかり（に）,As if (to say)
+N1,わ〜わ,わ〜わ,~and ~and
+N1,なりとも,なりとも,Even (a little)
+N1,に至っても,に至っても,Even when
+N1,を兼ねて,を兼ねて,And also
+N1,Verb[ない]もの(だろう)か,Verb[ない]もの(だ...,(Why) can’t
+N1,Verb[て] + みせる,Verb[て] + みせる,I will definitely
+N1,相まって,相まって,Combined with
+N1,に足りない,に足りない,To not be worthy
+N1,べからず,べからず,Do not
+N1,んばかりに,んばかりに,As if
+N1,に則って・に則り,に則って,According to
+N1,Adj限りだ,Adj限りだ,Extremely
+N1,はおろか,はおろか,Let alone
+N1,めく・めいた,めく,Like
+N1,といわず,といわず,Not only A or B but ev...
+N1,にもほどがある,にもほどがある,There is a limit to
+N1,にもまして,にもまして,Even -er than
+N1,まくる,まくる,Like crazy
+N1,わ〜わ（で）,わ〜わ（で）,And...so
+N1,どうにか,どうにか,Somehow (or other)
+N1,や否や,や否や,As soon as
+N1,次第です,次第です,Because the reason is
+N1,というところ,というところ,I would say (about)
+N1,１～たりとも～ない,１～たりとも～ない,Not even one
+N1,ったらない・といったらない,ったらない,Cannot tell
+N1,に照らして・に照らすと,に照らして,In light of
+N1,とあれば,とあれば,(Emphatic) if
+N1,さぞ,さぞ,You must be very
+N1,ときたら,ときたら,When it comes to
+N1,びる,びる,-like
+N1,にしたところで,にしたところで,Even
+N1,～ばこそ,～ばこそ,Precisely because
+N1,ても差し支えない,ても差し支えない,May
+N1,には及ばない①,には及ばない①,There is no need to
+N1,に即して,に即して,In line with
+N1,ないまでも,ないまでも,May not … but (at least)
+N1,をよそに,をよそに,Ignoring
+N1,に限ったことではない,に限ったことではない,Not limited to
+N1,とは比べものにならない,とは比べものにならない,Nothing compared to
+N1,まじき,まじき,Unbecoming of
+N1,の至り,の至り,Utmost
+N1,に恥じない,に恥じない,Lives up to
+N1,ずじまい,ずじまい,Ended up not
+N1,に言わせれば・に言わせると・に言わせたら,に言わせれば,If you ask
+N1,ったら・といったら,ったら,Cannot tell
+N1,こととて,こととて,Due to
+N1,ずくめ,ずくめ,Completely
+N1,には及ばない②,には及ばない②,To be no match (for)
+N1,とは言うものの,とは言うものの,Although
+N1,が早いか,が早いか,As soon as
+N1,に難くない,に難くない,Not hard to
+N1,ならいざ知らず,ならいざ知らず,Don’t know about it
+N1,を禁じ得ない,を禁じ得ない,Cannot help feeling
+N1,にかこつけて,にかこつけて,In the name of
+N1,ようによっては,ようによっては,Depending on the way
+N1,べくもない,べくもない,No (doubt or hope)
+N1,と来たら,と来たら,For …(is the best)
+N1,ものとして,ものとして,Assuming
+N1,を前提に,を前提に,On the premise of
+N1,ずにはすまない,ずにはすまない,Won&#39;t get away without
+N1,に堪えない,に堪えない,Cannot bear to
+N1,始末だ,始末だ,Ends up
+N1,ものなら②,ものなら②,If you were to do
+N1,にひきかえ,にひきかえ,In stark contrast
+N1,それまでだ,それまでだ,If… then it is all in ...
+N1,といおうか,といおうか,How to put it
+N1,ずにはおかない,ずにはおかない,Will definitely
+N1,を限りに,を限りに,As of (the end of)
+N1,てはかなわない,てはかなわない,It&#39;s unbearable when
+N1,かたがた,かたがた,Partly for (the purpos...
+N1,を余儀なくさせる,を余儀なくさせる,Force to
+N1,～てやる,～てやる,Just wait and see
+N1,ただ〜のみ,ただ〜のみ,Nothing but
+N1,ものとする,ものとする,Shall
+N1,との,との,That
+N1,以前,以前,Before
+N1,ともあろう,ともあろう,Of all people
+N1,こそすれ〜ない,こそすれ〜ない,And certainly not
+N1,並み,並み,As
+N1,に先駆けて,に先駆けて,First
+N1,を機に,を機に,Opportunity

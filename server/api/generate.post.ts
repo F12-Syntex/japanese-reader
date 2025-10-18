@@ -1,59 +1,94 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 export default defineEventHandler(async (event) => {
   const { apiKey, level, knownWords } = await readBody(event)
+
+  const cleanedLevel = level.replace(/[+]$|[-]$/, '')
+
+  const csvPath = path.join(process.cwd(), 'app', 'data', 'grammar_points.csv')
+  const csvContent = fs.readFileSync(csvPath, 'utf-8')
+  const lines = csvContent.split('\n').filter(l => l.trim())
+  const grammarPoints = lines.slice(1).map(line => {
+    const parts = line.split(',')
+    return {
+      level: parts[0],
+      grammarPoint: parts[1],
+      japanese: parts[2],
+      english: parts[3]
+    }
+  })
+  const relevantGrammar = grammarPoints.filter(g => g.level === cleanedLevel).map(g => ({
+    point: g.grammarPoint,
+    japanese: g.japanese,
+    english: g.english
+  }))
 
   const wordListText = knownWords?.length > 0 
     ? `Use ONLY these known words: ${knownWords.slice(0, 100).join(', ')}`
     : ''
 
+
+  const storyThemes: string[] = [
+    'medieval',
+    'sci-fi',
+    'fantasy',
+    'school life',
+    'romance',
+    'adventure',
+    'mystery',
+    'slice of life',
+    'historical',
+    'comedy',
+    'horror',
+    'drama',
+    'supernatural',
+    'detective',
+    'sports',
+    'music',
+    'travel',
+    'friendship',
+    'family',
+    'workplace',
+  ];
+
+  const randomTheme = storyThemes[Math.floor(Math.random() * storyThemes.length)];
+
   const prompt = `Generate a coherent SHORT STORY (5-7 sentences) in Japanese at JLPT ${level} level.
 
+VOCABULARY LIST PLEASE LIMIT YOURSELF TO THESE WORDS ( you may freely use particles and common grammar, but for nouns, verbs, adjectives, adverbs, etc. use only the words from this list):
 ${wordListText}
 
-IMPORTANT STORY REQUIREMENTS:
-- Create a connected narrative with a beginning, middle, and end
-- Characters, objects, and places should be referenced across multiple sentences
-- Use pronouns (彼, 彼女, それ, etc.) to refer back to previously mentioned things
-- Each sentence should build on the previous ones
-- Include cause and effect relationships between sentences
-- Use connecting words like だから, それで, しかし when appropriate
+GRAMMAR POINTS TO INCORPORATE (use at least 3 of these grammar points in the story):
+${relevantGrammar.map(g => `- ${g.point} (${g.japanese}): ${g.english}`).join('\n')}
+
+STORY THEME: The story should be about a ${randomTheme} setting.
 
 Return ONLY valid JSON (no markdown):
 {
   "sentences": [
     {"text": "sentence in Japanese"}
   ]
-}
+}`
 
-Example of good story flow:
-1. Introduce character/setting
-2. Describe action/event
-3. Show consequence
-4. Continue with related action
-5. Conclude the mini-story`
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a Japanese language teacher creating coherent stories for learners. Always respond with valid JSON only.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.8,
-      max_tokens: 1000,
-      stream: true
+  const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        input: [
+          { role: 'system', content: 'You are a Japanese language teacher creating coherent stories for learners. Always respond with valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        reasoning: { effort: 'minimal' },
+        text: { verbosity: 'high' },
+        max_output_tokens: 2500,
+        stream: true
+      })
     })
-  })
 
   if (!response.ok) {
     throw createError({
@@ -80,6 +115,9 @@ Example of good story flow:
   const decoder = new TextDecoder()
 
   const readable = new ReadableStream({
+    start(controller) {
+      controller.enqueue(`data: ${JSON.stringify({ type: 'grammar', data: relevantGrammar })}\n\n`)
+    },
     async pull(controller) {
       try {
         while (true) {
@@ -96,9 +134,10 @@ Example of good story flow:
 
               try {
                 const parsed = JSON.parse(data)
-                const content = parsed.choices?.[0]?.delta?.content || ''
+                const content = parsed.delta.trim()
                 if (content) {
-                  controller.enqueue(`data: ${JSON.stringify({ content })}\n\n`)
+                  console.log('Generated story content:', content)
+                  controller.enqueue(`data: ${JSON.stringify({ type: 'story', content })}\n\n`)
                 }
               } catch (e) {}
             }
