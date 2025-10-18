@@ -48,57 +48,52 @@
       </button>
       
       <button 
-        @click="clearText" 
-        class="btn btn-circle btn-error shadow-lg"
-        title="Clear text"
-      >
-        <IconTrash class="w-5 h-5" />
-      </button>
-      
-      <button 
-        @click="handleGenerate" 
+        @click="showFeedback = true" 
         class="btn btn-circle btn-primary shadow-lg"
-        :class="{ 'loading': isGenerating }"
-        :disabled="isGenerating"
-        title="Generate new text"
+        title="Next text"
       >
-        <IconSparkles v-if="!isGenerating" class="w-5 h-5" />
+        <IconArrowRight class="w-5 h-5" />
       </button>
     </div>
 
     <ReaderSettingsModal
-      v-model="showSettings"
+      :model-value="showSettings"
+      @update:model-value="showSettings = $event"
       :settings="localSettings"
       @update:settings="updateSettings"
       @reset="resetSettings"
     />
 
     <ReaderWordModal
-      v-model="showWordModal"
+      :model-value="showWordModal"
+      @update:model-value="showWordModal = $event"
       :word="selectedWord"
     />
 
     <SentenceAnalysisModal
-      v-model="showAnalysisModal"
+      :model-value="showAnalysisModal"
+      @update:model-value="showAnalysisModal = $event"
       :sentence="selectedSentence"
-      :analysis="sentenceAnalysis"
-      :is-loading="isAnalyzing"
+    />
+
+    <FeedbackModal
+      :model-value="showFeedback"
+      @update:model-value="showFeedback = $event"
+      @feedback="handleFeedback"
     />
   </div>
 </template>
 
 <script setup>
-import IconSparkles from '~icons/lucide/sparkles'
 import IconInfo from '~icons/lucide/info'
-import IconTrash from '~icons/lucide/trash-2'
 import IconX from '~icons/lucide/x'
 import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
+import IconArrowRight from '~icons/lucide/arrow-right'
 
-const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText } = useJapaneseText()
+const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback } = useJapaneseText()
 const { getApiKey } = useOpenAI()
 const { loadFromStorage } = useAnki()
-const { analyzeSentence } = useSentenceAnalysis()
 
 const hasSeenInfo = ref(false)
 const showSettings = ref(false)
@@ -106,8 +101,7 @@ const showWordModal = ref(false)
 const selectedWord = ref(null)
 const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
-const sentenceAnalysis = ref(null)
-const isAnalyzing = ref(false)
+const showFeedback = ref(false)
 
 const defaultSettings = {
   fontFamily: 'Noto Sans JP',
@@ -141,13 +135,35 @@ const defaultSettings = {
   showPartOfSpeech: true,
   focusModeOpacity: 30,
   autoScroll: false,
-  jlptLevel: 'N5',
   highlightKnownWords: true,
   dimKnownWords: false,
-  strikethroughKnown: false
+  strikethroughKnown: false,
+  grammarMode: false,
+  grammarShowArrows: true,
+  grammarShowLabels: true,
+  grammarShowTranslation: true,
+  grammarArrowThickness: 2.5,
+  grammarArrowOpacity: 70,
+  grammarSubjectColor: '#EF4444',
+  grammarObjectColor: '#3B82F6',
+  grammarParticleColor: '#F59E0B',
+  grammarVerbColor: '#10B981',
+  grammarModifierColor: '#8B5CF6',
+  grammarLabelSize: 11,
+  grammarLineSpacing: 40,
+  grammarHighlightOnHover: true,
+  grammarAnimateArrows: false,
+  grammarShowNotes: true
 }
 
 const localSettings = ref({ ...defaultSettings })
+
+const closeAllModals = () => {
+  showSettings.value = false
+  showWordModal.value = false
+  showAnalysisModal.value = false
+  showFeedback.value = false
+}
 
 const handleGenerate = async () => {
   const apiKey = getApiKey()
@@ -155,29 +171,27 @@ const handleGenerate = async () => {
     navigateTo('/settings')
     return
   }
-  await generateText(localSettings.value.jlptLevel)
+  const { difficulty, getLevelFromScore } = useDifficulty()
+  const level = getLevelFromScore(difficulty.value)
+  await generateText(level)
+}
+
+const handleFeedback = async (feedback) => {
+  giveFeedback(feedback)
+  clearText()
+  await handleGenerate()
 }
 
 const handleWordClick = (word) => {
+  closeAllModals()
   selectedWord.value = word
   showWordModal.value = true
 }
 
-const handleSentenceAnalyze = async ({ index, sentence }) => {
+const handleSentenceAnalyze = ({ index, sentence }) => {
+  closeAllModals()
   selectedSentence.value = sentence
   showAnalysisModal.value = true
-  isAnalyzing.value = true
-  sentenceAnalysis.value = null
-
-  try {
-    const analysis = await analyzeSentence(sentence)
-    sentenceAnalysis.value = analysis
-  } catch (error) {
-    console.error('Analysis error:', error)
-    sentenceAnalysis.value = { error: 'Failed to analyze sentence' }
-  } finally {
-    isAnalyzing.value = false
-  }
 }
 
 const dismissInfo = () => {

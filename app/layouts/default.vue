@@ -2,8 +2,14 @@
   <div class="min-h-screen bg-base-200">
     <header class="bg-base-100 border-b border-base-300 sticky top-0 z-50 shadow-sm">
       <div class="w-full">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between px-4">
+          <div class="flex items-center gap-2">
+            <IconBookOpen class="w-6 h-6 text-primary" />
+            <h1 class="text-xl font-bold hidden sm:block">Japanese Reader</h1>
+          </div>
+          
           <TabNavigation :active-tab="activeTab" @update:activeTab="navigateToTab" />
+          
           <ThemeSwitcher :current-theme="currentTheme" @update:theme="setTheme" />
         </div>
       </div>
@@ -16,12 +22,15 @@
 </template>
 
 <script setup>
+import IconBookOpen from '~icons/lucide/book-open'
+
 const route = useRoute()
 const currentTheme = ref('forest')
 
 const activeTab = computed(() => {
-  if (route.path.includes('/settings')) return 'settings'
-  if (route.path.includes('/stats')) return 'stats'
+  const path = route.path
+  if (path === '/settings') return 'settings'
+  if (path === '/stats') return 'stats'
   return 'reader'
 })
 
