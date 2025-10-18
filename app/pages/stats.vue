@@ -1,26 +1,6 @@
 <template>
-  <div class="min-h-screen bg-base-200">
-    <!-- Header -->
-    <header class="bg-base-100 border-b border-base-300 sticky top-0 z-50 shadow-sm">
-      <div class="w-full flex items-center justify-between px-4 py-3">
-        <div class="flex items-center gap-2">
-          <IconBarChart class="w-6 h-6 text-primary" />
-          <h1 class="text-2xl font-bold">Your Japanese Progress</h1>
-        </div>
-        <button 
-          @click="navigateTo('/')"
-          class="btn btn-sm btn-ghost gap-1"
-          title="Back to Reader"
-        >
-          <IconArrowLeft class="w-4 h-4" />
-          Back
-        </button>
-      </div>
-    </header>
-
-    <!-- Main -->
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-      <!-- Stats Overview -->
+  <div class="w-full h-full overflow-y-auto custom-scrollbar">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       <div class="stats shadow w-full">
         <div class="stat">
           <div class="stat-title flex items-center gap-1">
@@ -52,7 +32,6 @@
         </div>
       </div>
 
-      <!-- Chart -->
       <div class="bg-base-100 p-6 rounded-xl shadow-md">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold flex items-center gap-2">
@@ -67,76 +46,110 @@
         <canvas id="difficultyChart" class="w-full max-h-72"></canvas>
       </div>
 
-      <!-- History Table -->
       <div class="bg-base-100 rounded-xl shadow-md p-6">
-        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
-          <IconList class="w-5 h-5 text-primary" /> Session History
-        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <IconList class="w-5 h-5 text-primary" />
+            Session History
+          </h2>
+          <button 
+            @click="resetHistory" 
+            class="btn btn-outline btn-error btn-sm gap-2"
+          >
+            <IconTrash class="w-4 h-4" />
+            Clear
+          </button>
+        </div>
 
         <div v-if="history.length === 0" class="text-base-content/60 italic text-center py-6">
           No data yet. Read something and give feedback!
         </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="table table-sm w-full">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Feedback</th>
-                <th>Proficiency</th>
-                <th>JLPT Level</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(entry, i) in sortedHistory" :key="i">
-                <td class="whitespace-nowrap">{{ formatDate(entry.timestamp) }}</td>
-                <td>
-                  <span :class="feedbackColor(entry.feedback)" class="badge text-xs capitalize">{{ entry.feedback }}</span>
-                </td>
-                <td>{{ entry.score.toFixed(1) }}</td>
-                <td>{{ getLevelFromScore(entry.score) }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else>
+          <div class="overflow-x-auto">
+            <table class="table table-sm w-full">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Feedback</th>
+                  <th>Proficiency</th>
+                  <th>JLPT Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, i) in paginatedHistory" :key="i">
+                  <td class="whitespace-nowrap">{{ formatDate(entry.timestamp) }}</td>
+                  <td>
+                    <span :class="feedbackColor(entry.feedback)" class="badge text-xs capitalize">
+                      {{ entry.feedback }}
+                    </span>
+                  </td>
+                  <td>{{ entry.score.toFixed(1) }}</td>
+                  <td>{{ getLevelFromScore(entry.score) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="totalPages > 1" class="flex justify-center mt-4">
+            <div class="join">
+              <button 
+                class="join-item btn btn-sm"
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+              >
+                «
+              </button>
+              <button class="join-item btn btn-sm">
+                Page {{ currentPage }} / {{ totalPages }}
+              </button>
+              <button 
+                class="join-item btn btn-sm"
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+              >
+                »
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Reset Stats -->
-      <div class="text-right">
-        <button @click="resetHistory" class="btn btn-outline btn-error btn-sm gap-2">
-          <IconTrash class="w-4 h-4" /> Clear Stats
-        </button>
-      </div>
-    </main>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
 import Chart from 'chart.js/auto'
-import { useDifficulty } from '~/composables/useDifficulty'
-import { useStats } from '~/composables/useStats'
-
-import IconArrowLeft from '~icons/lucide/arrow-left'
 import IconActivity from '~icons/lucide/activity'
-import IconBarChart from '~icons/lucide/bar-chart-3'
 import IconTrash from '~icons/lucide/trash-2'
 import IconBrain from '~icons/lucide/brain'
 import IconTrendingUp from '~icons/lucide/trending-up'
 import IconList from '~icons/lucide/list'
 import IconRuler from '~icons/lucide/ruler'
 
-// Composables
+definePageMeta({
+  layout: 'default'
+})
+
 const { difficulty, loadDifficulty, getLevelFromScore, getProficiencyDescription } = useDifficulty()
 const { history, loadHistory, getConsistency } = useStats()
 
-// Computed values
+const currentPage = ref(1)
+const itemsPerPage = 5
+
 const consistency = computed(() => parseFloat(getConsistency()))
 const levelDescription = computed(() => getProficiencyDescription(difficulty.value))
 const level = computed(() => getLevelFromScore(difficulty.value))
 const sortedHistory = computed(() => [...history.value].sort((a, b) => b.timestamp - a.timestamp))
 
-// Chart rendering
+const totalPages = computed(() => Math.ceil(sortedHistory.value.length / itemsPerPage))
+
+const paginatedHistory = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return sortedHistory.value.slice(start, end)
+})
+
 onMounted(() => {
   loadDifficulty()
   loadHistory()
@@ -177,7 +190,6 @@ onMounted(() => {
   })
 })
 
-// Helpers
 const formatDate = (ts) => new Date(ts).toLocaleDateString()
 
 const feedbackColor = (feedback) => {
@@ -193,13 +205,7 @@ const resetHistory = () => {
   if (confirm('Clear all recorded study stats?')) {
     localStorage.removeItem('readerHistory')
     history.value = []
+    currentPage.value = 1
   }
 }
 </script>
-
-<style scoped>
-#difficultyChart {
-  width: 100%;
-  max-height: 17rem;
-}
-</style>
