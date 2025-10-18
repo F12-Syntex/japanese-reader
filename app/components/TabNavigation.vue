@@ -13,6 +13,17 @@
 
     <button 
       class="px-6 py-4 font-medium text-sm transition-all border-b-2 hover:bg-base-200"
+      :class="activeTab === 'grammar' ? 'border-primary text-primary bg-base-200' : 'border-transparent text-base-content/70'"
+      @click="$emit('update:activeTab', 'grammar')"
+    >
+      <div class="flex items-center gap-2">
+        <IconBookOpen class="w-5 h-5" />
+        <span class="hidden sm:inline">Grammar</span>
+      </div>
+    </button>
+
+    <button 
+      class="px-6 py-4 font-medium text-sm transition-all border-b-2 hover:bg-base-200"
       :class="activeTab === 'settings' ? 'border-primary text-primary bg-base-200' : 'border-transparent text-base-content/70'"
       @click="$emit('update:activeTab', 'settings')"
     >
@@ -37,6 +48,7 @@
 
 <script setup>
 import IconBook from '~icons/lucide/book-open'
+import IconBookOpen from '~icons/lucide/book'
 import IconSettings from '~icons/lucide/settings'
 import IconBarChart from '~icons/lucide/bar-chart-3'
 

@@ -6,23 +6,35 @@ export default defineEventHandler(async (event) => {
 
   const cleanedLevel = level.replace(/[+]$|[-]$/, '')
 
-  const csvPath = path.join(process.cwd(), 'app', 'data', 'grammar_points.csv')
-  const csvContent = fs.readFileSync(csvPath, 'utf-8')
-  const lines = csvContent.split('\n').filter(l => l.trim())
-  const grammarPoints = lines.slice(1).map(line => {
+
+  type GrammarPoint = {
+    level: string
+    grammarPoint: string
+    japanese: string
+    english: string
+  }
+
+  //fetch from baseurl/grammar_points.csv
+  const config = useRuntimeConfig()
+  const baseUrl = config.public?.baseUrl ?? process.env.BASE_URL ?? 'http://localhost:3000'
+  const csvContent = (await $fetch(`${baseUrl}/grammar_points.csv`)) as string
+  const lines = csvContent.split('\n').filter((l: string) => l.trim())
+  const grammarPoints: GrammarPoint[] = lines.slice(1).map((line: string) => {
     const parts = line.split(',')
     return {
-      level: parts[0],
-      grammarPoint: parts[1],
-      japanese: parts[2],
-      english: parts[3]
+      level: parts[0] ?? '',
+      grammarPoint: parts[1] ?? '',
+      japanese: parts[2] ?? '',
+      english: parts[3] ?? ''
     }
   })
-  const relevantGrammar = grammarPoints.filter(g => g.level === cleanedLevel).map(g => ({
-    point: g.grammarPoint,
-    japanese: g.japanese,
-    english: g.english
-  }))
+  const relevantGrammar = grammarPoints
+    .filter((g: GrammarPoint) => g.level === cleanedLevel)
+    .map((g: GrammarPoint) => ({
+      point: g.grammarPoint,
+      japanese: g.japanese,
+      english: g.english
+    }))
 
   const wordListText = knownWords?.length > 0 
     ? `Use ONLY these known words: ${knownWords.slice(0, 100).join(', ')}`

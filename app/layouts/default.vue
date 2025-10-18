@@ -31,6 +31,7 @@ const activeTab = computed(() => {
   const path = route.path
   if (path === '/settings') return 'settings'
   if (path === '/stats') return 'stats'
+  if (path === '/grammar-catalog') return 'grammar'
   return 'reader'
 })
 
@@ -45,6 +46,7 @@ const setTheme = (theme) => {
 const navigateToTab = (tab) => {
   if (tab === 'settings') navigateTo('/settings')
   else if (tab === 'stats') navigateTo('/stats')
+  else if (tab === 'grammar') navigateTo('/grammar-catalog')
   else navigateTo('/')
 }
 
