@@ -33,25 +33,37 @@ export const useJapaneseText = () => {
 
       await streamGenerateText(currentLevel, knownWordsList, (chunk: string) => {
         accumulatedText += chunk
-        streamingText.value = accumulatedText
 
         try {
-          // Clean streaming response
           const cleaned = accumulatedText
             .replace(/```json\n?/g, '')
             .replace(/```\n?/g, '')
-            .replace(/^[^{]*/, '')
-            .replace(/[^}]*$/, '')
-            .trim()
 
-          if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
-            const parsed = JSON.parse(cleaned)
+          // Extract complete "text" values progressively
+          const textRegex = /"text"\s*:\s*"([^"]*)"/g
+          let match
+          let extractedTexts: string[] = []
+          while ((match = textRegex.exec(cleaned)) !== null) {
+            if (match[1] !== undefined) {
+              extractedTexts.push(match[1])
+            }
+          }
+
+          if (extractedTexts.length > 0) {
+            streamingText.value = extractedTexts.join('。') + '…'
+          }
+
+          // Try full parse for rawSentences when possible
+          const fullCleaned = cleaned.replace(/^[^{]*/, '').replace(/[^}]*$/, '').trim()
+          if (fullCleaned.startsWith('{') && fullCleaned.endsWith('}')) {
+            const parsed = JSON.parse(fullCleaned)
             if (parsed.sentences && Array.isArray(parsed.sentences)) {
               rawSentences = parsed.sentences
+              streamingText.value = parsed.sentences.map((s: any) => s.text).join('。')
             }
           }
         } catch (e) {
-          // ignore parse streaming errors
+          // Ignore partial parse errors, keep showing extracted text
         }
       })
 
