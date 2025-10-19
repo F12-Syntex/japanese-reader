@@ -1,7 +1,7 @@
 // composables/useOpenAI.ts
 export const useOpenAI = () => {
   const getApiKey = () => {
-    return localStorage.getItem('openai_api_key') || ''
+    return import.meta.client ? (localStorage.getItem('openai_api_key') || '') : ''
   }
 
   const streamGenerateText = async (level: string = 'N5', knownWords: string[], onChunk: (chunk: string) => void) => {

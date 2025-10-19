@@ -22,6 +22,7 @@ export default defineNuxtConfig({
   srcDir: 'app/',
 
   nitro: {
-    preset: 'node-server'
+    // Easiest: let Vercel handle server routes as functions
+    preset: 'vercel'
   }
 })

@@ -133,8 +133,10 @@
       </div>
     </div>
 
-    <AnkiImportModal v-model="showAnkiImport" />
-    <AnkiVisualizer v-model="showAnkiVisualizer" />
+    <ClientOnly>
+      <AnkiImportModal v-model="showAnkiImport" />
+      <AnkiVisualizer v-model="showAnkiVisualizer" />
+    </ClientOnly>
   </div>
 </template>
 
