@@ -17,19 +17,36 @@ export default defineEventHandler(async (event) => {
   const grammarPoints = await loadGrammarPoints(baseUrl)
   const relevantGrammar = getGrammarByLevel(cleanLevel, grammarPoints)
 
-  const wordList = knownWords?.length > 0 ? `Use only: ${knownWords.slice(0, 100).join(', ')}` : ''
+  const wordList = knownWords?.length > 0 ? `Use only: ${knownWords.join(', ')}` : ''
   const themes = ['medieval', 'sci-fi', 'fantasy', 'school', 'romance', 'adventure', 'mystery']
   const theme = themes[Math.floor(Math.random() * themes.length)]
+
+  console.log(`Generating story at ${cleanLevel} level about ${theme} theme with ${relevantGrammar.length} grammar points.`)
+  console.log(`Known words count: ${knownWords?.length ?? 0}`)
+  console.log(`Word list: ${wordList}`)
+  console.log(`Relevant grammar points: ${relevantGrammar.map(g => g.point).slice(0, 5).join(', ')}`)
 
   const systemPrompt = `You are a Japanese language teacher. Generate a N${cleanLevel} story about ${theme}.
 CRITICAL: Respond ONLY with valid JSON. No markdown, no explanation.
 {"sentences": [{"text": "Japanese sentence here"}]}`
 
-  const userPrompt = `Generate 5-7 sentences in Japanese at N${cleanLevel} level about a ${theme} theme.
+const shuffleArray = <T,>(arr: T[]) => {
+    const a = arr.slice()
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+}
+
+const shuffledGrammar = shuffleArray(relevantGrammar)
+
+const userPrompt = `Generate 5-7 sentences in Japanese at N${cleanLevel} level about a ${theme} theme.
 ${wordList}
 
+
 Grammar points (use at least 3):
-${relevantGrammar.slice(0, 5).map(g => `- ${g.point}: ${g.english}`).join('\n')}
+${shuffledGrammar.slice(0, 5).map(g => `- ${g.point}: ${g.english}`).join('\n')}
 
 RESPOND ONLY WITH JSON:`
 
