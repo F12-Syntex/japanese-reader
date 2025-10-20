@@ -1,8 +1,11 @@
-// composables/useDifficulty.ts
-export const useDifficulty = () => {
-  const difficulty = useState<number>('difficulty', () => 10) // starts near N5
+// app/composables/useDifficulty.ts
+import { computed } from 'vue'
+import { useDifficultyStore } from '~/stores/useDifficultyStore'
 
-  /** Convert numeric difficulty to JLPT label */
+export const useDifficulty = () => {
+  const store = useDifficultyStore()
+  const difficulty = computed(() => store.score)
+
   const getLevelFromScore = (score: number): string => {
     if (score <= 15) return 'N5'
     if (score <= 30) return 'N4'
@@ -12,34 +15,13 @@ export const useDifficulty = () => {
     return 'Native'
   }
 
-  const adjustDifficulty = (feedback: 'easy' | 'okay' | 'hard') => {
-    const delta = feedback === 'easy' ? 5 : feedback === 'hard' ? -5 : 0
-    difficulty.value = Math.max(0, Math.min(100, difficulty.value + delta))
-    if (import.meta.client) localStorage.setItem('difficulty', String(difficulty.value))
-  }
-
-  const setDifficulty = (newScore: number) => {
-    difficulty.value = Math.max(0, Math.min(100, newScore))
-    if (import.meta.client) localStorage.setItem('difficulty', String(difficulty.value))
-  }
-
-  const loadDifficulty = () => {
-    if (import.meta.client) {
-      const saved = localStorage.getItem('difficulty')
-      if (saved) difficulty.value = parseFloat(saved)
-    }
-  }
-
-  const getProficiencyDescription = (score: number) => {
-    const level = getLevelFromScore(score)
-    return `${level} (${score.toFixed(1)}/100)`
-  }
+  const getProficiencyDescription = (score: number) => `${getLevelFromScore(score)} (${score.toFixed(1)}/100)`
 
   return {
     difficulty,
-    adjustDifficulty,
-    setDifficulty,
-    loadDifficulty,
+    adjustDifficulty: (f: 'easy' | 'okay' | 'hard') => store.adjust(f),
+    setDifficulty: (n: number) => store.set(n),
+    loadDifficulty: () => store.load(),
     getLevelFromScore,
     getProficiencyDescription
   }

@@ -1,111 +1,76 @@
-// composables/useJapaneseText.ts
-import { useDifficulty } from './useDifficulty'
-import { useStats } from './useStats'
+// app/composables/useJapaneseText.ts
+import { computed } from 'vue'
+import { useJapaneseTextStore } from '~/stores/useJapaneseTextStore'
+import { useOpenAI } from '~/composables/useOpenAI'
+import { useAnki } from '~/composables/useAnki'
+import { useKuromojiParser } from '~/composables/useKuromojiParser'
+import { useDifficulty } from '~/composables/useDifficulty'
+import { useStats } from '~/composables/useStats'
+import type { ParsedSentence } from '~/types/japanese'
 
 export const useJapaneseText = () => {
-  const japaneseText = useState<any[]>('japaneseText', () => [])
-  const isGenerating = useState('isGenerating', () => false)
-  const generationError = useState<string | null>('generationError', () => null)
-  const streamingText = useState('streamingText', () => '')
-
+  const store = useJapaneseTextStore()
   const { streamGenerateText } = useOpenAI()
   const { knownWords } = useAnki()
   const { parseSentences } = useKuromojiParser()
-  const { difficulty, getLevelFromScore } = useDifficulty()
+  const { difficulty, getLevelFromScore, adjustDifficulty } = useDifficulty()
   const { addAttempt } = useStats()
 
-  /**
-   * Generate AI text dynamically based on user proficiency level
-   */
   const generateText = async () => {
-    isGenerating.value = true
-    generationError.value = null
-    japaneseText.value = []
-    streamingText.value = ''
-    let accumulatedText = ''
-    let rawSentences: Array<{ text: string }> = []
-
+    store.setGenerating(true)
+    store.setError(null)
+    store.setSentences([])
+    store.setStreaming('')
+    let accumulated = ''
+    let raw: Array<{ text: string }> = []
     try {
-      const knownWordsList = Array.from(knownWords.value.keys())
-
-      // Convert difficulty to JLPT-like level for instruction prompt
+      const knownList = Array.from(knownWords.value.keys())
       const currentLevel = getLevelFromScore(difficulty.value)
-
-      await streamGenerateText(currentLevel, knownWordsList, (chunk: string) => {
-        accumulatedText += chunk
-
+      await streamGenerateText(currentLevel, knownList, (chunk: string) => {
+        accumulated += chunk
         try {
-          const cleaned = accumulatedText
-            .replace(/```json\n?/g, '')
-            .replace(/```\n?/g, '')
-
-          // Extract complete "text" values progressively
+          const cleaned = accumulated.replace(/```json\n?/g, '').replace(/```\n?/g, '')
           const textRegex = /"text"\s*:\s*"([^"]*)"/g
           let match
-          let extractedTexts: string[] = []
+          const pieces: string[] = []
           while ((match = textRegex.exec(cleaned)) !== null) {
-            if (match[1] !== undefined) {
-              extractedTexts.push(match[1])
+            if (match[1] !== undefined) pieces.push(match[1])
+          }
+          if (pieces.length) store.setStreaming(pieces.join('。') + '…')
+          const full = cleaned.replace(/^[^{]*/, '').replace(/[^}]*$/, '').trim()
+          if (full.startsWith('{') && full.endsWith('}')) {
+            const parsed = JSON.parse(full)
+            if (Array.isArray(parsed.sentences)) {
+              raw = parsed.sentences
+              store.setStreaming(parsed.sentences.map((s: any) => s.text).join('。'))
             }
           }
-
-          if (extractedTexts.length > 0) {
-            streamingText.value = extractedTexts.join('。') + '…'
-          }
-
-          // Try full parse for rawSentences when possible
-          const fullCleaned = cleaned.replace(/^[^{]*/, '').replace(/[^}]*$/, '').trim()
-          if (fullCleaned.startsWith('{') && fullCleaned.endsWith('}')) {
-            const parsed = JSON.parse(fullCleaned)
-            if (parsed.sentences && Array.isArray(parsed.sentences)) {
-              rawSentences = parsed.sentences
-              streamingText.value = parsed.sentences.map((s: any) => s.text).join('。')
-            }
-          }
-        } catch (e) {
-          // Ignore partial parse errors, keep showing extracted text
-        }
+        } catch {}
       })
-
-      if (rawSentences.length === 0) {
-        throw new Error('Failed to parse generated text from the model')
-      }
-
-      // Tokenize and attach grammar tags
-      const parsedSentences = await parseSentences(rawSentences)
-      japaneseText.value = parsedSentences
-    } catch (error: any) {
-      generationError.value = error.message || 'Text generation failed'
-      console.error('Generation error:', error)
+      if (!raw.length) throw new Error('Failed to parse generated text from the model')
+      const parsed: ParsedSentence[] = await parseSentences(raw)
+      store.setSentences(parsed)
+    } catch (e: any) {
+      store.setError(e.message || 'Text generation failed')
+      console.error('Generation error:', e)
     } finally {
-      isGenerating.value = false
-      streamingText.value = ''
+      store.setGenerating(false)
+      store.setStreaming('')
     }
   }
 
-  /**
-   * Record user feedback after reading.
-   * Adjust difficulty automatically.
-   */
   const giveFeedback = (feedback: 'easy' | 'okay' | 'hard') => {
-    const { adjustDifficulty } = useDifficulty()
     adjustDifficulty(feedback)
     addAttempt(feedback, difficulty.value)
   }
 
-  /**
-   * Clear current text
-   */
-  const clearText = () => {
-    japaneseText.value = []
-    streamingText.value = ''
-  }
+  const clearText = () => store.clear()
 
   return {
-    japaneseText: readonly(japaneseText),
-    isGenerating: readonly(isGenerating),
-    generationError,
-    streamingText: readonly(streamingText),
+    japaneseText: computed(() => store.japaneseText),
+    isGenerating: computed(() => store.isGenerating),
+    generationError: computed(() => store.error),
+    streamingText: computed(() => store.streamingText),
     generateText,
     clearText,
     giveFeedback

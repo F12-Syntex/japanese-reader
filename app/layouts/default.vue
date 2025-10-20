@@ -23,9 +23,12 @@
 
 <script setup>
 import IconBookOpen from '~icons/lucide/book-open'
+import { useTheme } from '~/composables/useTheme'
+import { useOpenAI } from '~/composables/useOpenAI'
 
 const route = useRoute()
-const currentTheme = ref('forest')
+const { currentTheme, loadTheme, setTheme } = useTheme()
+const { loadApiKey } = useOpenAI()
 
 const activeTab = computed(() => {
   const path = route.path
@@ -35,14 +38,6 @@ const activeTab = computed(() => {
   return 'reader'
 })
 
-const setTheme = (theme) => {
-  currentTheme.value = theme
-  if (import.meta.client) {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }
-}
-
 const navigateToTab = (tab) => {
   if (tab === 'settings') navigateTo('/settings')
   else if (tab === 'stats') navigateTo('/stats')
@@ -51,8 +46,7 @@ const navigateToTab = (tab) => {
 }
 
 onMounted(() => {
-  const savedTheme = localStorage.getItem('theme') || 'forest'
-  currentTheme.value = savedTheme
-  document.documentElement.setAttribute('data-theme', savedTheme)
+  loadTheme()
+  loadApiKey()
 })
 </script>

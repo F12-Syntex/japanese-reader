@@ -1,10 +1,23 @@
-// composables/useOpenAI.ts
+// app/composables/useOpenAI.ts
+import { useApiKeyStore } from '~/stores/useApiKeyStore'
+
 export const useOpenAI = () => {
-  const getApiKey = () => {
-    return import.meta.client ? (localStorage.getItem('openai_api_key') || '') : ''
+  const apiStore = useApiKeyStore()
+
+  // Ensure store is loaded from localStorage on client
+  if (import.meta.client && !apiStore.key) {
+    apiStore.load()
   }
 
-  const streamGenerateText = async (level: string = 'N5', knownWords: string[], onChunk: (chunk: string) => void) => {
+  const getApiKey = () => {
+    return apiStore.key
+  }
+
+  const streamGenerateText = async (
+    level: string = 'N5',
+    knownWords: string[],
+    onChunk: (chunk: string) => void
+  ) => {
     const apiKey = getApiKey()
     if (!apiKey) {
       throw new Error('API key not found')
@@ -56,6 +69,7 @@ export const useOpenAI = () => {
 
   return {
     getApiKey,
-    streamGenerateText
+    streamGenerateText,
+    loadApiKey: () => apiStore.load()
   }
 }
