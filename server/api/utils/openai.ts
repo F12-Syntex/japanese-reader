@@ -3,14 +3,14 @@ export interface OpenAIConfig {
   model: string
 }
 
-export const createOpenAIClient = (apiKey: string) => {
+export const createOpenAIClient = (apiKey: string, model: string = 'gpt-5-mini') => {
   if (!apiKey) throw new Error('API key required')
+  
   return {
     async request(params: {
       system: string
       user: string
       maxTokens?: number
-      temperature?: number
     }) {
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -19,15 +19,14 @@ export const createOpenAIClient = (apiKey: string) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5-mini',
+          model,
           input: [
             { role: 'system', content: params.system },
             { role: 'user', content: params.user }
           ],
           reasoning: { effort: 'minimal' },
           text: { verbosity: 'low' },
-          max_output_tokens: params.maxTokens ?? 2000,
-          temperature: params.temperature ?? 0.7
+          max_output_tokens: params.maxTokens ?? 2000
         })
       })
 
@@ -43,7 +42,6 @@ export const createOpenAIClient = (apiKey: string) => {
       system: string
       user: string
       maxTokens?: number
-      temperature?: number
     }) {
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -52,7 +50,7 @@ export const createOpenAIClient = (apiKey: string) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5-mini',
+          model,
           input: [
             { role: 'system', content: params.system },
             { role: 'user', content: params.user }

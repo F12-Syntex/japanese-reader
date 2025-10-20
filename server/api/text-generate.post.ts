@@ -3,16 +3,17 @@ import { createOpenAIClient } from './utils/openai'
 import { getGrammarByLevel, loadGrammarPoints } from './utils/grammar'
 
 export default defineEventHandler(async (event) => {
-  const { apiKey, level, knownWords } = await readBody(event)
+  const { apiKey, level, knownWords, model } = await readBody(event)
 
   if (!apiKey?.trim() || !level?.trim()) {
-    throw createError({ statusCode: 400, message: 'apiKey and level required' })
+    throw createError({
+      statusCode: 400,
+      message: 'apiKey and level required'
+    })
   }
 
-  const client = createOpenAIClient(apiKey)
   const config = useRuntimeConfig()
   const baseUrl = String(config.public?.baseUrl ?? 'http://localhost:3000')
-
   const cleanLevel = level.replace(/[+\-]$/, '')
   const grammarPoints = await loadGrammarPoints(baseUrl)
   const relevantGrammar = getGrammarByLevel(cleanLevel, grammarPoints)
@@ -21,34 +22,27 @@ export default defineEventHandler(async (event) => {
   const themes = ['medieval', 'sci-fi', 'fantasy', 'school', 'romance', 'adventure', 'mystery']
   const theme = themes[Math.floor(Math.random() * themes.length)]
 
-  console.log(`Generating story at ${cleanLevel} level about ${theme} theme with ${relevantGrammar.length} grammar points.`)
-  console.log(`Known words count: ${knownWords?.length ?? 0}`)
-  console.log(`Word list: ${wordList}`)
-  console.log(`Relevant grammar points: ${relevantGrammar.map(g => g.point).slice(0, 5).join(', ')}`)
-
   const systemPrompt = `You are a Japanese language teacher. Generate a N${cleanLevel} story about ${theme}.
-CRITICAL: Respond ONLY with valid JSON. No markdown, no explanation.
-{"sentences": [{"text": "Japanese sentence here"}]}`
+Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence"}]}`
 
-const shuffleArray = <T,>(arr: T[]) => {
+  const shuffleArray = <T,>(arr: T[]) => {
     const a = arr.slice()
     for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[a[i], a[j]] = [a[j], a[i]]
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]]
     }
     return a
-}
+  }
 
-const shuffledGrammar = shuffleArray(relevantGrammar)
+  const shuffledGrammar = shuffleArray(relevantGrammar)
 
-const userPrompt = `Generate 5-7 sentences in Japanese at N${cleanLevel} level about a ${theme} theme.
+  const userPrompt = `Generate 5-7 sentences in Japanese at N${cleanLevel} level about a ${theme} theme.
 ${wordList}
-
 
 Grammar points (use at least 3):
 ${shuffledGrammar.slice(0, 5).map(g => `- ${g.point}: ${g.english}`).join('\n')}
 
-RESPOND ONLY WITH JSON:`
+Respond ONLY with JSON:`
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',
@@ -57,11 +51,11 @@ RESPOND ONLY WITH JSON:`
   })
 
   try {
+    const client = createOpenAIClient(apiKey, model ?? 'gpt-5-mini')
     const body = await client.stream({
       system: systemPrompt,
       user: userPrompt,
       maxTokens: 1500,
-      temperature: 0.7
     })
 
     const reader = body.getReader()
@@ -81,7 +75,7 @@ RESPOND ONLY WITH JSON:`
 
             buffer += decoder.decode(value, { stream: true })
             const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
+            buffer = lines.pop() ?? ''
 
             for (const line of lines) {
               if (!line.trim()) continue
@@ -91,10 +85,8 @@ RESPOND ONLY WITH JSON:`
 
                 try {
                   const parsed = JSON.parse(data)
-                  const content = parsed?.choices?.[0]?.delta?.content || 
-                                 parsed?.delta || 
-                                 parsed?.content || ''
-                  
+                  const content = (parsed?.choices?.[0]?.delta?.content ?? parsed?.text ?? '')
+
                   if (content) {
                     controller.enqueue(`data: ${JSON.stringify({ type: 'content', value: content })}\n\n`)
                   }
@@ -106,7 +98,7 @@ RESPOND ONLY WITH JSON:`
           if (buffer.trim()) {
             try {
               const parsed = JSON.parse(buffer)
-              const content = parsed?.choices?.[0]?.delta?.content || parsed?.delta || parsed?.content || ''
+              const content = (parsed?.choices?.[0]?.delta?.content ?? parsed?.text ?? '')
               if (content) {
                 controller.enqueue(`data: ${JSON.stringify({ type: 'content', value: content })}\n\n`)
               }
