@@ -1,141 +1,149 @@
 <template>
-  <BaseModal :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" title="Session Feedback" subtitle="Rate difficulty and note grammar challenges" size="lg">
-    <template #default>
-      <div class="p-6 space-y-6">
-        <div class="text-center">
-          <p class="text-base-content/70 mb-6">How was the reading session?</p>
+  <div class="modal" :class="{ 'modal-open': modelValue }">
+    <div class="modal-box w-full max-w-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h3 class="font-bold text-lg">Session Feedback</h3>
+          <p class="text-sm text-base-content/60">Rate difficulty and note grammar challenges</p>
+        </div>
+        <button @click="$emit('update:modelValue', false)" class="btn btn-sm btn-circle btn-ghost">✕</button>
+      </div>
 
-          <div class="grid grid-cols-1 gap-4 max-w-md mx-auto">
+      <div class="space-y-6">
+        <div>
+          <p class="text-sm font-semibold mb-4">How was the reading session?</p>
+          <div class="grid grid-cols-3 gap-3">
             <button 
               @click="selectFeedback('easy')"
-              class="btn btn-lg btn-success gap-3 justify-start"
-              :class="{ 'btn-active scale-105': selectedFeedback === 'easy' }"
+              class="btn btn-outline transition-all"
+              :class="selectedFeedback === 'easy' ? 'btn-success' : ''"
             >
-              <IconThumbsUp class="w-6 h-6" />
-              <div class="text-left flex-1">
-                <div class="font-bold">Too Easy</div>
-                <div class="text-xs opacity-70">Understood everything</div>
-              </div>
+              <IconThumbsUp class="w-5 h-5" />
+              <span class="hidden sm:inline">Easy</span>
             </button>
-
             <button 
               @click="selectFeedback('okay')"
-              class="btn btn-lg btn-primary gap-3 justify-start"
-              :class="{ 'btn-active scale-105': selectedFeedback === 'okay' }"
+              class="btn btn-outline transition-all"
+              :class="selectedFeedback === 'okay' ? 'btn-info' : ''"
             >
-              <IconMinus class="w-6 h-6" />
-              <div class="text-left flex-1">
-                <div class="font-bold">Just Right</div>
-                <div class="text-xs opacity-70">Challenging but good</div>
-              </div>
+              <IconMinus class="w-5 h-5" />
+              <span class="hidden sm:inline">Just Right</span>
             </button>
-
             <button 
               @click="selectFeedback('hard')"
-              class="btn btn-lg btn-error gap-3 justify-start"
-              :class="{ 'btn-active scale-105': selectedFeedback === 'hard' }"
+              class="btn btn-outline transition-all"
+              :class="selectedFeedback === 'hard' ? 'btn-error' : ''"
             >
-              <IconThumbsDown class="w-6 h-6" />
-              <div class="text-left flex-1">
-                <div class="font-bold">Too Hard</div>
-                <div class="text-xs opacity-70">Struggled to understand</div>
-              </div>
+              <IconThumbsDown class="w-5 h-5" />
+              <span class="hidden sm:inline">Hard</span>
             </button>
           </div>
         </div>
 
-        <div class="divider">Grammar Challenges</div>
+        <div class="divider my-0"></div>
 
-        <div class="space-y-4">
-          <p class="text-sm text-base-content/70">Which grammar points gave you trouble? (Optional)</p>
-          
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-            <label
+        <div>
+          <p class="text-sm font-semibold mb-3">Grammar challenges (Optional)</p>
+          <div class="flex flex-wrap gap-2 p-3 bg-base-200/50 rounded-lg max-h-40 overflow-y-auto">
+            <button
               v-for="point in sessionGrammarPoints"
               :key="point.grammarPoint"
-              class="label cursor-pointer justify-start gap-2 p-2 hover:bg-base-200 rounded"
+              @click="toggleGrammar(point.grammarPoint)"
+              class="badge badge-lg cursor-pointer transition-all"
+              :class="selectedGrammar.includes(point.grammarPoint) ? 'badge-primary' : 'badge-ghost'"
             >
-              <input
-                type="checkbox"
-                v-model="selectedGrammar"
-                :value="point.grammarPoint"
-                class="checkbox checkbox-primary checkbox-sm"
-              />
-              <span class="label-text text-xs truncate max-w-[120px]">{{ point.grammarPoint }}</span>
-            </label>
-          </div>
-
-          <div class="flex gap-2 pt-4">
-            <button 
-              @click="submitFeedback" 
-              class="btn btn-primary flex-1"
-              :disabled="!selectedFeedback && selectedGrammar.length === 0"
-            >
-              <IconCheck class="w-4 h-4" />
-              Submit
-            </button>
-            <button 
-              @click="clearSelection" 
-              class="btn btn-ghost flex-1"
-            >
-              Clear
+              {{ point.grammarPoint }}
             </button>
           </div>
         </div>
 
-        <div class="divider">Current Progress</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="stat bg-base-200 rounded-lg p-4">
+            <div class="stat-title text-xs">Proficiency</div>
+            <div class="stat-value text-xl">{{ currentDifficulty.toFixed(1) }}</div>
+            <div class="stat-desc text-xs">{{ currentLevel }}</div>
+          </div>
+          <div class="stat bg-base-200 rounded-lg p-4">
+            <div class="stat-title text-xs">Mastered</div>
+            <div class="stat-value text-xl">{{ grammarMastered }}/{{ totalGrammar }}</div>
+            <div class="stat-desc text-xs">80%+ points</div>
+          </div>
+        </div>
 
-        <div class="stats shadow w-full">
-          <div class="stat">
-            <div class="stat-title">Proficiency</div>
-            <div class="stat-value text-primary text-2xl">{{ currentDifficulty.toFixed(1) }}</div>
-            <div class="stat-desc">{{ currentLevel }}</div>
-          </div>
-          <div class="stat">
-            <div class="stat-title">Grammar Mastered</div>
-            <div class="stat-value text-secondary">{{ grammarMastered }}/{{ totalGrammar }}</div>
-            <div class="stat-desc">Points at 80%+</div>
-          </div>
+        <div class="flex gap-2 pt-4">
+          <button 
+            @click="submitFeedback" 
+            class="btn btn-primary flex-1"
+            :disabled="!selectedFeedback && selectedGrammar.length === 0"
+          >
+            <IconCheck class="w-4 h-4" />
+            Submit
+          </button>
+          <button 
+            @click="clearSelection" 
+            class="btn btn-ghost flex-1"
+          >
+            Clear
+          </button>
         </div>
       </div>
-    </template>
-  </BaseModal>
+    </div>
+    <div class="modal-backdrop" @click="$emit('update:modelValue', false)"></div>
+  </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import IconThumbsUp from '~icons/lucide/thumbs-up'
 import IconThumbsDown from '~icons/lucide/thumbs-down'
 import IconMinus from '~icons/lucide/minus'
 import IconCheck from '~icons/lucide/check'
 
-const props = defineProps({
-  modelValue: Boolean,
-  sessionGrammar: {
-    type: Array,
-    default: () => []
-  }
-})
+interface GrammarPoint {
+  grammarPoint: string
+  userScore?: number
+}
 
-const emit = defineEmits(['update:modelValue', 'feedback', 'grammar-update'])
+interface Props {
+  modelValue: boolean
+  sessionGrammar: string[]
+}
 
-const { difficulty, getLevelFromScore, getProficiencyDescription } = useDifficulty()
-const { grammarPoints, getOverallProficiency, getProficiencyForLevel } = useGrammarCatalog()
+const props = defineProps<Props>()
 
-const selectedFeedback = ref('')
-const selectedGrammar = ref([])
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'feedback': [value: string]
+  'grammar-update': [value: string[]]
+}>()
+
+const { difficulty, getLevelFromScore } = useDifficulty()
+const { grammarPoints } = useGrammarCatalog()
+
+const selectedFeedback = ref<string>('')
+const selectedGrammar = ref<string[]>([])
+
 const currentDifficulty = computed(() => difficulty.value)
 const currentLevel = computed(() => getLevelFromScore(difficulty.value))
-const grammarMastered = computed(() => grammarPoints.value.filter(p => (p.userScore ?? 0) >= 80).length)
+const grammarMastered = computed(() => grammarPoints.value.filter((p: GrammarPoint) => (p.userScore ?? 0) >= 80).length)
 const totalGrammar = computed(() => grammarPoints.value.length)
 
 const sessionGrammarPoints = computed(() => {
-  return grammarPoints.value.filter(p => props.sessionGrammar.includes(p.grammarPoint))
+  return grammarPoints.value.filter((p: GrammarPoint) => props.sessionGrammar.includes(p.grammarPoint))
 })
 
-const selectFeedback = (feedback) => {
+const selectFeedback = (feedback: string) => {
   selectedFeedback.value = feedback
   if (feedback === 'easy' && selectedGrammar.value.length > 0) {
     selectedGrammar.value = []
+  }
+}
+
+const toggleGrammar = (point: string) => {
+  const idx = selectedGrammar.value.indexOf(point)
+  if (idx > -1) {
+    selectedGrammar.value.splice(idx, 1)
+  } else {
+    selectedGrammar.value.push(point)
   }
 }
 
@@ -144,7 +152,7 @@ const clearSelection = () => {
   selectedGrammar.value = []
 }
 
-const submitFeedback = async () => {
+const submitFeedback = () => {
   let feedback = selectedFeedback.value
   if (!feedback && selectedGrammar.value.length > 0) {
     feedback = 'hard'
@@ -152,19 +160,16 @@ const submitFeedback = async () => {
     feedback = 'okay'
   }
   
-  if (feedback) {
-    emit('feedback', feedback)
-    
-    selectedGrammar.value.forEach(point => {
-      const grammarPoint = grammarPoints.value.find(p => p.grammarPoint === point)
-      if (grammarPoint) {
-        const newScore = Math.max(0, (grammarPoint.userScore ?? 0) - 20)
-        grammarPoint.userScore = newScore
-      }
-    })
-    
-    emit('grammar-update', selectedGrammar.value)
-  }
+  emit('feedback', feedback)
+  
+  selectedGrammar.value.forEach(point => {
+    const grammarPoint = grammarPoints.value.find((p: GrammarPoint) => p.grammarPoint === point)
+    if (grammarPoint) {
+      grammarPoint.userScore = Math.max(0, (grammarPoint.userScore ?? 0) - 20)
+    }
+  })
+  
+  emit('grammar-update', selectedGrammar.value)
   emit('update:modelValue', false)
 }
 </script>
