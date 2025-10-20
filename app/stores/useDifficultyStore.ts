@@ -18,7 +18,7 @@ export const useDifficultyStore = defineStore('difficulty', {
       if (import.meta.client) localStorage.setItem('difficulty', String(this.score))
     },
     adjust(feedback: DifficultyFeedback) {
-      const delta = feedback === 'easy' ? 5 : feedback === 'hard' ? -5 : 0
+      const delta = feedback === 'easy' ? 1 : feedback === 'hard' ? -1 : 0.5
       this.set(this.score + delta)
     }
   },
