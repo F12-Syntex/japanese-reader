@@ -1,14 +1,16 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  
+
   modules: [
     '@nuxtjs/tailwindcss',
-    'unplugin-icons/nuxt'
+    'unplugin-icons/nuxt',
+    '@pinia/nuxt',
+    '@pinia-plugin-persistedstate/nuxt',
   ],
-  
+
   css: ['~/assets/css/main.css'],
-  
+
   app: {
     head: {
       title: 'Japanese Reader',
@@ -20,9 +22,5 @@ export default defineNuxtConfig({
   },
 
   srcDir: 'app/',
-
-  nitro: {
-    // Easiest: let Vercel handle server routes as functions
-    preset: 'vercel'
-  }
+  nitro: { preset: 'vercel' }
 })
