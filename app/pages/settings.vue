@@ -1,83 +1,116 @@
 <template>
-  <div class="w-full h-full overflow-y-auto">
-    <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 space-y-4">
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold">Settings</h1>
-        <p class="text-base-content/60 mt-1">Configure your Japanese reader experience</p>
-      </div>
+  <div class="min-h-screen bg-base-200 flex flex-col items-center py-10">
+    <div class="w-full max-w-4xl space-y-8">
 
-      <div class="collapse collapse-arrow bg-base-100 shadow-sm">
-        <input type="checkbox" v-model="showApiKeyInput" />
-        <div class="collapse-title flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <IconKey class="w-5 h-5 text-primary" />
-            <div>
-              <h3 class="font-semibold">OpenAI API Key</h3>
-              <p class="text-sm text-base-content/60">Required for text generation</p>
-            </div>
-          </div>
-          <a href="https://platform.openai.com/api-keys" target="_blank" class="btn btn-ghost btn-sm flex items-center gap-1">
-            <IconExternalLink class="w-4 h-4" />
-            Get Key
-          </a>
-        </div>
-        <div class="collapse-content space-y-3">
-          <div class="relative">
-            <input v-model="apiKey" :type="showKey ? 'text' : 'password'" class="input input-bordered w-full pr-20 font-mono text-sm" placeholder="sk-proj-..." />
-            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-              <button @click="showKey = !showKey" class="btn btn-ghost btn-sm btn-square">
-                <IconEye v-if="!showKey" class="w-4 h-4" />
-                <IconEyeOff v-else class="w-4 h-4" />
-              </button>
-              <button v-if="apiKey" @click="clearApiKey" class="btn btn-ghost btn-sm btn-square">
-                <IconX class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div class="flex gap-2">
-            <button @click="saveApiKey" class="btn btn-primary btn-sm flex-1" :disabled="!apiKey || isSaving">
-              <IconSave class="w-4 h-4" /> Save
-            </button>
-            <button @click="testApiKey" class="btn btn-outline btn-sm flex-1" :disabled="!apiKey || isTesting">
-              <IconZap class="w-4 h-4" /> Test
-            </button>
-          </div>
-
-          <div v-if="testResult" class="alert alert-sm" :class="testResult.success ? 'alert-success' : 'alert-error'">
-            <IconCheck v-if="testResult.success" class="w-4 h-4" />
-            <IconAlertCircle v-else class="w-4 h-4" />
-            <span class="text-xs">{{ testResult.message }}</span>
-          </div>
-
-          <div class="flex items-center gap-2 text-xs text-base-content/60">
-            <IconShield class="w-3 h-3" />
-            <span>Stored locally in your browser only</span>
-          </div>
+      <div class="hero bg-base-100 shadow-xl rounded-box">
+        <div class="hero-content flex-col text-center">
+          <h1 class="text-4xl font-bold text-primary">Settings</h1>
+          <p class="text-base-content/70">Configure your Japanese reader experience</p>
         </div>
       </div>
 
-      <div class="card bg-base-100 shadow-sm p-4 sm:p-6">
-        <div class="flex justify-between items-center gap-2">
-          <div class="flex items-center gap-3 flex-1 min-w-0">
-            <IconDatabase class="w-5 h-5 text-secondary" />
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold">Anki Integration</h3>
-              <p class="text-sm text-base-content/60">
-                <span v-if="knownWords.size > 0">{{ knownWords.size.toLocaleString() }} words loaded</span>
-                <span v-else>Import your Anki deck data</span>
-              </p>
+      <div class="hidden md:flex flex-col gap-8">
+        <div class="card bg-base-100 shadow-lg border border-base-300">
+          <div class="card-body gap-5">
+            <div class="collapse collapse-plus border border-base-300">
+              <input type="checkbox" v-model="showApiKeyInput" />
+              <div class="collapse-title flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="avatar placeholder">
+                    <div class="bg-primary text-primary-content w-8 rounded-full">
+                      <IconKey class="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 class="font-semibold">OpenAI API Key</h2>
+                    <p class="text-sm text-base-content/60">Manage your API authentication</p>
+                  </div>
+                </div>
+                <a href="https://platform.openai.com/api-keys" target="_blank" class="btn btn-sm btn-ghost">
+                  <IconExternalLink class="w-4 h-4" /> Get Key
+                </a>
+              </div>
+              <div class="collapse-content space-y-4">
+                <label class="input input-bordered flex items-center gap-2">
+                  <input v-model="apiKey" :type="showKey ? 'text' : 'password'" class="grow font-mono text-sm" placeholder="sk-proj-..." />
+                  <button @click="showKey = !showKey" class="btn btn-ghost btn-xs btn-square">
+                    <IconEye v-if="!showKey" class="w-4 h-4" />
+                    <IconEyeOff v-else class="w-4 h-4" />
+                  </button>
+                  <button v-if="apiKey" @click="clearApiKey" class="btn btn-ghost btn-xs btn-square">
+                    <IconX class="w-4 h-4" />
+                  </button>
+                </label>
+
+                <div class="join w-full">
+                  <button @click="saveApiKey" class="join-item btn btn-primary w-1/2" :disabled="!apiKey || isSaving">
+                    <IconSave class="w-4 h-4" /> Save
+                  </button>
+                  <button @click="testApiKey" class="join-item btn btn-outline w-1/2" :disabled="!apiKey || isTesting">
+                    <IconZap class="w-4 h-4" /> Test
+                  </button>
+                </div>
+
+                <div v-if="testResult" class="alert" :class="testResult.success ? 'alert-success' : 'alert-error'">
+                  <IconCheck v-if="testResult.success" class="w-4 h-4" />
+                  <IconAlertCircle v-else class="w-4 h-4" />
+                  <span class="text-sm">{{ testResult.message }}</span>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs text-base-content/60">
+                  <IconShield class="w-3 h-3" />
+                  <span>Stored locally in your browser only</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="join">
-            <button @click="openAnkiImport" class="join-item btn btn-primary btn-sm gap-2">
-              <IconUpload class="w-4 h-4" /> Import
+        </div>
+
+        <div class="card bg-base-100 shadow-lg border border-base-300">
+          <div class="card-body flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <div class="avatar placeholder">
+                <div class="bg-secondary text-secondary-content w-8 rounded-full">
+                  <IconDatabase class="w-4 h-4" />
+                </div>
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-semibold">Anki Integration</h3>
+                <p class="text-sm text-base-content/60 truncate">
+                  <span v-if="knownWords.size > 0">{{ knownWords.size.toLocaleString() }} words loaded</span>
+                  <span v-else>Import your Anki deck data</span>
+                </p>
+              </div>
+            </div>
+            <div class="join">
+              <button @click="openAnkiImport" class="join-item btn btn-primary btn-sm">
+                <IconUpload class="w-4 h-4" /> Import
+              </button>
+              <button v-if="knownWords.size > 0" @click="openAnkiVisualizer" class="join-item btn btn-ghost btn-sm">
+                <IconEye class="w-4 h-4" /> View
+              </button>
+              <button v-if="knownWords.size > 0" @click="handleClearAnki" class="join-item btn btn-error btn-sm">
+                <IconTrash class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="md:hidden flex flex-col gap-4">
+        <div class="card bg-base-100 shadow-md">
+          <div class="card-body">
+            <button @click="showApiKeyInput = !showApiKeyInput" class="btn btn-outline w-full">
+              <IconKey class="w-4 h-4" /> Manage API Key
             </button>
-            <button v-if="knownWords.size > 0" @click="openAnkiVisualizer" class="join-item btn btn-ghost btn-sm">
-              <IconEye class="w-4 h-4" /> View
+            <button @click="openAnkiImport" class="btn btn-primary w-full">
+              <IconUpload class="w-4 h-4" /> Import Anki
             </button>
-            <button v-if="knownWords.size > 0" @click="handleClearAnki" class="join-item btn btn-ghost btn-error btn-sm">
-              <IconTrash class="w-4 h-4" />
+            <button v-if="knownWords.size > 0" @click="openAnkiVisualizer" class="btn btn-ghost w-full">
+              <IconEye class="w-4 h-4" /> View Words
+            </button>
+            <button v-if="knownWords.size > 0" @click="handleClearAnki" class="btn btn-error w-full">
+              <IconTrash class="w-4 h-4" /> Clear Data
             </button>
           </div>
         </div>
@@ -105,52 +138,32 @@ import IconAlertCircle from '~icons/lucide/alert-circle'
 import IconDatabase from '~icons/lucide/database'
 import IconTrash from '~icons/lucide/trash-2'
 import IconUpload from '~icons/lucide/upload'
+import { ref, onMounted, watch } from 'vue'
+import { useAnki } from '~/composables/useAnki'
 
 definePageMeta({ layout: 'default' })
 
 const { knownWords, clearAnkiData, loadFromStorage } = useAnki()
 const apiKey = ref<string>('')
-const showKey = ref<boolean>(false)
-const isSaving = ref<boolean>(false)
-const isTesting = ref<boolean>(false)
+const showKey = ref(false)
+const isSaving = ref(false)
+const isTesting = ref(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
-const showAnkiVisualizer = ref<boolean>(false)
-const showAnkiImport = ref<boolean>(false)
-const showApiKeyInput = ref<boolean>(false)
-
-const closeAllModals = () => {
-  showAnkiImport.value = false
-  showAnkiVisualizer.value = false
-}
-
-const openAnkiImport = () => {
-  closeAllModals()
-  showAnkiImport.value = true
-}
-
-const openAnkiVisualizer = () => {
-  closeAllModals()
-  showAnkiVisualizer.value = true
-}
+const showAnkiImport = ref(false)
+const showAnkiVisualizer = ref(false)
+const showApiKeyInput = ref(false)
 
 const saveApiKey = async () => {
   if (!apiKey.value) return
   isSaving.value = true
-  setTimeout(() => {
-    if (import.meta.client) {
-      localStorage.setItem('openai_api_key', apiKey.value)
-      isSaving.value = false
-    }
-  }, 400)
+  await new Promise((r) => setTimeout(r, 400))
+  if (import.meta.client) localStorage.setItem('openai_api_key', apiKey.value)
+  isSaving.value = false
 }
 
 const clearApiKey = () => {
   apiKey.value = ''
   if (import.meta.client) localStorage.removeItem('openai_api_key')
-}
-
-const handleClearAnki = () => {
-  if (confirm('Clear all imported Anki data?')) clearAnkiData()
 }
 
 const testApiKey = async () => {
@@ -169,6 +182,20 @@ const testApiKey = async () => {
   } finally {
     isTesting.value = false
   }
+}
+
+const handleClearAnki = () => {
+  if (confirm('Clear all imported Anki data?')) clearAnkiData()
+}
+
+const openAnkiImport = () => {
+  showAnkiVisualizer.value = false
+  showAnkiImport.value = true
+}
+
+const openAnkiVisualizer = () => {
+  showAnkiImport.value = false
+  showAnkiVisualizer.value = true
 }
 
 onMounted(() => {
