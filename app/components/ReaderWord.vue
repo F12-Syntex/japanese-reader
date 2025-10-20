@@ -4,7 +4,8 @@
     class="inline-block relative transition-all"
     :class="{
       'mr-0': !settings?.showWordSpacing,
-      'mx-1': settings?.alwaysShowTranslation
+      'mx-1': settings?.alwaysShowTranslation,
+      'text-center justify-center': settings?.alwaysShowTranslation  // Reinforce centering for longer translations
     }"
     :style="wordContainerStyle"
     @click="handleClick"
@@ -12,7 +13,7 @@
     @mouseleave="onWrapperMouseLeave"
   >
     <span
-      v-if="settings?.alwaysShowTranslation && word?.meaning"
+      v-if="settings?.alwaysShowTranslation && word?.meaning && !isParticle"
       class="block text-center opacity-70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
       :style="translationStyle"
     >
@@ -264,14 +265,30 @@ const tooltipTextSize = computed(() => {
 
 const truncateMeaning = (meaning: string): string => {
   if (!meaning) return ''
+  
+  // Calculate dynamic max length based on parent text (double the size)
+  const parentText = localWord.value.kanji || localWord.value.kana || ''
+  const maxLength = parentText.length * 10
+  
+  // Clean and split by sentence punctuation
   const cleaned = meaning.split(/[.,;]/).map(s => s.trim()).filter(Boolean)
-  if (cleaned.length === 0) {
+  let firstMeaning = ''
+  
+  if (cleaned.length > 0) {
+    // ensure a string is assigned even if TypeScript can't infer the index is defined
+    firstMeaning = cleaned[0] ?? ''
+  } else {
+    // Fallback to first word if no sentence-like parts
     const words = meaning.trim().split(/\s+/)
-    const firstWord = words[0] ?? ''
-    return firstWord.length > 14 ? firstWord.substring(0, 14) + '…' : firstWord
+    firstMeaning = words[0] || ''
   }
-  const firstMeaning = cleaned[0] ?? ''
-  return firstMeaning.length > 22 ? firstMeaning.substring(0, 22) + '…' : firstMeaning
+  
+  // Truncate to maxLength if needed, add ellipsis
+  if (firstMeaning.length > maxLength) {
+    firstMeaning = firstMeaning.substring(0, maxLength) + '…'
+  }
+  
+  return firstMeaning
 }
 
 const handleClick = (e: MouseEvent) => {

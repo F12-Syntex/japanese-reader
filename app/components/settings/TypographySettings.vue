@@ -28,7 +28,7 @@
           <span class="label-text font-medium text-sm">Size</span>
           <span class="label-text-alt font-mono text-xs">{{ settings.fontSize }}px</span>
         </label>
-        <input v-model.number="settings.fontSize" type="range" min="14" max="48" class="range range-primary range-xs" />
+        <input v-model.number="settings.fontSize" type="range" min="14" max="64" class="range range-primary range-xs" />
       </div>
 
       <div class="form-control">

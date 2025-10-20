@@ -46,12 +46,12 @@ export interface ReaderSettings {
 
 export const defaultReaderSettings: ReaderSettings = {
   fontFamily: 'Noto Sans JP',
-  fontSize: 18,
+  fontSize: 48,
   fontWeight: 400,
   lineHeight: 1.8,
   letterSpacing: 0,
   textAlign: 'left',
-  maxWidth: '2xl',
+  maxWidth: 'full',
   verticalText: false,
   
   showFurigana: true,
@@ -64,9 +64,9 @@ export const defaultReaderSettings: ReaderSettings = {
   translationSize: 10,
   translationGap: 4,
   
-  highlightParticles: false,
-  highlightVerbs: false,
-  highlightAdjectives: false,
+  highlightParticles: true,
+  highlightVerbs: true,
+  highlightAdjectives: true,
   highlightNouns: false,
   highlightKnownWords: true,
   knownWordOpacity: 100,
