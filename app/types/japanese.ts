@@ -11,5 +11,7 @@ export interface ParsedWord {
 }
 
 export interface ParsedSentence {
+  text: string
   words: ParsedWord[]
+  grammar: string[]
 }

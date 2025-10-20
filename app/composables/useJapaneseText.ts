@@ -1,4 +1,3 @@
-// app/composables/useJapaneseText.ts
 import { computed } from 'vue'
 import { useJapaneseTextStore } from '~/stores/useJapaneseTextStore'
 import { useOpenAI } from '~/composables/useOpenAI'
@@ -22,7 +21,7 @@ export const useJapaneseText = () => {
     store.setSentences([])
     store.setStreaming('')
     let accumulated = ''
-    let raw: Array<{ text: string }> = []
+    let raw: Array<{ text: string; grammar?: string[] }> = []
     try {
       const knownList = Array.from(knownWords.value.keys())
       const currentLevel = getLevelFromScore(difficulty.value)
@@ -36,13 +35,13 @@ export const useJapaneseText = () => {
           while ((match = textRegex.exec(cleaned)) !== null) {
             if (match[1] !== undefined) pieces.push(match[1])
           }
-          if (pieces.length) store.setStreaming(pieces.join('。') + '…')
+          if (pieces.length) store.setStreaming(pieces.join('πÇé') + 'ΓÇª')
           const full = cleaned.replace(/^[^{]*/, '').replace(/[^}]*$/, '').trim()
           if (full.startsWith('{') && full.endsWith('}')) {
             const parsed = JSON.parse(full)
             if (Array.isArray(parsed.sentences)) {
               raw = parsed.sentences
-              store.setStreaming(parsed.sentences.map((s: any) => s.text).join('。'))
+              store.setStreaming(parsed.sentences.map((s: any) => s.text).join('πÇé'))
             }
           }
         } catch {}

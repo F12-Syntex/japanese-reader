@@ -1,4 +1,3 @@
-// app/stores/useJapaneseTextStore.ts
 import { defineStore } from 'pinia'
 import type { ParsedSentence } from '~/types/japanese'
 

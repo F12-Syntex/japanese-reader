@@ -32,6 +32,7 @@
             :word="word"
             :settings="settings"
             :disable-hover="isCtrlPressed"
+            :is-grammar-highlighted="settings.highlightGrammar && isWordGrammarHighlighted(word, sentence.grammar)"
             @click="handleWordClick(word)"
           />
         </span>
@@ -103,6 +104,15 @@ const textStyles = computed(() => ({
   fontWeight: props.settings.fontWeight,
   letterSpacing: `${props.settings.letterSpacing}px`
 }))
+
+const isWordGrammarHighlighted = (word: ParsedWord, grammarPoints: string[]): boolean => {
+  if (!grammarPoints?.length) return false
+  const wordText = word.kanji || word.kana || ''
+  return grammarPoints.some(point => {
+    if (!point) return false
+    return point.includes(wordText) || wordText.includes(point)
+  })
+}
 
 const handleSentenceHover = (index: number, event: MouseEvent) => {
   const mouseEvent = event as MouseEvent

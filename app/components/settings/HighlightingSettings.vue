@@ -34,6 +34,20 @@
             <input v-model="settings.highlightNouns" type="checkbox" class="toggle toggle-primary toggle-sm" />
           </label>
         </div>
+
+        <div class="form-control">
+          <label class="label cursor-pointer">
+            <span class="label-text font-medium text-sm">Highlight Grammar Points</span>
+            <input v-model="settings.highlightGrammar" type="checkbox" class="toggle toggle-primary toggle-sm" />
+          </label>
+        </div>
+
+        <div class="form-control">
+          <label class="label cursor-pointer">
+            <span class="label-text font-medium text-sm">Highlight Known Words</span>
+            <input v-model="settings.highlightKnownWords" type="checkbox" class="toggle toggle-primary toggle-sm" />
+          </label>
+        </div>
       </div>
     </div>
 
@@ -42,15 +56,8 @@
     <div class="space-y-4">
       <h3 class="text-base font-bold flex items-center gap-2">
         <IconBookmark class="w-4 h-4" />
-        Known Words
+        Known Words Options
       </h3>
-
-      <div class="form-control">
-        <label class="label cursor-pointer">
-          <span class="label-text font-medium text-sm">Highlight Known Words</span>
-          <input v-model="settings.highlightKnownWords" type="checkbox" class="toggle toggle-primary toggle-sm" />
-        </label>
-      </div>
 
       <div class="space-y-4 pt-4 border-t border-base-300" :class="{ 'opacity-50 pointer-events-none': !settings.highlightKnownWords }">
         <div class="form-control">

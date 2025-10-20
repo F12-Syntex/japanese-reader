@@ -5,7 +5,6 @@
     :class="{
       'mr-0': !settings?.showWordSpacing,
       'mx-1': settings?.alwaysShowTranslation,
-      'text-center justify-center': settings?.alwaysShowTranslation  // Reinforce centering for longer translations
     }"
     :style="wordContainerStyle"
     @click="handleClick"
@@ -29,7 +28,6 @@
       <ruby class="[ruby-align:center]">
         <span
           class="transition-colors duration-150 px-0.5 rounded-sm"
-          :class="surfaceClasses"
           :style="mergedSurfaceStyle"
         >
           <span class="align-middle leading-none">
@@ -144,9 +142,12 @@ interface Props {
   word: ParsedWord
   settings: ReaderSettings
   disableHover: boolean
+  isGrammarHighlighted?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isGrammarHighlighted: false
+})
 
 const emit = defineEmits<{
   click: [word: ParsedWord, event: MouseEvent]
@@ -185,17 +186,13 @@ const arrowStyle = computed((): CSSProperties => {
   }
 })
 
-const surfaceClasses = computed(() => ({
-  'underline decoration-dashed decoration-1 underline-offset-4':
-    props.settings?.underlineUnknown && !localWord.value?.isKnown,
-  'ring-1 ring-offset-0':
-    props.settings?.highlightKnownWords && localWord.value?.isKnown,
-  'opacity-70': props.settings?.dimKnownWords && localWord.value?.isKnown,
-  'line-through': props.settings?.strikethroughKnown && localWord.value?.isKnown,
-}))
-
 const wordColorStyle = computed((): CSSProperties => {
   const style: CSSProperties = {}
+
+  if (props.isGrammarHighlighted && props.settings?.highlightGrammar) {
+    style.color = '#16A34A'
+    return style
+  }
 
   if (props.settings?.highlightParticles && isParticle.value) {
     style.color = 'hsl(12, 78%, 45%)'
@@ -208,8 +205,19 @@ const wordColorStyle = computed((): CSSProperties => {
   }
 
   if (props.settings?.highlightKnownWords && localWord.value?.isKnown) {
-    style.boxShadow = 'inset 0 0 0 9999px rgba(0,0,0,0)'
-    style.borderColor = 'hsl(210, 10%, 60%)'
+    style.opacity = (props.settings?.knownWordOpacity ?? 100) / 100
+    if (props.settings?.dimKnownWords) {
+      style.opacity = 0.6
+    }
+    if (props.settings?.strikethroughKnown) {
+      style.textDecoration = 'line-through'
+    }
+  }
+
+  if (props.settings?.underlineUnknown && !localWord.value?.isKnown) {
+    style.textDecoration = 'underline dashed'
+    style.textDecorationColor = 'currentColor'
+    style.textUnderlineOffset = '4px'
   }
 
   return style
@@ -266,24 +274,19 @@ const tooltipTextSize = computed(() => {
 const truncateMeaning = (meaning: string): string => {
   if (!meaning) return ''
   
-  // Calculate dynamic max length based on parent text (double the size)
   const parentText = localWord.value.kanji || localWord.value.kana || ''
   const maxLength = parentText.length * 10
   
-  // Clean and split by sentence punctuation
   const cleaned = meaning.split(/[.,;]/).map(s => s.trim()).filter(Boolean)
   let firstMeaning = ''
   
   if (cleaned.length > 0) {
-    // ensure a string is assigned even if TypeScript can't infer the index is defined
     firstMeaning = cleaned[0] ?? ''
   } else {
-    // Fallback to first word if no sentence-like parts
     const words = meaning.trim().split(/\s+/)
     firstMeaning = words[0] || ''
   }
   
-  // Truncate to maxLength if needed, add ellipsis
   if (firstMeaning.length > maxLength) {
     firstMeaning = firstMeaning.substring(0, maxLength) + '…'
   }
@@ -298,28 +301,48 @@ const handleClick = (e: MouseEvent) => {
 }
 
 const handleMouseEnter = async () => {
-  const delay = Math.max(0, Math.min(500, props.settings?.tooltipDelay ?? 0))
-  
-  await new Promise(r => setTimeout(r, delay))
-  
-  showTooltip.value = true
+  if (isParticle.value || !props.settings?.showTooltip) return
+
   await nextTick()
-  
-  if (tooltipRef.value && wrapperRef.value) {
-    const tooltipRect = tooltipRef.value.getBoundingClientRect()
-    
-    if (tooltipRect.bottom > window.innerHeight - 50) {
-      arrowPosition.value = 'bottom'
-    } else {
-      arrowPosition.value = 'top'
-    }
+
+  if (props.settings?.tooltipDelay && props.settings.tooltipDelay > 0) {
+    setTimeout(() => {
+      showTooltip.value = true
+      positionTooltip()
+    }, props.settings.tooltipDelay)
+  } else {
+    showTooltip.value = true
+    positionTooltip()
   }
 }
 
-const onWrapperMouseLeave = () => {
-  if (!keepTooltip) {
-    showTooltip.value = false
+const positionTooltip = () => {
+  if (!tooltipRef.value || !wrapperRef.value) return
+
+  const tooltipRect = tooltipRef.value.getBoundingClientRect()
+  const wrapperRect = wrapperRef.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+
+  const spaceAbove = wrapperRect.top
+  const spaceBelow = viewportHeight - wrapperRect.bottom
+  const tooltipHeight = tooltipRect.height
+
+  if (spaceAbove > tooltipHeight + 20) {
+    arrowPosition.value = 'bottom'
+    tooltipRef.value.style.bottom = 'auto'
+    tooltipRef.value.style.top = `${wrapperRect.top - tooltipHeight - 16}px`
+  } else if (spaceBelow > tooltipHeight + 20) {
+    arrowPosition.value = 'top'
+    tooltipRef.value.style.top = 'auto'
+    tooltipRef.value.style.bottom = `${viewportHeight - wrapperRect.bottom - 16}px`
+  } else {
+    arrowPosition.value = 'top'
+    tooltipRef.value.style.top = `${wrapperRect.bottom + 16}px`
   }
+
+  const leftPos = wrapperRect.left + wrapperRect.width / 2 - tooltipRect.width / 2
+  const clampedLeft = Math.max(8, Math.min(leftPos, window.innerWidth - tooltipRect.width - 8))
+  tooltipRef.value.style.left = `${clampedLeft}px`
 }
 
 const onTooltipMouseEnter = () => {
@@ -331,7 +354,13 @@ const onTooltipMouseLeave = () => {
   showTooltip.value = false
 }
 
+const onWrapperMouseLeave = () => {
+  if (!keepTooltip) {
+    showTooltip.value = false
+  }
+}
+
 watch(() => props.word, (newWord) => {
   localWord.value = { ...newWord }
-}, { deep: true })
+})
 </script>

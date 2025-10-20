@@ -2,6 +2,11 @@ import { defineEventHandler, readBody, setResponseHeaders, sendStream } from 'h3
 import { createOpenAIClient } from './utils/openai'
 import { getGrammarByLevel, loadGrammarPoints } from './utils/grammar'
 
+interface GrammarPoint {
+  point: string
+  english: string
+}
+
 export default defineEventHandler(async (event) => {
   const { apiKey, level, knownWords, model } = await readBody(event)
 
@@ -23,9 +28,9 @@ export default defineEventHandler(async (event) => {
   const theme = themes[Math.floor(Math.random() * themes.length)]
 
   const systemPrompt = `You are a Japanese language teacher. Generate a N${cleanLevel} story about ${theme}.
-Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence"}]}`
+Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["grammar point used"]}]}`
 
-  const shuffleArray = <T,>(arr: T[]) => {
+  const shuffleArray = <T,>(arr: T[]): T[] => {
     const a = arr.slice()
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -40,9 +45,10 @@ Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence"}]}`
 ${wordList}
 
 Grammar points (use at least 3):
-${shuffledGrammar.slice(0, 5).map(g => `- ${g.point}: ${g.english}`).join('\n')}
+${shuffledGrammar.slice(0, 5).map((g: GrammarPoint) => `- ${g.point}: ${g.english}`).join('\n')}
 
-Respond ONLY with JSON:`
+For each sentence, include the grammar points used from the list above. all particles are considered grammar points.
+Respond ONLY with JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["point1", "point2"]}]}`
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',
