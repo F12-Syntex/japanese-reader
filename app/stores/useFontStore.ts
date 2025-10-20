@@ -88,7 +88,8 @@ export const useFontStore = defineStore('fonts', {
   state: () => ({
     downloadable: JAPANESE_FONTS as FontItemExtended[],
     loading: false as boolean | string,
-    loadedFonts: new Set<string>() as Set<string>
+    loadedFonts: new Set<string>() as Set<string>,
+    customError: '' as string
   }),
   getters: {
     downloadableFonts: (s) => s.downloadable.filter(f => !s.loadedFonts.has(f.value)),
@@ -101,6 +102,9 @@ export const useFontStore = defineStore('fonts', {
         const font = JAPANESE_FONTS.find(f => f.value === fontValue)
         if (font) {
           installed.push(font as FontItemExtended)
+        } else {
+          // Custom font fallback
+          installed.push({ name: fontValue.replace(/['"]/g, ''), value: fontValue, source: 'custom' as const })
         }
       })
       
@@ -110,6 +114,17 @@ export const useFontStore = defineStore('fonts', {
   actions: {
     getLinkId(fontValue: string): string {
       return `font-${fontValue.replace(/\s+/g, '-').toLowerCase()}`
+    },
+    extractFontFamily(css: string): string {
+      const match = css.match(/@font-face\s*\{[^}]*font-family\s*:\s*['"]?([^'";]+)['"]?/i)
+      if (match) {
+        const raw = match[1] ?? ''
+        const family = raw.trim()
+        if (!family) return 'Custom Font'
+        // Handle quoted or unquoted, and return quoted if needed
+        return family.includes(' ') ? `'${family}'` : family
+      }
+      return 'Custom Font'
     },
     async installFont(font: FontItemExtended) {
       if (!import.meta.client) return
@@ -122,6 +137,8 @@ export const useFontStore = defineStore('fonts', {
         if (font.source === 'google' && font.importUrl) {
           await this.injectFont(font)
         }
+      } catch (error) {
+        console.error(`Failed to install font: ${font.value}`, error)
       } finally {
         this.loading = false
       }
@@ -175,6 +192,79 @@ export const useFontStore = defineStore('fonts', {
         }
       })
     },
+    async addCustomFont(url: string) {
+      if (!import.meta.client || !url) {
+        this.customError = 'Invalid URL'
+        return
+      }
+
+      this.loading = 'custom'
+      this.customError = ''
+
+      try {
+        // Fetch CSS to extract font family
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch CSS: ${response.status}`)
+        }
+        const css = await response.text()
+        const fontFamily = this.extractFontFamily(css)
+        const fontValue = fontFamily // Already quoted if needed
+
+        if (this.loadedFonts.has(fontValue)) {
+          throw new Error('Font already installed')
+        }
+
+        // Check if it's a predefined font
+        const predefined = JAPANESE_FONTS.find(f => f.importUrl === url)
+        if (predefined) {
+          await this.installFont(predefined)
+          return
+        }
+
+        // For custom, inject link
+        const linkId = this.getLinkId(fontValue)
+        if (document.getElementById(linkId)) {
+          this.loadedFonts.add(fontValue)
+          this.persistInstalledFonts()
+          return
+        }
+
+        await new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+          link.href = url
+          link.rel = 'stylesheet'
+          link.id = linkId
+          link.dataset.fontFamily = fontValue
+          link.dataset.fontSource = 'custom'
+
+          link.onload = () => {
+            this.loadedFonts.add(fontValue)
+            this.persistInstalledFonts()
+            resolve(true)
+          }
+
+          link.onerror = () => {
+            reject(new Error(`Failed to load custom font from ${url}`))
+          }
+
+          document.head.appendChild(link)
+
+          setTimeout(() => {
+            if (!this.loadedFonts.has(fontValue)) {
+              this.loadedFonts.add(fontValue)
+              this.persistInstalledFonts()
+            }
+            resolve(true)
+          }, 2000)
+        })
+      } catch (error) {
+        console.error('Failed to add custom font:', error)
+        this.customError = error instanceof Error ? error.message : 'Failed to add custom font'
+      } finally {
+        this.loading = false
+      }
+    },
     removeFont(fontValue: string) {
       if (!import.meta.client) return
       
@@ -200,9 +290,12 @@ export const useFontStore = defineStore('fonts', {
         const fontValues = JSON.parse(saved) as string[]
         
         for (const fontValue of fontValues) {
+          // For predefined
           const font = JAPANESE_FONTS.find(f => f.value === fontValue)
           if (font) {
             await this.injectFont(font as FontItemExtended)
+          } else {
+            console.warn(`Custom font ${fontValue} not re-injected (URL not persisted)`)
           }
         }
       } catch (error) {

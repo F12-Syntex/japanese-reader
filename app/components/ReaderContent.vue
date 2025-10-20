@@ -13,6 +13,13 @@
     >
       <template v-for="(sentence, sIndex) in text" :key="sIndex">
         <span 
+          v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'left'"
+          class="inline-block mr-2 opacity-50 text-sm"
+        >
+          {{ sIndex + 1 }}.
+        </span>
+
+        <span 
           class="inline transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
           :class="{ 'bg-primary/10': hoveredSentence === sIndex && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex && isCtrlPressed }"
           @mouseenter="handleSentenceHover(sIndex, $event)"
@@ -25,9 +32,17 @@
             :word="word"
             :settings="settings"
             :disable-hover="isCtrlPressed"
-            @click="handleWordClick(word, $event)"
+            @click="handleWordClick(word)"
           />
         </span>
+
+        <span 
+          v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'right'"
+          class="inline-block ml-2 opacity-50 text-sm"
+        >
+          .{{ sIndex + 1 }}
+        </span>
+
         <span v-if="sIndex < text.length - 1" class="inline px-1">&nbsp;</span>
       </template>
       
@@ -38,29 +53,28 @@
   </div>
 </template>
 
-<script setup>
-const props = defineProps({
-  text: {
-    type: Array,
-    required: true
-  },
-  settings: {
-    type: Object,
-    required: true
-  },
-  streamingText: {
-    type: String,
-    default: ''
-  }
-})
+<script setup lang="ts">
+import type { ParsedSentence, ParsedWord } from '~/types/japanese'
+import type { ReaderSettings } from '~/types/reader'
 
-const emit = defineEmits(['word-click', 'sentence-analyze'])
+interface Props {
+  text: ParsedSentence[]
+  settings: ReaderSettings
+  streamingText: string
+}
 
-const hoveredSentence = ref(null)
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  'word-click': [word: ParsedWord, event?: MouseEvent]
+  'sentence-analyze': [payload: { index: number; sentence: ParsedSentence }]
+}>()
+
+const hoveredSentence = ref<number | null>(null)
 const isCtrlPressed = ref(false)
 
 const maxWidthClass = computed(() => {
-  const widths = {
+  const widths: Record<string, string> = {
     full: 'max-w-full',
     '2xl': 'max-w-2xl',
     '4xl': 'max-w-4xl',
@@ -70,7 +84,7 @@ const maxWidthClass = computed(() => {
 })
 
 const textAlignClass = computed(() => {
-  const aligns = {
+  const aligns: Record<string, string> = {
     left: 'text-left',
     center: 'text-center',
     right: 'text-right',
@@ -80,45 +94,45 @@ const textAlignClass = computed(() => {
 })
 
 const containerStyles = computed(() => ({
-  fontFamily: `"${props.settings.fontFamily}", sans-serif`,
-  backgroundColor: props.settings.backgroundColor || undefined
+  fontFamily: `"${props.settings.fontFamily}", sans-serif`
 }))
 
 const textStyles = computed(() => ({
   fontSize: `${props.settings.fontSize}px`,
   lineHeight: props.settings.lineHeight,
   fontWeight: props.settings.fontWeight,
-  letterSpacing: `${props.settings.letterSpacing}px`,
-  color: props.settings.textColor || undefined
+  letterSpacing: `${props.settings.letterSpacing}px`
 }))
 
-const handleSentenceHover = (index, event) => {
-  if (event.ctrlKey || event.metaKey) {
+const handleSentenceHover = (index: number, event: MouseEvent) => {
+  const mouseEvent = event as MouseEvent
+  if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
     hoveredSentence.value = index
   }
 }
 
-const handleSentenceClick = (index, sentence, event) => {
-  if (event.ctrlKey || event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
+const handleSentenceClick = (index: number, sentence: ParsedSentence, event: MouseEvent) => {
+  const mouseEvent = event as MouseEvent
+  if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
+    mouseEvent.preventDefault()
+    mouseEvent.stopPropagation()
     emit('sentence-analyze', { index, sentence })
   }
 }
 
-const handleWordClick = (word, event) => {
+const handleWordClick = (word: ParsedWord, event?: MouseEvent) => {
   if (!isCtrlPressed.value) {
-    emit('word-click', word)
+    emit('word-click', word, event)
   }
 }
 
-const handleKeyDown = (e) => {
+const handleKeyDown = (e: KeyboardEvent) => {
   if (e.ctrlKey || e.metaKey) {
     isCtrlPressed.value = true
   }
 }
 
-const handleKeyUp = (e) => {
+const handleKeyUp = (e: KeyboardEvent) => {
   if (!e.ctrlKey && !e.metaKey) {
     isCtrlPressed.value = false
   }

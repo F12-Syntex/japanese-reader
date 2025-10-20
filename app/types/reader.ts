@@ -6,22 +6,42 @@ export interface ReaderSettings {
   letterSpacing: number
   textAlign: 'left' | 'center' | 'right' | 'justify'
   maxWidth: 'full' | '2xl' | '4xl' | '6xl'
-  showWordSpacing: boolean
   verticalText: boolean
-  furiganaSize: number
-  furiganaColor: string
+  
   showFurigana: boolean
+  furiganaSize: number
+  furiganaPosition: 'above' | 'inline'
   centeredFurigana: boolean
+  
+  showWordSpacing: boolean
+  alwaysShowTranslation: boolean
+  translationSize: number
+  translationGap: number
+  
+  highlightParticles: boolean
+  highlightVerbs: boolean
+  highlightAdjectives: boolean
+  highlightNouns: boolean
+  highlightKnownWords: boolean
+  knownWordOpacity: number
+  dimKnownWords: boolean
+  strikethroughKnown: boolean
+  underlineUnknown: boolean
+  
   showTooltip: boolean
-  showKanjiInfo: boolean
-  kanjiInfoPosition: 'tooltip' | 'popup' | 'sidebar'
-  hiraganaColor: string
-  katakanaColor: string
-  kanjiColor: string
-  unknownWordColor: string
-  furiganaShowNotes: boolean
-  furiganaShowExamples: boolean
-  grammarShowNotes: boolean
+  tooltipSize: 'sm' | 'md' | 'lg'
+  tooltipDelay: number
+  showPartOfSpeech: boolean
+  showJLPTLevel: boolean
+  showPitchAccent: boolean
+  showExample: boolean
+  
+  showSentenceNumbers: boolean
+  sentenceNumberPosition: 'left' | 'right'
+  
+  clickToToggle: boolean
+  focusModeOpacity: number
+  autoScroll: boolean
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -32,20 +52,40 @@ export const defaultReaderSettings: ReaderSettings = {
   letterSpacing: 0,
   textAlign: 'left',
   maxWidth: '2xl',
-  showWordSpacing: false,
   verticalText: false,
-  furiganaSize: 0.5,
-  furiganaColor: '#6366f1',
+  
   showFurigana: true,
+  furiganaSize: 0.5,
+  furiganaPosition: 'above',
   centeredFurigana: true,
+  
+  showWordSpacing: false,
+  alwaysShowTranslation: false,
+  translationSize: 10,
+  translationGap: 4,
+  
+  highlightParticles: false,
+  highlightVerbs: false,
+  highlightAdjectives: false,
+  highlightNouns: false,
+  highlightKnownWords: true,
+  knownWordOpacity: 100,
+  dimKnownWords: false,
+  strikethroughKnown: false,
+  underlineUnknown: false,
+  
   showTooltip: true,
-  showKanjiInfo: true,
-  kanjiInfoPosition: 'tooltip',
-  hiraganaColor: '#000000',
-  katakanaColor: '#000000',
-  kanjiColor: '#000000',
-  unknownWordColor: '#ef4444',
-  furiganaShowNotes: false,
-  furiganaShowExamples: false,
-  grammarShowNotes: false
+  tooltipSize: 'md',
+  tooltipDelay: 0,
+  showPartOfSpeech: true,
+  showJLPTLevel: true,
+  showPitchAccent: false,
+  showExample: true,
+  
+  showSentenceNumbers: false,
+  sentenceNumberPosition: 'left',
+  
+  clickToToggle: true,
+  focusModeOpacity: 30,
+  autoScroll: false
 }

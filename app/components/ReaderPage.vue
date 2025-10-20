@@ -87,6 +87,7 @@ import IconX from '~icons/lucide/x'
 import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
 import IconArrowRight from '~icons/lucide/arrow-right'
+import ReaderSettingsModal from '~/components/settings/ReaderSettingsModal.vue'  // Added import for ReaderSettingsModal
 import { useReaderSettings } from '~/composables/useReaderSettings'
 
 const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback } = useJapaneseText()
