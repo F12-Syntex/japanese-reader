@@ -1,106 +1,51 @@
-// app/types/reader.ts
 export interface ReaderSettings {
   fontFamily: string
   fontSize: number
   fontWeight: number
   lineHeight: number
   letterSpacing: number
-  furiganaSize: number
-  furiganaColor: string
-  showFurigana: boolean
-  showTooltip: boolean
-  tooltipSize: 'sm' | 'md' | 'lg'
-  tooltipDelay: number
-  alwaysShowTranslation: boolean
-  translationSize: number
-  translationGap: number
-  highlightParticles: boolean
-  highlightVerbs: boolean
-  highlightAdjectives: boolean
-  highlightOnHover: boolean
-  underlineUnknown: boolean
-  textColor: string
-  backgroundColor: string
   textAlign: 'left' | 'center' | 'right' | 'justify'
   maxWidth: 'full' | '2xl' | '4xl' | '6xl'
   showWordSpacing: boolean
   verticalText: boolean
-  showSentenceNumbers: boolean
-  clickToToggle: boolean
-  showPitchAccent: boolean
-  showPartOfSpeech: boolean
-  focusModeOpacity: number
-  autoScroll: boolean
-  highlightKnownWords: boolean
-  dimKnownWords: boolean
-  strikethroughKnown: boolean
-  grammarMode: boolean
-  grammarShowArrows: boolean
-  grammarShowLabels: boolean
-  grammarShowTranslation: boolean
-  grammarArrowThickness: number
-  grammarArrowOpacity: number
-  grammarSubjectColor: string
-  grammarObjectColor: string
-  grammarParticleColor: string
-  grammarVerbColor: string
-  grammarModifierColor: string
-  grammarLabelSize: number
-  grammarLineSpacing: number
-  grammarHighlightOnHover: boolean
-  grammarAnimateArrows: boolean
+  furiganaSize: number
+  furiganaColor: string
+  showFurigana: boolean
+  centeredFurigana: boolean
+  showTooltip: boolean
+  showKanjiInfo: boolean
+  kanjiInfoPosition: 'tooltip' | 'popup' | 'sidebar'
+  hiraganaColor: string
+  katakanaColor: string
+  kanjiColor: string
+  unknownWordColor: string
+  furiganaShowNotes: boolean
+  furiganaShowExamples: boolean
   grammarShowNotes: boolean
 }
 
 export const defaultReaderSettings: ReaderSettings = {
   fontFamily: 'Noto Sans JP',
-  fontSize: 28,
+  fontSize: 18,
   fontWeight: 400,
-  lineHeight: 2.8,
+  lineHeight: 1.8,
   letterSpacing: 0,
-  furiganaSize: 0.45,
-  furiganaColor: '',
-  showFurigana: false,
-  showTooltip: true,
-  tooltipSize: 'md',
-  tooltipDelay: 0,
-  alwaysShowTranslation: false,
-  translationSize: 10,
-  translationGap: 4,
-  highlightParticles: false,
-  highlightVerbs: false,
-  highlightAdjectives: false,
-  highlightOnHover: false,
-  underlineUnknown: false,
-  textColor: '',
-  backgroundColor: '',
   textAlign: 'left',
-  maxWidth: 'full',
+  maxWidth: '2xl',
   showWordSpacing: false,
   verticalText: false,
-  showSentenceNumbers: false,
-  clickToToggle: true,
-  showPitchAccent: false,
-  showPartOfSpeech: true,
-  focusModeOpacity: 30,
-  autoScroll: false,
-  highlightKnownWords: true,
-  dimKnownWords: false,
-  strikethroughKnown: false,
-  grammarMode: false,
-  grammarShowArrows: true,
-  grammarShowLabels: true,
-  grammarShowTranslation: true,
-  grammarArrowThickness: 2.5,
-  grammarArrowOpacity: 70,
-  grammarSubjectColor: '#EF4444',
-  grammarObjectColor: '#3B82F6',
-  grammarParticleColor: '#F59E0B',
-  grammarVerbColor: '#10B981',
-  grammarModifierColor: '#8B5CF6',
-  grammarLabelSize: 11,
-  grammarLineSpacing: 40,
-  grammarHighlightOnHover: true,
-  grammarAnimateArrows: false,
-  grammarShowNotes: true
+  furiganaSize: 0.5,
+  furiganaColor: '#6366f1',
+  showFurigana: true,
+  centeredFurigana: true,
+  showTooltip: true,
+  showKanjiInfo: true,
+  kanjiInfoPosition: 'tooltip',
+  hiraganaColor: '#000000',
+  katakanaColor: '#000000',
+  kanjiColor: '#000000',
+  unknownWordColor: '#ef4444',
+  furiganaShowNotes: false,
+  furiganaShowExamples: false,
+  grammarShowNotes: false
 }

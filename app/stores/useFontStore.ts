@@ -1,36 +1,220 @@
-// app/stores/useFontStore.ts
 import { defineStore } from 'pinia'
 import type { FontItem } from '~/types/fonts'
 
+export interface FontItemExtended extends FontItem {
+  googleFontUrl?: string
+  importUrl?: string
+}
+
+const JAPANESE_FONTS = [
+  {
+    name: 'Noto Sans JP',
+    value: 'Noto Sans JP',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'Noto Serif JP',
+    value: 'Noto Serif JP',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'Playfair Display',
+    value: 'Playfair Display',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap'
+  },
+  {
+    name: 'Poppins',
+    value: 'Poppins',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'
+  },
+  {
+    name: 'Inter',
+    value: 'Inter',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+  },
+  {
+    name: 'IBM Plex Sans JP',
+    value: 'IBM Plex Sans JP',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'Roboto',
+    value: 'Roboto',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'M PLUS 1',
+    value: 'M PLUS 1',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=M+PLUS+1:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'M PLUS Rounded 1c',
+    value: 'M PLUS Rounded 1c',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@300;400;500;700&display=swap'
+  },
+  {
+    name: 'Kiwi Maru',
+    value: 'Kiwi Maru',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@300;400;500&display=swap'
+  },
+  {
+    name: 'Hachi Maru Pop',
+    value: 'Hachi Maru Pop',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&display=swap'
+  },
+  {
+    name: 'Zen Kaku Gothic New',
+    value: 'Zen Kaku Gothic New',
+    source: 'google' as const,
+    importUrl: 'https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap'
+  }
+]
+
+const STORAGE_KEY = 'installedFonts'
+const SYSTEM_FONT = 'Noto Sans JP'
+
 export const useFontStore = defineStore('fonts', {
   state: () => ({
-    downloadable: [] as FontItem[],
-    installed: [{ name: 'System Default', value: 'Noto Sans JP', source: 'system' }] as FontItem[],
-    loading: false as boolean
+    downloadable: JAPANESE_FONTS as FontItemExtended[],
+    loading: false as boolean | string,
+    loadedFonts: new Set<string>() as Set<string>
   }),
   getters: {
-    downloadableFonts: (s) => s.downloadable,
-    installedFonts: (s) => s.installed
+    downloadableFonts: (s) => s.downloadable.filter(f => !s.loadedFonts.has(f.value)),
+    installedFonts: (s) => {
+      const installed: FontItemExtended[] = [
+        { name: 'System Default', value: SYSTEM_FONT, source: 'system' as const }
+      ]
+      
+      s.loadedFonts.forEach(fontValue => {
+        const font = JAPANESE_FONTS.find(f => f.value === fontValue)
+        if (font) {
+          installed.push(font as FontItemExtended)
+        }
+      })
+      
+      return installed
+    }
   },
   actions: {
-    async loadFromGoogle() {
-      if (this.downloadable.length) return
-      this.loading = true
+    getLinkId(fontValue: string): string {
+      return `font-${fontValue.replace(/\s+/g, '-').toLowerCase()}`
+    },
+    async installFont(font: FontItemExtended) {
+      if (!import.meta.client) return
+      
+      if (this.loadedFonts.has(font.value)) return
+      
+      this.loading = font.value
+      
       try {
-        // You can implement your fetch here (or keep mocked)
-        // this.downloadable = [...]
+        if (font.source === 'google' && font.importUrl) {
+          await this.injectFont(font)
+        }
       } finally {
         this.loading = false
       }
     },
-    installFont(font: FontItem) {
-      if (!this.installed.find(f => f.value === font.value)) {
-        this.installed.push({ ...font })
+    async injectFont(font: FontItemExtended): Promise<boolean> {
+      if (!import.meta.client) return false
+      
+      const url = font.importUrl
+      if (!url) return false
+      
+      const linkId = this.getLinkId(font.value)
+      
+      if (document.getElementById(linkId)) {
+        this.loadedFonts.add(font.value)
+        this.persistInstalledFonts()
+        return true
       }
+      
+      return new Promise((resolve) => {
+        try {
+          const link = document.createElement('link')
+          link.href = url
+          link.rel = 'stylesheet'
+          link.id = linkId
+          link.dataset.fontFamily = font.value
+          link.dataset.fontSource = font.source
+          
+          link.onload = () => {
+            this.loadedFonts.add(font.value)
+            this.persistInstalledFonts()
+            resolve(true)
+          }
+          
+          link.onerror = () => {
+            console.error(`Failed to load font: ${font.value}`)
+            resolve(false)
+          }
+          
+          document.head.appendChild(link)
+          
+          setTimeout(() => {
+            if (!this.loadedFonts.has(font.value)) {
+              this.loadedFonts.add(font.value)
+              this.persistInstalledFonts()
+            }
+            resolve(true)
+          }, 2000)
+        } catch (error) {
+          console.error(`Error injecting font ${font.value}:`, error)
+          resolve(false)
+        }
+      })
     },
     removeFont(fontValue: string) {
-      this.installed = this.installed.filter(f => f.value !== fontValue)
+      if (!import.meta.client) return
+      
+      if (fontValue === SYSTEM_FONT) return
+      
+      const linkId = this.getLinkId(fontValue)
+      const link = document.getElementById(linkId)
+      
+      if (link) {
+        link.remove()
+      }
+      
+      this.loadedFonts.delete(fontValue)
+      this.persistInstalledFonts()
+    },
+    async loadInstalledFontsOnMount() {
+      if (!import.meta.client) return
+      
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (!saved) return
+      
+      try {
+        const fontValues = JSON.parse(saved) as string[]
+        
+        for (const fontValue of fontValues) {
+          const font = JAPANESE_FONTS.find(f => f.value === fontValue)
+          if (font) {
+            await this.injectFont(font as FontItemExtended)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading installed fonts:', error)
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    },
+    persistInstalledFonts() {
+      if (!import.meta.client) return
+      
+      const fontArray = Array.from(this.loadedFonts)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fontArray))
     }
-  },
-  persist: true
+  }
 })

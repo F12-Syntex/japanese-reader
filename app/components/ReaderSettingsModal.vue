@@ -147,8 +147,8 @@
 
               <div v-if="marketplaceTab === 'available'" class="space-y-3">
                 <div v-if="downloadableFonts.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
-                  <span class="loading loading-spinner loading-lg text-primary mb-4"></span>
-                  <p class="text-sm text-base-content/60">Loading fonts from Google Fonts...</p>
+                  <IconCheck class="w-12 h-12 text-success mb-4" />
+                  <p class="text-sm text-base-content/60">All available fonts installed!</p>
                 </div>
 
                 <div v-else-if="filteredDownloadableFonts.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
@@ -170,11 +170,11 @@
                             class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300 whitespace-nowrap overflow-hidden text-ellipsis"
                             :style="{ fontFamily: font.value }"
                           >
-                            こんにちは、世界！ 日本語のフォントテストです。
+                            こんにちは世界
                           </div>
                         </div>
                         <button
-                          @click="loadFont(font)"
+                          @click="downloadFont(font)"
                           :disabled="isLoadingFont === font.value"
                           class="btn btn-primary btn-sm gap-2 flex-shrink-0"
                         >
@@ -189,7 +189,7 @@
               </div>
 
               <div v-if="marketplaceTab === 'installed'" class="space-y-3">
-                <div v-if="installedFonts.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
+                <div v-if="installedFonts.length <= 1" class="flex flex-col items-center justify-center py-12 text-center">
                   <IconPackage class="w-12 h-12 text-base-content/20 mb-4" />
                   <p class="text-sm text-base-content/60">No fonts installed yet</p>
                   <button @click="marketplaceTab = 'available'" class="btn btn-primary btn-sm mt-4">
@@ -214,11 +214,21 @@
                             class="text-lg mb-3 p-3 bg-base-100 rounded border border-base-300 whitespace-nowrap overflow-hidden text-ellipsis"
                             :style="{ fontFamily: font.value }"
                           >
-                            こんにちは、世界！ 日本語のフォントテストです。
+                            こんにちは世界
                           </div>
                         </div>
                         <div class="flex flex-col gap-2 flex-shrink-0">
                           <button
+                            v-if="font.value !== systemFont"
+                            @click="selectFont(font)"
+                            class="btn btn-sm gap-2"
+                            :class="settings.fontFamily === font.value ? 'btn-success' : 'btn-ghost'"
+                          >
+                            <IconCheck class="w-4 h-4" />
+                            {{ settings.fontFamily === font.value ? 'Active' : 'Use' }}
+                          </button>
+                          <button
+                            v-else
                             @click="selectFont(font)"
                             class="btn btn-sm gap-2"
                             :class="settings.fontFamily === font.value ? 'btn-success' : 'btn-ghost'"
@@ -245,12 +255,7 @@
                 <div class="alert alert-info text-xs">
                   <IconInfo class="w-4 h-4" />
                   <span>
-                    To add a custom font:<br>
-                    1. Go to <a href="https://fonts.google.com" target="_blank" class="link link-primary">fonts.google.com</a>.<br>
-                    2. Search for a Japanese font.<br>
-                    3. Select the font and styles (e.g., weights 300-700).<br>
-                    4. In the right panel, copy the &lt;link&gt; href URL (e.g., https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&display=swap).<br>
-                    5. Paste it below and click Add.
+                    To add a custom font, visit <a href="https://fonts.google.com" target="_blank" class="link link-primary">Google Fonts</a>
                   </span>
                 </div>
 
@@ -262,7 +267,7 @@
                     <input
                       v-model="customUrl"
                       type="text"
-                      placeholder="Paste Google Fonts URL here"
+                      placeholder="Paste Google Fonts URL"
                       class="input input-bordered input-sm w-full join-item"
                     />
                     <button
@@ -300,160 +305,32 @@
               </div>
 
               <div class="form-control">
-                <label class="label">
-                  <span class="label-text font-medium text-sm">Furigana Color</span>
-                </label>
-                <input v-model="settings.furiganaColor" type="color" class="input input-bordered input-sm w-full h-10" />
-                <label class="label">
-                  <span class="label-text-alt text-xs">Leave empty for default color</span>
-                </label>
-              </div>
-
-              <div class="form-control">
                 <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Show Pitch Accent</span>
-                  <input v-model="settings.showPitchAccent" type="checkbox" class="toggle toggle-accent toggle-sm" />
+                  <span class="label-text font-medium text-sm">Centered Furigana</span>
+                  <input v-model="settings.centeredFurigana" type="checkbox" class="toggle toggle-secondary toggle-sm" />
                 </label>
               </div>
             </div>
 
-            <div v-show="activeTab === 'translation'" class="space-y-4">
-              <h3 class="text-base font-bold mb-3">Translation Settings</h3>
+            <div v-show="activeTab === 'kanji'" class="space-y-4">
+              <h3 class="text-base font-bold mb-3">Kanji Settings</h3>
 
               <div class="form-control">
                 <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Always Show Translation</span>
-                  <input v-model="settings.alwaysShowTranslation" type="checkbox" class="toggle toggle-info toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs">Display English above each word</span>
+                  <span class="label-text font-medium text-sm">Show Kanji Info</span>
+                  <input v-model="settings.showKanjiInfo" type="checkbox" class="toggle toggle-success toggle-sm" />
                 </label>
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Translation Size: {{ settings.translationSize }}px</span>
+                  <span class="label-text font-medium text-sm">Kanji Info Position</span>
                 </label>
-                <input v-model.number="settings.translationSize" type="range" min="8" max="16" step="1" class="range range-info range-xs" />
-              </div>
-
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text font-medium text-sm">Translation Gap: {{ settings.translationGap }}px</span>
-                </label>
-                <input v-model.number="settings.translationGap" type="range" min="0" max="12" step="1" class="range range-info range-xs" />
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Show Tooltips</span>
-                  <input v-model="settings.showTooltip" type="checkbox" class="toggle toggle-info toggle-sm" />
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text font-medium text-sm">Tooltip Size</span>
-                </label>
-                <select v-model="settings.tooltipSize" class="select select-bordered select-sm w-full">
-                  <option value="sm">Small</option>
-                  <option value="md">Medium</option>
-                  <option value="lg">Large</option>
+                <select v-model="settings.kanjiInfoPosition" class="select select-bordered select-sm w-full">
+                  <option value="tooltip">Tooltip</option>
+                  <option value="popup">Popup</option>
+                  <option value="sidebar">Sidebar</option>
                 </select>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Show Part of Speech</span>
-                  <input v-model="settings.showPartOfSpeech" type="checkbox" class="toggle toggle-info toggle-sm" />
-                </label>
-              </div>
-            </div>
-
-            <div v-show="activeTab === 'highlighting'" class="space-y-4">
-              <h3 class="text-base font-bold mb-3">Color Highlighting</h3>
-
-              <div class="alert alert-info text-xs py-2">
-                <IconInfo class="w-3 h-3" />
-                <span>Words will be colored based on their grammatical function</span>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Highlight Particles</span>
-                  <input v-model="settings.highlightParticles" type="checkbox" class="toggle toggle-warning toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs flex items-center gap-2">
-                    <span class="badge badge-warning badge-xs"></span>
-                   Particles, etc. (Warning color)
-                  </span>
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Highlight Verbs</span>
-                  <input v-model="settings.highlightVerbs" type="checkbox" class="toggle toggle-success toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs flex items-center gap-2">
-                    <span class="badge badge-success badge-xs"></span>
-                    Action words (Success color)
-                  </span>
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Highlight Adjectives</span>
-                  <input v-model="settings.highlightAdjectives" type="checkbox" class="toggle toggle-secondary toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs flex items-center gap-2">
-                    <span class="badge badge-secondary badge-xs"></span>
-                    Describing words (Secondary color)
-                  </span>
-                </label>
-              </div>
-
-              <div class="divider text-xs">Known Words (from Anki)</div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Highlight Known Words</span>
-                  <input v-model="settings.highlightKnownWords" type="checkbox" class="toggle toggle-success toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs">Green background for words you know</span>
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Dim Known Words</span>
-                  <input v-model="settings.dimKnownWords" type="checkbox" class="toggle toggle-accent toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs">Lower opacity for known words</span>
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Strikethrough Known Words</span>
-                  <input v-model="settings.strikethroughKnown" type="checkbox" class="toggle toggle-accent toggle-sm" />
-                </label>
-                <label class="label">
-                  <span class="label-text-alt text-xs">Cross out words you already know</span>
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Underline Unknown Words</span>
-                  <input v-model="settings.underlineUnknown" type="checkbox" class="toggle toggle-error toggle-sm" />
-                </label>
               </div>
             </div>
 
@@ -462,331 +339,135 @@
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Text Color</span>
+                  <span class="label-text font-medium text-sm">Hiragana Color</span>
                 </label>
-                <input v-model="settings.textColor" type="color" class="input input-bordered input-sm w-full h-10" />
-                <label class="label">
-                  <span class="label-text-alt text-xs">Leave empty for theme default</span>
-                </label>
+                <input v-model="settings.hiraganaColor" type="color" class="input input-bordered h-10" />
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Background Color</span>
+                  <span class="label-text font-medium text-sm">Katakana Color</span>
                 </label>
-                <input v-model="settings.backgroundColor" type="color" class="input input-bordered input-sm w-full h-10" />
-                <label class="label">
-                  <span class="label-text-alt text-xs">Leave empty for theme default</span>
-                </label>
-              </div>
-            </div>
-
-            <div v-show="activeTab === 'behavior'" class="space-y-4">
-              <h3 class="text-base font-bold mb-3">Behavior Settings</h3>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Click to Toggle Details</span>
-                  <input v-model="settings.clickToToggle" type="checkbox" class="toggle toggle-primary toggle-sm" />
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Show Sentence Numbers</span>
-                  <input v-model="settings.showSentenceNumbers" type="checkbox" class="toggle toggle-primary toggle-sm" />
-                </label>
-              </div>
-
-              <div class="form-control">
-                <label class="label cursor-pointer">
-                  <span class="label-text font-medium text-sm">Auto Scroll</span>
-                  <input v-model="settings.autoScroll" type="checkbox" class="toggle toggle-primary toggle-sm" />
-                </label>
+                <input v-model="settings.katakanaColor" type="color" class="input input-bordered h-10" />
               </div>
 
               <div class="form-control">
                 <label class="label">
-                  <span class="label-text font-medium text-sm">Focus Mode Opacity: {{ settings.focusModeOpacity }}%</span>
+                  <span class="label-text font-medium text-sm">Kanji Color</span>
                 </label>
-                <input v-model.number="settings.focusModeOpacity" type="range" min="10" max="80" step="5" class="range range-primary range-xs" />
+                <input v-model="settings.kanjiColor" type="color" class="input input-bordered h-10" />
+              </div>
+
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-medium text-sm">Unknown Word Color</span>
+                </label>
+                <input v-model="settings.unknownWordColor" type="color" class="input input-bordered h-10" />
               </div>
             </div>
           </div>
         </div>
       </div>
     </template>
-
-    <template #footer>
-      <button @click="handleReset" class="btn btn-outline btn-sm">
-        <IconRotateCcw class="w-4 h-4" />
-        Reset
-      </button>
-      <button @click="modelValue = false" class="btn btn-primary btn-sm">
-        <IconCheck class="w-4 h-4" />
-        Close
-      </button>
-    </template>
   </BaseModal>
 </template>
 
-<script setup>
-import IconCheck from '~icons/lucide/check'
-import IconRotateCcw from '~icons/lucide/rotate-ccw'
-import IconType from '~icons/lucide/type'
-import IconLanguages from '~icons/lucide/languages'
-import IconHighlighter from '~icons/lucide/highlighter'
-import IconPalette from '~icons/lucide/palette'
-import IconSettings from '~icons/lucide/settings'
-import IconFileText from '~icons/lucide/file-text'
-import IconInfo from '~icons/lucide/info'
-import IconDownload from '~icons/lucide/download'
-import IconStore from '~icons/lucide/store'
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import IconStore from '~icons/lucide/shopping-bag'
 import IconArrowLeft from '~icons/lucide/arrow-left'
+import IconDownload from '~icons/lucide/download'
+import IconCheck from '~icons/lucide/check'
 import IconTrash from '~icons/lucide/trash-2'
 import IconSearch from '~icons/lucide/search'
 import IconPackage from '~icons/lucide/package'
-import { useReaderSettings } from '~/composables/useReaderSettings'
+import IconInfo from '~icons/lucide/info'
 
-const modelValue = defineModel()
-const { settings, resetSettings } = useReaderSettings()
+interface Props {
+  modelValue: boolean
+}
 
+const props = defineProps<Props>()
+const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
+
+const fontStore = useFontStore()
+const readerSettingsStore = useReaderSettingsStore()
+
+const modelValue = computed({
+  get: () => props.modelValue,
+  set: (value: boolean) => emit('update:modelValue', value)
+})
+
+const settings = computed(() => readerSettingsStore.settings)
 const activeTab = ref('typography')
 const marketplaceTab = ref('available')
 const marketplaceSearch = ref('')
 const customUrl = ref('')
-const customError = ref('')
 const isLoadingCustom = ref(false)
+const customError = ref('')
+const systemFont = 'Noto Sans JP'
 
-const tabs = [
-  { id: 'typography', label: 'Typography', icon: IconType },
-  { id: 'furigana', label: 'Furigana', icon: IconFileText },
-  { id: 'translation', label: 'Translation', icon: IconLanguages },
-  { id: 'highlighting', label: 'Highlighting', icon: IconHighlighter },
-  { id: 'colors', label: 'Colors', icon: IconPalette },
-  { id: 'behavior', label: 'Behavior', icon: IconSettings }
-]
-
-const systemFont = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-
-const availableFonts = ref([
-  { name: 'System Default', value: systemFont }
-])
-
-const downloadableFonts = ref([])
-
-const loadedFonts = ref([])
-
-const fallbackFonts = [
-  { name: 'Noto Sans JP', value: 'Noto Sans JP', url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap' },
-  { name: 'Noto Serif JP', value: 'Noto Serif JP', url: 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&display=swap' },
-  { name: 'M PLUS Rounded 1c', value: 'M PLUS Rounded 1c', url: 'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@300;400;500;700;800&display=swap' },
-  { name: 'Zen Kaku Gothic New', value: 'Zen Kaku Gothic New', url: 'https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap' },
-  { name: 'Zen Maru Gothic', value: 'Zen Maru Gothic', url: 'https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@300;400;500;700;900&display=swap' },
-  { name: 'Sawarabi Gothic', value: 'Sawarabi Gothic', url: 'https://fonts.googleapis.com/css2?family=Sawarabi+Gothic&display=swap' },
-  { name: 'Sawarabi Mincho', value: 'Sawarabi Mincho', url: 'https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap' },
-  { name: 'Kosugi Maru', value: 'Kosugi Maru', url: 'https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap' },
-  { name: 'Kosugi', value: 'Kosugi', url: 'https://fonts.googleapis.com/css2?family=Kosugi&display=swap' },
-  { name: 'Yuji Syuku', value: 'Yuji Syuku', url: 'https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap' }
-]
-
-const installedFonts = computed(() => {
-  return availableFonts.value.filter(font => font.value !== systemFont)
-})
+const downloadableFonts = computed(() => fontStore.downloadableFonts)
+const installedFonts = computed(() => fontStore.installedFonts)
+const isLoadingFont = computed(() => fontStore.loading)
 
 const filteredDownloadableFonts = computed(() => {
-  const search = marketplaceSearch.value.toLowerCase()
-  return downloadableFonts.value.filter(font => 
-    !availableFonts.value.some(f => f.value === font.value) &&
-    (font.name.toLowerCase().includes(search) || !search)
+  if (!marketplaceSearch.value) return downloadableFonts.value
+  
+  const searchLower = marketplaceSearch.value.toLowerCase()
+  return downloadableFonts.value.filter(font =>
+    font.name.toLowerCase().includes(searchLower)
   )
 })
 
-const isLoadingFont = ref('')
+const availableFonts = computed(() => installedFonts.value)
 
-const selectFont = (font) => {
+const downloadFont = async (font: any) => {
+  await fontStore.installFont(font)
+}
+
+const selectFont = (font: any) => {
   settings.value.fontFamily = font.value
 }
 
-const deleteFont = (font) => {
-  const index = availableFonts.value.findIndex(f => f.value === font.value)
-  if (index > -1) {
-    availableFonts.value.splice(index, 1)
-  }
-
-  const loadedIndex = loadedFonts.value.indexOf(font.value)
-  if (loadedIndex > -1) {
-    loadedFonts.value.splice(loadedIndex, 1)
-    localStorage.setItem('loadedFonts', JSON.stringify(loadedFonts.value))
-  }
-
-  const linkElement = document.querySelector(`link[href*="${font.value.replace(/ /g, '+')}"]`)
-  if (linkElement) {
-    linkElement.remove()
-  }
-
-  if (settings.value.fontFamily === font.value) {
-    const defaultFont = availableFonts.value[0]
-    if (defaultFont) {
-      settings.value.fontFamily = defaultFont.value
-    }
-  }
-}
-
-const loadFont = async (font) => {
-  if (availableFonts.value.some(f => f.value === font.value)) {
-    return
-  }
-
-  isLoadingFont.value = font.value
-
-  try {
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = font.url
-
-    link.onload = () => {
-      availableFonts.value.push({ name: font.name, value: font.value })
-      loadedFonts.value.push(font.value)
-      localStorage.setItem('loadedFonts', JSON.stringify(loadedFonts.value))
-      isLoadingFont.value = ''
-    }
-
-    link.onerror = () => {
-      isLoadingFont.value = ''
-      alert('Failed to load font: ' + font.name)
-    }
-
-    document.head.appendChild(link)
-  } catch (error) {
-    console.error('Font loading error:', error)
-    isLoadingFont.value = ''
+const deleteFont = (font: any) => {
+  if (confirm(`Delete font: ${font.name}?`)) {
+    fontStore.removeFont(font.value)
   }
 }
 
 const addCustomFont = async () => {
+  if (!customUrl.value) return
+  
   customError.value = ''
   isLoadingCustom.value = true
-
-  const url = customUrl.value.trim()
-  if (!url.startsWith('https://fonts.googleapis.com/css2?')) {
-    customError.value = 'Invalid URL. Must be a Google Fonts CSS link.'
-    isLoadingCustom.value = false
-    return
-  }
-
-  const match = url.match(/family=([^&]+)/)
-  if (!match) {
-    customError.value = 'Could not extract font family from URL.'
-    isLoadingCustom.value = false
-    return
-  }
-
-  const familyEncoded = match[1]
-  const family = decodeURIComponent(familyEncoded).replace(/\+/g, ' ')
-
-  if (availableFonts.value.some(f => f.value === family)) {
-    customError.value = 'Font already installed.'
-    isLoadingCustom.value = false
-    return
-  }
-
+  
   try {
     const link = document.createElement('link')
+    link.href = customUrl.value
     link.rel = 'stylesheet'
-    link.href = url
-
-    link.onload = () => {
-      availableFonts.value.push({ name: family, value: family })
-      loadedFonts.value.push(family)
-      localStorage.setItem('loadedFonts', JSON.stringify(loadedFonts.value))
-      customUrl.value = ''
-      isLoadingCustom.value = false
-      marketplaceTab.value = 'installed' // Switch to installed tab after adding
-    }
-
-    link.onerror = () => {
-      customError.value = 'Failed to load custom font.'
-      isLoadingCustom.value = false
-    }
-
-    document.head.appendChild(link)
+    
+    await new Promise((resolve, reject) => {
+      link.onload = () => resolve(true)
+      link.onerror = () => reject(new Error('Failed to load font'))
+      document.head.appendChild(link)
+      
+      setTimeout(() => resolve(true), 2000)
+    })
+    
+    customUrl.value = ''
   } catch (error) {
-    console.error('Custom font loading error:', error)
-    customError.value = 'Error loading custom font.'
+    customError.value = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+  } finally {
     isLoadingCustom.value = false
   }
 }
 
-const handleReset = () => {
-  resetSettings()
-  modelValue.value = false
-}
-
-watch(modelValue, (newVal) => {
-  if (newVal) {
-    marketplaceSearch.value = ''
-  }
-})
-
-onMounted(async () => {
-  if (import.meta.client) {
-    const stored = localStorage.getItem('loadedFonts')
-    if (stored) {
-      loadedFonts.value = JSON.parse(stored)
-    }
-
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-      const response = await $fetch('https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyDUu_V0wRh0GJkSjuLaJJbxZJBCBDVqrfk&sort=popularity', {
-        signal: controller.signal
-      })
-      
-      clearTimeout(timeoutId)
-      
-      downloadableFonts.value = response.items
-        .filter(item => item.subsets && item.subsets.includes('japanese'))
-        .slice(0, 50)
-        .map(item => ({
-          name: item.family,
-          value: item.family,
-          url: `https://fonts.googleapis.com/css2?family=${item.family.replace(/ /g, '+')}:wght@300;400;500;700&display=swap&subset=japanese`
-        }))
-
-      for (const fontValue of loadedFonts.value) {
-        const existing = availableFonts.value.find(f => f.value === fontValue)
-        if (!existing) {
-          const font = downloadableFonts.value.find(f => f.value === fontValue) || fallbackFonts.find(f => f.value === fontValue)
-          if (font) {
-            const existingLink = Array.from(document.querySelectorAll('link[href]')).some(link => 
-              link.href.includes(font.value.replace(/ /g, '+'))
-            )
-            if (!existingLink) {
-              const link = document.createElement('link')
-              link.rel = 'stylesheet'
-              link.href = font.url
-              document.head.appendChild(link)
-            }
-            availableFonts.value.push(font)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch Google Fonts, using fallback:', error)
-      downloadableFonts.value = fallbackFonts
-      
-      for (const fontValue of loadedFonts.value) {
-        const existing = availableFonts.value.find(f => f.value === fontValue)
-        if (!existing) {
-          const font = fallbackFonts.find(f => f.value === fontValue)
-          if (font) {
-            availableFonts.value.push(font)
-          }
-        }
-      }
-    }
-  }
-})
+const tabs = [
+  { id: 'typography', label: 'Typography', icon: 'div' },
+  { id: 'marketplace', label: 'Font Marketplace', icon: 'div' },
+  { id: 'furigana', label: 'Furigana', icon: 'div' },
+  { id: 'kanji', label: 'Kanji', icon: 'div' },
+  { id: 'colors', label: 'Colors', icon: 'div' }
+]
 </script>
