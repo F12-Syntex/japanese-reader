@@ -42,21 +42,6 @@
 
         <div class="divider my-0"></div>
 
-        <div>
-          <p class="text-sm font-semibold mb-3">Grammar challenges (Optional)</p>
-          <div class="flex flex-wrap gap-2 p-3 bg-base-200/50 rounded-lg max-h-40 overflow-y-auto">
-            <button
-              v-for="point in sessionGrammarPoints"
-              :key="point.grammarPoint"
-              @click="toggleGrammar(point.grammarPoint)"
-              class="badge badge-lg cursor-pointer transition-all"
-              :class="selectedGrammar.includes(point.grammarPoint) ? 'badge-primary' : 'badge-ghost'"
-            >
-              {{ point.grammarPoint }}
-            </button>
-          </div>
-        </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div class="stat bg-base-200 rounded-lg p-4">
             <div class="stat-title text-xs">Proficiency</div>
@@ -105,7 +90,6 @@ interface GrammarPoint {
 
 interface Props {
   modelValue: boolean
-  sessionGrammar: string[]
 }
 
 const props = defineProps<Props>()
@@ -126,10 +110,6 @@ const currentDifficulty = computed(() => difficulty.value)
 const currentLevel = computed(() => getLevelFromScore(difficulty.value))
 const grammarMastered = computed(() => grammarPoints.value.filter((p: GrammarPoint) => (p.userScore ?? 0) >= 80).length)
 const totalGrammar = computed(() => grammarPoints.value.length)
-
-const sessionGrammarPoints = computed(() => {
-  return grammarPoints.value.filter((p: GrammarPoint) => props.sessionGrammar.includes(p.grammarPoint))
-})
 
 const selectFeedback = (feedback: string) => {
   selectedFeedback.value = feedback
