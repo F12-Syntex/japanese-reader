@@ -48,6 +48,7 @@ function searchFilesByContent(files, searchTerm) {
   });
 }
 
+
 function getFilesByExtension(files, extension) {
   const ext = extension.startsWith('.') ? extension : `.${extension}`;
   return files.filter(file => file.endsWith(ext));
@@ -108,44 +109,60 @@ function copyToClipboard(text, fileList) {
   child.stdin.end();
 }
 
+// ✅ UPDATED FUNCTION — applies CSV, ICO, and truncation logic
 function buildOutput(files) {
   let output = '';
+
   files.forEach(filePath => {
+    // Skip .ico entirely
+    if (filePath.endsWith('.ico')) return;
+
     const content = fs.readFileSync(filePath, 'utf8');
+    let finalContent = content;
+
+    if (filePath.endsWith('.csv')) {
+      const lines = content.split(/\r?\n/).slice(0, 3);
+      finalContent = lines.join('\n') + '\n... (truncated CSV preview)\n';
+    } else {
+      const lines = content.split(/\r?\n/);
+      if (lines.length > 300) {
+        finalContent = lines.slice(0, 300).join('\n') + '\n... (truncated after 300 lines)\n';
+      }
+    }
+
     output += `File: ${filePath}\n`;
-    output += `${content}\n\n`;
+    output += `${finalContent}\n\n`;
   });
+
   return output;
 }
 
-function buildTreeOutput(dirPath, prefix = '', isRoot = true) {
+// 🌳 Build tree with optional “safe” ASCII output
+function buildTreeOutput(dirPath, prefix = '', isRoot = true, useAscii = false) {
   let output = '';
   const files = fs.readdirSync(dirPath);
+  const lastIndex = files.length - 1;
 
   files.forEach((file, index) => {
     const fullPath = path.join(dirPath, file);
     const stat = fs.statSync(fullPath);
-    const isLast = index === files.length - 1;
+    const isLast = index === lastIndex;
 
     if (file === 'node_modules' || file.startsWith('.')) return;
 
-    const connector = isLast ? '└── ' : '├── ';
-    const newPrefix = isLast ? '    ' : '│   ';
+    const connector = useAscii ? (isLast ? '\\-- ' : '|-- ') : (isLast ? '└── ' : '├── ');
+    const newPrefix = useAscii ? (isLast ? '    ' : '|   ') : (isLast ? '    ' : '│   ');
 
     if (stat.isDirectory()) {
-      const line = prefix + connector + file + '/\n';
-      output += line;
-      output += buildTreeOutput(fullPath, prefix + newPrefix, false);
-    } else {
-      if (
-        !file.endsWith('.lock') &&
-        !file.endsWith('.md') &&
-        file !== '.gitignore' &&
-        !file.endsWith('.json')
-      ) {
-        const line = prefix + connector + file + '\n';
-        output += line;
-      }
+      output += `${prefix}${connector}${file}/\n`;
+      output += buildTreeOutput(fullPath, prefix + newPrefix, false, useAscii);
+    } else if (
+      !file.endsWith('.lock') &&
+      !file.endsWith('.md') &&
+      file !== '.gitignore' &&
+      !file.endsWith('.json')
+    ) {
+      output += `${prefix}${connector}${file}\n`;
     }
   });
 
@@ -161,32 +178,27 @@ Usage: node helper [command] [argument(s)]
 Commands:
   (no args)              Copy all code files to clipboard
 
-  ? or help              Show this help message (copied to clipboard)
+  ? or help              Show this help message
 
   name <substring(s)>    Find files containing one or more substrings in filename
-                         Example: node helper name user service utils
-
   content <term>         Find files containing term in their content
-                         Example: node helper content "useState"
-
   ext <extension>        Get all files with specific extension
-                         Example: node helper ext .tsx
-
-  recent [hours]         Get recently modified files (default: 24 hours)
-                         Example: node helper recent 2
-
+  recent [hours]         Get recently modified files (default: 24h)
   list                   List all files and copy to clipboard
-
   tree                   Show directory tree structure and copy to clipboard
 
+Exclusions and Formatting:
+  - .ico files skipped entirely
+  - .csv files: first 3 lines only
+  - Files >300 lines truncated
+
 Examples:
-  node helper                    # Copy everything
-  node helper name component     # Files with "component" in name
-  node helper name user service  # Files with "user" or "service" in name
-  node helper content API        # Files containing "API"
-  node helper ext .js            # All JavaScript files
-  node helper recent 12          # Files modified in last 12 hours
-  node helper tree               # Visual directory structure
+  node helper
+  node helper name component
+  node helper content API
+  node helper ext .js
+  node helper recent 12
+  node helper tree
 `;
 
   console.log(helpText);
@@ -200,58 +212,56 @@ function main() {
     const command = args[0]?.toLowerCase();
     const argument = args[1];
 
-    // Show help
     if (command === '?' || command === 'help') {
       showHelp();
       return;
     }
 
-    // Show tree
     if (command === 'tree') {
       console.log('📂 Project Structure:');
-      const rootName = path.basename(currentDir) + '/\n';
       console.log(path.basename(currentDir) + '/');
-      const treeOutput = rootName + buildTreeOutput(currentDir);
-      copyToClipboard(treeOutput);
+      const fancyTree = path.basename(currentDir) + '/\n' + buildTreeOutput(currentDir, '', true, false);
+      const safeTree = path.basename(currentDir) + '/\n' + buildTreeOutput(currentDir, '', true, true);
+      copyToClipboard(safeTree); // copy ASCII-safe tree
+      console.log(fancyTree);    // pretty tree in terminal
       return;
     }
 
     console.log('🔄 Processing files...');
     const allFiles = getAllFiles(currentDir, [], true);
-
     let selectedFiles = allFiles;
     let output = '';
 
-    // ✅ Modified "name" command to include structure
     if (command === 'name' && args.length > 1) {
       selectedFiles = searchFilesByName(allFiles, ...args.slice(1));
-      console.log(`🔍 Searching for files with names including: ${args.slice(1).join(', ')}`);
-
-      // Build structure + file contents
-      const projectName = path.basename(currentDir);
-      const structure = `${projectName}/\n${buildTreeOutput(currentDir)}`;
-      const filesSection = buildOutput(selectedFiles);
-      output = `<structure>\n${structure}\n\n<files>\n${filesSection}`;
+      console.log(`🔍 Searching filenames: ${args.slice(1).join(', ')}`);
+      const project = path.basename(currentDir);
+      const structure = `${project}/\n${buildTreeOutput(currentDir, '', true, true)}`;
+      const files = buildOutput(selectedFiles);
+      output = `<structure>\n${structure}\n\n<files>\n${files}`;
     } else if (command === 'content' && argument) {
       selectedFiles = searchFilesByContent(allFiles, argument);
-      console.log(`🔍 Searching for files containing "${argument}"...`);
+      console.log(`🔍 Searching for content "${argument}"...`);
       output = buildOutput(selectedFiles);
     } else if (command === 'ext' && argument) {
       selectedFiles = getFilesByExtension(allFiles, argument);
-      console.log(`🔍 Filtering files with extension "${argument}"...`);
+      console.log(`🔍 Files with extension "${argument}"...`);
       output = buildOutput(selectedFiles);
     } else if (command === 'recent') {
       const hours = argument ? parseInt(argument, 10) : 24;
       selectedFiles = getRecentlyModified(allFiles, hours);
-      console.log(`🔍 Finding files modified in last ${hours} hours...`);
+      console.log(`⏰ Files modified in last ${hours}h...`);
       output = buildOutput(selectedFiles);
     } else if (command === 'list') {
       console.log('📋 Listing all files...');
       output = buildOutput(selectedFiles);
     } else if (command && command !== 'name') {
-      console.log(`⚠️  Unknown command: "${command}"`);
-      console.log('💡 Use "node helper ?" for help\n');
+      console.log(`⚠️ Unknown command: "${command}"`);
+      console.log('💡 Use "node helper ?" for help');
       return;
+    } else {
+      console.log('📋 Copying all files (with truncation rules)...');
+      output = buildOutput(selectedFiles);
     }
 
     if (selectedFiles.length === 0) {
@@ -260,7 +270,6 @@ function main() {
     }
 
     copyToClipboard(output, selectedFiles);
-
   } catch (error) {
     console.error('❌ Error:', error.message);
   }
