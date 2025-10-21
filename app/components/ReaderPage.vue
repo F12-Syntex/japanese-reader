@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full bg-base-100 flex flex-col">
+  <div class="h-full bg-base-100 flex flex-col relative">
     <div class="flex-1 overflow-y-auto custom-scrollbar">
       <div v-if="japaneseText.length > 0 || streamingText" class="w-full">
         <div v-if="!hasSeenInfo" class="px-6 sm:px-12 pt-6">
@@ -38,16 +38,15 @@
       />
     </div>
 
-    <!-- Floating action button: hidden when any modal is open, positioned above mobile tab nav -->
-    <div
+   <div 
       v-if="japaneseText.length > 0 && !anyModalOpen"
-      class="fixed right-8 z-[50]"
+      class="fixed right-8 z-40"
       :class="fabContainerClasses"
     >
       <button 
         @click="showFeedback = true" 
         class="btn btn-circle btn-primary shadow-lg"
-        title="Next text"
+        title="Next"
       >
         <IconArrowRight class="w-5 h-5" />
       </button>
