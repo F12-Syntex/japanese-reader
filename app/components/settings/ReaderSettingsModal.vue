@@ -1,32 +1,47 @@
 <template>
   <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Reader Settings" subtitle="Customize your reading experience" size="2xl">
     <template #default>
-      <div class="flex flex-col gap-4 h-full overflow-hidden md:flex-row">
-        <div class="hidden md:flex tabs tabs-boxed bg-base-200 flex-col w-full">
+      <div class="flex flex-col gap-4 h-full overflow-hidden">
+        <div class="hidden md:flex tabs tabs-boxed bg-base-200 flex-shrink-0">
           <button 
             v-for="tab in tabs" 
             :key="tab.id"
             @click="activeTab = tab.id"
-            class="tab gap-2 justify-start text-xs md:text-sm"
+            class="tab flex items-center gap-2 text-xs md:text-sm"
             :class="activeTab === tab.id ? 'tab-active' : ''"
           >
             <component :is="tab.icon" class="w-4 h-4" />
-            <span>{{ tab.label }}</span>
+            <span class="hidden lg:inline">{{ tab.label }}</span>
           </button>
         </div>
 
-        <div class="overflow-y-auto flex-1">
-          <div class="space-y-6 pr-2">
-            <TypographySettings v-show="activeTab === 'typography'" :settings="localSettings" />
+        <div class="overflow-y-auto flex-1 pr-2">
+          <div class="space-y-6">
+            <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" />
             <MarketplaceSettings 
               v-show="activeTab === 'marketplace'" 
-              :settings="localSettings"
+              :settings="readerStore.settings"
             />
-            <FuriganaSettings v-show="activeTab === 'furigana'" :settings="localSettings" />
-            <TooltipSettings v-show="activeTab === 'tooltip'" :settings="localSettings" />
-            <HighlightingSettings v-show="activeTab === 'highlighting'" :settings="localSettings" />
-            <DisplaySettings v-show="activeTab === 'display'" :settings="localSettings" />
-            <InteractionSettings v-show="activeTab === 'interaction'" :settings="localSettings" @reset="handleReset" />
+            <FuriganaSettings v-show="activeTab === 'furigana'" :settings="readerStore.settings" />
+            <TooltipSettings v-show="activeTab === 'tooltip'" :settings="readerStore.settings" />
+            <HighlightingSettings v-show="activeTab === 'highlighting'" :settings="readerStore.settings" />
+            <DisplaySettings v-show="activeTab === 'display'" :settings="readerStore.settings" />
+            <InteractionSettings v-show="activeTab === 'interaction'" :settings="readerStore.settings" @reset="handleReset" />
+          </div>
+        </div>
+
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 z-50">
+          <div class="flex justify-around items-center p-2 w-full max-w-full overflow-x-auto">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              :title="tab.label"
+              class="p-3 rounded-lg transition-colors flex-shrink-0"
+              :class="activeTab === tab.id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-200'"
+            >
+              <component :is="tab.icon" class="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -84,19 +99,13 @@ const tabs: TabItem[] = [
 ]
 
 const handleReset = (): void => {
-  localSettings.value = { ...defaultReaderSettings }
-  readerStore.settings = { ...defaultReaderSettings }
+  readerStore.reset()
   emit('update:modelValue', false)
 }
 
 watch(() => props.modelValue, (newVal: boolean) => {
   if (newVal) {
-    localSettings.value = { ...readerStore.settings }
     activeTab.value = 'typography'
   }
 })
-
-watch(localSettings, (newSettings: ReaderSettings) => {
-  readerStore.settings = { ...newSettings }
-}, { deep: true })
 </script>
