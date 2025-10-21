@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const systemPrompt = `You are a JSON generator. Return only valid JSON object. Map each word to {reading, meaning, pos, jlptLevel}.`
+  const systemPrompt = `You are a JSON generator. Return only valid JSON object. Map each word to {reading, meaning, pos ( e.g verb/adverb/noun/adjective ), jlptLevel}.`
 
   const userPrompt = `Map these words: ${JSON.stringify(words.slice(0, 50))}`
 

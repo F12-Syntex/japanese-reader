@@ -9,11 +9,11 @@
     @mouseleave="handleMouseLeave"
   >
     <span
-      v-if="settings?.alwaysShowTranslation && word?.meaning && !isParticle"
+      v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle"
       class="block text-center opacity-70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
       :style="translationStyle"
     >
-      {{ truncateMeaning(word.meaning) }}
+      {{ truncateMeaning(displayMeaning) }}
     </span>
 
     <span
@@ -44,11 +44,11 @@
           class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
           :style="tooltipPosition"
         >
-          <div 
+          <div
             class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
             :style="arrowStyle"
           ></div>
-          
+
           <div
             class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
             :class="tooltipTextSize"
@@ -57,7 +57,7 @@
             @mouseleave="onTooltipMouseLeave"
           >
             <div class="h-1.5 bg-primary"></div>
-            
+
             <div class="p-4 sm:p-5">
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="min-w-0 flex-1">
@@ -65,33 +65,33 @@
                     <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
                       {{ localWord.kanji }}
                     </div>
-                    <div 
-                      v-if="localWord.jlptLevel" 
+                    <div
+                      v-if="enrichedMeaning?.jlptLevel"
                       class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
                     >
-                      {{ localWord.jlptLevel }}
+                      {{ enrichedMeaning.jlptLevel }}
                     </div>
                   </div>
-                  <div v-if="localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
-                    {{ localWord.reading }}
+                  <div v-if="enrichedMeaning?.reading || localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
+                    {{ enrichedMeaning?.reading || localWord.reading }}
                   </div>
                 </div>
 
                 <div
-                  v-if="(settings?.showPartOfSpeech && localWord.pos) || localWord.isKnown !== undefined"
+                  v-if="(settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)) || localWord.isKnown !== undefined"
                   class="flex flex-col gap-2 items-end shrink-0"
                 >
                   <span
-                    v-if="settings?.showPartOfSpeech && localWord.pos"
+                    v-if="settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)"
                     class="badge badge-neutral badge-sm font-semibold"
                   >
-                    {{ localWord.pos }}
+                    {{ enrichedMeaning?.pos || localWord.pos }}
                   </span>
                   <span
                     v-if="localWord.isKnown !== undefined"
                     class="badge badge-sm font-semibold"
-                    :class="localWord.isKnown 
-                      ? 'badge-success badge-outline' 
+                    :class="localWord.isKnown
+                      ? 'badge-success badge-outline'
                       : 'badge-warning badge-outline'"
                   >
                     {{ localWord.isKnown ? 'Known' : 'Learning' }}
@@ -103,7 +103,7 @@
 
               <div class="mb-3">
                 <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
-                  {{ localWord.meaning || 'No meaning available' }}
+                  {{ displayMeaning || 'No meaning available' }}
                 </p>
               </div>
 
@@ -111,13 +111,13 @@
                 v-if="showTooltipExtras"
                 class="space-y-2.5 pt-2 border-t border-base-300"
               >
-                <div v-if="settings?.showPitchAccent && localWord.pitchAccent" class="flex items-center gap-2">
+                <div v-if="settings?.showPitchAccent && (enrichedMeaning?.pitchAccent || localWord.pitchAccent)" class="flex items-center gap-2">
                   <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
-                  <span class="text-sm font-medium text-base-content">{{ localWord.pitchAccent }}</span>
+                  <span class="text-sm font-medium text-base-content">{{ enrichedMeaning?.pitchAccent || localWord.pitchAccent }}</span>
                 </div>
-                <div v-if="settings?.showExample && localWord.example" class="alert alert-info py-2 px-3">
+                <div v-if="settings?.showExample && (enrichedMeaning?.example || localWord.example)" class="alert alert-info py-2 px-3">
                   <p class="text-sm leading-relaxed italic">
-                    "{{ localWord.example }}"
+                    "{{ enrichedMeaning?.example || localWord.example }}"
                   </p>
                 </div>
               </div>
@@ -134,6 +134,7 @@ import { nextTick, computed, ref, watch, onUnmounted } from 'vue'
 import type { ParsedWord } from '~/types/japanese'
 import type { ReaderSettings } from '~/types/reader'
 import type { CSSProperties } from 'vue'
+import { useWordMetadataStore } from '~/stores/useWordMetadataStore'
 
 interface Props {
   word: ParsedWord
@@ -150,6 +151,7 @@ const emit = defineEmits<{
   click: [word: ParsedWord, event: MouseEvent]
 }>()
 
+const metadataStore = useWordMetadataStore()
 const showTooltip = ref(false)
 const tooltipRef = ref<HTMLElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
@@ -160,16 +162,25 @@ const isMobile = ref(false)
 let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let keepTooltip = false
 
-const isParticle = computed(() => localWord.value?.pos === 'particle')
+const enrichedMeaning = computed(() => {
+  const kanji = localWord.value?.kanji ?? ''
+  return kanji ? metadataStore.getWord(kanji) : null
+})
 
-const showTooltipExtras = computed(() => 
-  (props.settings?.showPitchAccent && localWord.value.pitchAccent) ||
-  (props.settings?.showExample && localWord.value.example)
+const displayMeaning = computed(() => {
+  return enrichedMeaning.value?.meaning || localWord.value?.meaning || ''
+})
+
+const isParticle = computed(() => enrichedMeaning.value?.pos === 'particle' || localWord.value?.pos === 'particle')
+
+const showTooltipExtras = computed(() =>
+  (props.settings?.showPitchAccent && (enrichedMeaning.value?.pitchAccent || localWord.value.pitchAccent)) ||
+  (props.settings?.showExample && (enrichedMeaning.value?.example || localWord.value.example))
 )
 
 const arrowStyle = computed((): CSSProperties => {
   const baseStyle: CSSProperties = { zIndex: -1 }
-  
+
   if (arrowPosition.value === 'bottom') {
     return {
       ...baseStyle,
@@ -194,13 +205,15 @@ const wordColorStyle = computed((): CSSProperties => {
     return style
   }
 
-  if (props.settings?.highlightParticles && isParticle.value) {
+  const pos = enrichedMeaning.value?.pos || localWord.value?.pos
+
+  if (props.settings?.highlightParticles && pos === 'particle') {
     style.color = 'hsl(12, 78%, 45%)'
-  } else if (props.settings?.highlightVerbs && localWord.value?.pos === 'verb') {
+  } else if (props.settings?.highlightVerbs && pos === 'verb') {
     style.color = 'hsl(212, 78%, 45%)'
-  } else if (props.settings?.highlightAdjectives && localWord.value?.pos === 'adjective') {
+  } else if (props.settings?.highlightAdjectives && pos === 'adjective') {
     style.color = 'hsl(276, 65%, 50%)'
-  } else if (props.settings?.highlightNouns && localWord.value?.pos === 'noun') {
+  } else if (props.settings?.highlightNouns && pos === 'noun') {
     style.color = 'hsl(48, 85%, 45%)'
   }
 
@@ -273,75 +286,84 @@ const tooltipTextSize = computed(() => {
 
 const truncateMeaning = (meaning: string): string => {
   if (!meaning) return ''
-  
+
   const parentText = localWord.value.kanji || localWord.value.kana || ''
   const maxLength = parentText.length * 10
-  
+
   const cleaned = meaning.split(/[.,;]/).map(s => s.trim()).filter(Boolean)
   let firstMeaning = ''
-  
+
   if (cleaned.length > 0) {
     firstMeaning = cleaned[0] ?? ''
   } else {
     const words = meaning.trim().split(/\s+/)
     firstMeaning = words[0] || ''
   }
-  
+
   if (firstMeaning.length > maxLength) {
     firstMeaning = firstMeaning.substring(0, maxLength) + '...'
   }
-  
+
   return firstMeaning
 }
 
 const calculateTooltipPosition = (): void => {
   if (!wrapperRef.value || !tooltipRef.value) return
-  
+
   const rect = wrapperRef.value.getBoundingClientRect()
-  const tooltip = tooltipRef.value
-  const gap = 8
-  const tooltipHeight = tooltip.offsetHeight
-  const tooltipWidth = tooltip.offsetWidth
-  
-  const viewportHeight = window.innerHeight
-  const spaceBelow = viewportHeight - rect.bottom
-  const spaceAbove = rect.top
-  
-  const tooltipTop = spaceBelow > tooltipHeight + gap
-    ? rect.bottom + gap
-    : rect.top - tooltipHeight - gap
-  
-  arrowPosition.value = spaceBelow > tooltipHeight + gap ? 'top' : 'bottom'
-  
-  const tooltipLeft = Math.max(
-    8,
-    Math.min(
-      window.innerWidth - tooltipWidth - 8,
-      rect.left + rect.width / 2 - tooltipWidth / 2
-    )
-  )
-  
+  const tooltipRect = tooltipRef.value.getBoundingClientRect()
+  const gap = 16
+
+  let top = rect.top - tooltipRect.height - gap
+  let bottom: number | null = null
+  arrowPosition.value = 'bottom'
+
+  if (top < gap) {
+    top = rect.bottom + gap
+    arrowPosition.value = 'top'
+    bottom = null
+  }
+
+  let left = rect.left + rect.width / 2 - tooltipRect.width / 2
+
+  const minMargin = 8
+  if (left < minMargin) {
+    left = minMargin
+  } else if (left + tooltipRect.width > window.innerWidth - minMargin) {
+    left = window.innerWidth - tooltipRect.width - minMargin
+  }
+
   tooltipPosition.value = {
-    top: `${tooltipTop}px`,
-    left: `${tooltipLeft}px`
+    top: top > 0 ? `${top}px` : 'auto',
+    bottom: bottom !== null ? `${bottom}px` : 'auto',
+    left: `${left}px`
   }
 }
 
-const handleMouseEnter = (): void => {
+const handleMouseEnter = async (): Promise<void> => {
   if (props.disableHover || isParticle.value || isMobile.value) return
-  
+
   if (tooltipTimeout) clearTimeout(tooltipTimeout)
-  tooltipTimeout = setTimeout(() => {
+
+  const delay = Math.max(0, Math.min(1000, props.settings?.tooltipDelay ?? 10))
+
+  tooltipTimeout = setTimeout(async () => {
     showTooltip.value = true
-    nextTick(() => calculateTooltipPosition())
-  }, props.settings?.tooltipDelay ?? 0)
+    await nextTick()
+    calculateTooltipPosition()
+  }, delay)
 }
 
 const handleMouseLeave = (): void => {
   if (tooltipTimeout) clearTimeout(tooltipTimeout)
+
   if (!keepTooltip) {
     showTooltip.value = false
   }
+}
+
+const handleClick = (event: MouseEvent): void => {
+  emit('click', props.word, event)
 }
 
 const onTooltipMouseEnter = (): void => {
@@ -353,25 +375,28 @@ const onTooltipMouseLeave = (): void => {
   showTooltip.value = false
 }
 
-const handleClick = (event: MouseEvent): void => {
-  emit('click', props.word, event)
-}
-
-const checkMobile = (): void => {
-  isMobile.value = window.matchMedia('(max-width: 768px)').matches
-}
-
-watch(() => props.word, (newWord: ParsedWord) => {
-  localWord.value = { ...newWord }
+watch(() => props.word, (newWord) => {
+  if (newWord) {
+    localWord.value = { ...newWord }
+  }
 }, { deep: true })
 
+watch(() => tooltipRef.value, async () => {
+  if (showTooltip.value) {
+    await nextTick()
+    calculateTooltipPosition()
+  }
+})
+
 onMounted(() => {
-  checkMobile()
-  const mediaQuery = window.matchMedia('(max-width: 768px)')
-  mediaQuery.addEventListener('change', checkMobile)
-  
-  onUnmounted(() => {
-    mediaQuery.removeEventListener('change', checkMobile)
+  metadataStore.loadCache()
+  isMobile.value = window.innerWidth < 768
+  window.addEventListener('resize', () => {
+    isMobile.value = window.innerWidth < 768
   })
+})
+
+onUnmounted(() => {
+  if (tooltipTimeout) clearTimeout(tooltipTimeout)
 })
 </script>
