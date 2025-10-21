@@ -41,7 +41,7 @@
       <teleport v-if="showTooltip && settings?.showTooltip && !isParticle" to="body">
         <div
           ref="tooltipRef"
-          class="fixed z-[100] pointer-events-auto"
+          class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
           :style="tooltipPosition"
         >
           <div 
@@ -294,21 +294,24 @@ const truncateMeaning = (meaning: string): string => {
 }
 
 const calculateTooltipPosition = (): void => {
+  if (!wrapperRef.value) return
+  
+  const rect = wrapperRef.value.getBoundingClientRect()
+  const gap = 8
+  const padding = 8
+
+  tooltipPosition.value = {
+    top: `${Math.max(padding, rect.top - 200)}px`,
+    left: `${Math.max(padding, rect.left + rect.width / 2 - 140)}px`
+  }
+
   nextTick(() => {
-    const wrapper = wrapperRef.value
-    const tooltip = tooltipRef.value
-    if (!wrapper || !tooltip) return
-
-    const rect = wrapper.getBoundingClientRect()
-    if (!rect) return
-
-    const tooltipRect = tooltip.getBoundingClientRect()
-    const gap = 8
+    if (!tooltipRef.value) return
+    const tooltipRect = tooltipRef.value.getBoundingClientRect()
 
     let top = rect.top - tooltipRect.height - gap
     let left = rect.left + rect.width / 2 - tooltipRect.width / 2
 
-    const padding = 8
     if (left < padding) {
       left = padding
     }
@@ -337,10 +340,12 @@ const handleMouseEnter = (): void => {
     clearTimeout(tooltipTimeout)
   }
 
+  const delay = Math.max(0, (props.settings?.tooltipDelay ?? 200))
+  
   tooltipTimeout = setTimeout(() => {
     showTooltip.value = true
     calculateTooltipPosition()
-  }, props.settings?.tooltipDelay ?? 200)
+  }, delay)
 }
 
 const handleMouseLeave = (): void => {
