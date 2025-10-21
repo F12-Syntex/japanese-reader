@@ -2,143 +2,172 @@
   <div class="w-full h-full overflow-y-auto bg-base-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-      <div class="stats stats-vertical sm:stats-horizontal bg-base-100 shadow w-full rounded-lg">
-        <div class="stat">
-          <div class="stat-figure text-primary"><IconTarget class="w-6 h-6" /></div>
-          <div class="stat-title">Overall</div>
-          <div class="stat-value text-primary">{{ overallProficiency }}%</div>
+      <!-- Simplified Stats Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="card-body p-4 text-center">
+            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10">
+              <IconTarget class="w-5 h-5 text-primary" />
+            </div>
+            <div class="text-2xl font-bold text-primary">{{ overallProficiency }}%</div>
+            <div class="text-xs text-base-content/60">Overall</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-figure text-secondary"><IconBookOpen class="w-6 h-6" /></div>
-          <div class="stat-title">Total Points</div>
-          <div class="stat-value text-secondary">{{ grammarPoints.length }}</div>
+        
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="card-body p-4 text-center">
+            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-secondary/10">
+              <IconBookOpen class="w-5 h-5 text-secondary" />
+            </div>
+            <div class="text-2xl font-bold text-secondary">{{ grammarPoints.length }}</div>
+            <div class="text-xs text-base-content/60">Total</div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-figure text-success"><IconCheck class="w-6 h-6" /></div>
-          <div class="stat-title">Mastered</div>
-          <div class="stat-value text-success">{{ masteredCount }}</div>
+        
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="card-body p-4 text-center">
+            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-success/10">
+              <IconCheck class="w-5 h-5 text-success" />
+            </div>
+            <div class="text-2xl font-bold text-success">{{ masteredCount }}</div>
+            <div class="text-xs text-base-content/60">Mastered</div>
+          </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="card-body p-4 text-center">
+            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-warning/10">
+              <IconTrendingUp class="w-5 h-5 text-warning" />
+            </div>
+            <div class="text-2xl font-bold text-warning">{{ inProgressCount }}</div>
+            <div class="text-xs text-base-content/60">Learning</div>
+          </div>
         </div>
       </div>
 
+      <!-- Enhanced Search and Filter Card -->
       <div class="card bg-base-100 shadow-md">
-        <div class="card-body">
-          <div class="flex flex-col sm:flex-row gap-3">
-            <label class="input input-bordered flex items-center gap-2 w-full sm:flex-1">
-              <IconSearch class="w-4 h-4 opacity-70" />
-              <input v-model="searchQuery" type="text" placeholder="Search grammar points..." class="grow" />
-            </label>
-            <select v-model="selectedLevel" class="select select-bordered w-full sm:w-40">
-              <option value="">All Levels</option>
-              <option v-for="level in levels" :key="level" :value="level">{{ level }}</option>
-            </select>
-            <button @click="resetFilters" class="btn btn-ghost">
-              <IconRefreshCw class="w-4 h-4" /> Clear
+        <div class="card-body p-4 sm:p-6">
+          <div class="flex flex-col gap-3">
+            <!-- Search Bar -->
+            <div class="relative">
+              <IconSearch class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Search grammar points, English..." 
+                class="input input-bordered w-full pl-10 pr-4"
+              />
+            </div>
+            
+            <!-- Filter Row -->
+            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div class="flex-1 flex gap-2">
+                <select v-model="selectedLevel" class="select select-bordered flex-1 sm:flex-none sm:w-32">
+                  <option value="">All Levels</option>
+                  <option v-for="level in levels" :key="level" :value="level">{{ level }}</option>
+                </select>
+                
+                <button 
+                  @click="resetFilters" 
+                  class="btn btn-ghost gap-2"
+                  :class="{ 'btn-disabled': !searchQuery && !selectedLevel }"
+                >
+                  <IconRefreshCw class="w-4 h-4" />
+                  <span class="hidden sm:inline">Clear</span>
+                </button>
+              </div>
+              
+              <div class="text-sm text-base-content/60 text-center sm:text-right">
+                {{ filteredPoints.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1 }}–{{ Math.min(currentPage * itemsPerPage, filteredPoints.length) }} of {{ filteredPoints.length }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="filteredPoints.length === 0" class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body py-16 text-center">
+          <IconSearch class="w-16 h-16 mx-auto mb-4 text-base-content/20" />
+          <h3 class="text-lg font-semibold text-base-content/60">No grammar points found</h3>
+          <p class="text-sm text-base-content/40">Try adjusting your search or filters</p>
+        </div>
+      </div>
+
+      <!-- Grammar Points Grid -->
+      <div v-else>
+        <!-- Desktop Grid -->
+        <div class="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+          <GrammarPointCard
+            v-for="point in paginatedPoints"
+            :key="point.grammarPoint"
+            :point="point"
+            variant="desktop"
+            @open-modal="openScoreModal"
+            @reset-score="resetPointScore"
+          />
+        </div>
+
+        <!-- Mobile List -->
+        <div class="sm:hidden space-y-2">
+          <GrammarPointCard
+            v-for="point in paginatedPoints"
+            :key="point.grammarPoint"
+            :point="point"
+            variant="mobile"
+            @open-modal="openScoreModal"
+            @reset-score="resetPointScore"
+          />
+        </div>
+      </div>
+
+      <!-- Pagination and Actions -->
+      <div v-if="filteredPoints.length > 0" class="card bg-base-100 shadow-md">
+        <div class="card-body p-4">
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-base-content/70 order-2 sm:order-1">
+              Page {{ currentPage }} of {{ totalPages }}
+            </div>
+            
+            <div class="join order-1 sm:order-2">
+              <button 
+                class="join-item btn btn-sm" 
+                :disabled="currentPage === 1" 
+                @click="currentPage--"
+              >
+                <IconChevronLeft class="w-4 h-4" />
+              </button>
+              <button class="join-item btn btn-sm no-animation">
+                {{ currentPage }}
+              </button>
+              <button 
+                class="join-item btn btn-sm" 
+                :disabled="currentPage === totalPages" 
+                @click="currentPage++"
+              >
+                <IconChevronRight class="w-4 h-4" />
+              </button>
+            </div>
+            
+            <button 
+              @click="resetAllScores" 
+              class="btn btn-outline btn-error btn-sm gap-2 order-3"
+            >
+              <IconTrash class="w-4 h-4" />
+              <span class="hidden sm:inline">Reset All</span>
             </button>
           </div>
         </div>
       </div>
-
-      <p class="text-sm text-base-content/60">
-        Showing {{ filteredPoints.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1 }}–{{ Math.min(currentPage * itemsPerPage, filteredPoints.length) }} of {{ filteredPoints.length }} points
-      </p>
-
-      <div v-if="filteredPoints.length === 0" class="hero bg-base-100 rounded-lg border border-base-300 py-12">
-        <div class="text-center">
-          <IconSearch class="w-14 h-14 mx-auto mb-3 text-base-content/30" />
-          <p class="text-base-content/60">No grammar points found</p>
-        </div>
-      </div>
-
-      <div v-else>
-        <div class="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <div
-            v-for="point in paginatedPoints"
-            :key="point.grammarPoint"
-            class="card bg-base-100 hover:shadow-lg transition-all duration-150"
-          >
-            <div class="card-body p-4">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-8 rounded bg-primary/10 flex justify-center items-center">
-                    <IconBookOpen class="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 class="font-bold text-sm">{{ point.grammarPoint }}</h3>
-                    <p class="text-xs text-base-content/70 truncate">{{ point.english }}</p>
-                  </div>
-                </div>
-                <span class="badge badge-sm" :class="getLevelBadgeClass(point.level)">{{ point.level }}</span>
-              </div>
-              <div class="flex justify-end mt-2 gap-1">
-                <button @click="openScoreModal(point)" class="btn btn-xs btn-outline gap-1" :class="getScoreButtonClass(point.userScore ?? 0)">
-                  <IconTarget class="w-3 h-3" />{{ point.userScore ?? 0 }}%
-                </button>
-                <button @click="resetPointScore(point.grammarPoint)" class="btn btn-ghost btn-xs">
-                  <IconRefreshCw class="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sm:hidden space-y-3">
-          <div
-            v-for="point in paginatedPoints"
-            :key="point.grammarPoint"
-            class="card bg-base-100 shadow-sm"
-          >
-            <div class="card-body px-4 py-3">
-              <div class="flex justify-between">
-                <div>
-                  <p class="font-semibold">{{ point.grammarPoint }}</p>
-                  <p class="text-xs text-base-content/60">{{ point.english }}</p>
-                </div>
-                <span class="badge badge-sm" :class="getLevelBadgeClass(point.level)">{{ point.level }}</span>
-              </div>
-              <div class="flex justify-end mt-2 gap-2">
-                <button @click="openScoreModal(point)" class="btn btn-xs btn-outline" :class="getScoreButtonClass(point.userScore ?? 0)">
-                  <IconTarget class="w-3 h-3" /> {{ point.userScore ?? 0 }}%
-                </button>
-                <button @click="resetPointScore(point.grammarPoint)" class="btn btn-ghost btn-xs"><IconRefreshCw class="w-3 h-3" /></button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="filteredPoints.length > 0" class="card bg-base-100 shadow-md mt-4">
-        <div class="card-body flex justify-between items-center">
-          <div class="text-sm text-base-content/70">Page {{ currentPage }} of {{ totalPages }}</div>
-          <div class="join">
-            <button class="join-item btn btn-sm" :disabled="currentPage === 1" @click="currentPage--">‹</button>
-            <button class="join-item btn btn-sm no-animation">{{ currentPage }}</button>
-            <button class="join-item btn btn-sm" :disabled="currentPage === totalPages" @click="currentPage++">›</button>
-          </div>
-          <button @click="resetAllScores" class="btn btn-outline btn-error btn-sm">
-            <IconTrash class="w-4 h-4" /> Reset All
-          </button>
-        </div>
-      </div>
     </div>
 
-    <dialog ref="scoreModal" class="modal">
-      <div class="modal-box space-y-4">
-        <h3 class="font-bold text-lg">Set Mastery Level</h3>
-        <div v-if="selectedPoint">
-          <p class="font-semibold">{{ selectedPoint.grammarPoint }}</p>
-          <p class="text-sm text-base-content/60">{{ selectedPoint.english }}</p>
-        </div>
-        <div>
-          <input v-model.number="tempScore" type="range" min="0" max="100" step="5" class="range range-primary" />
-          <p class="text-center font-bold mt-2 text-primary">{{ tempScore }}%</p>
-        </div>
-        <div class="modal-action">
-          <button @click="closeScoreModal" class="btn btn-ghost">Cancel</button>
-          <button @click="saveScore" class="btn btn-primary">Save</button>
-        </div>
-      </div>
-      <form method="dialog" class="modal-backdrop"><button>close</button></form>
-    </dialog>
+    <!-- Score Modal -->
+    <GrammarScoreModal
+      v-model="showScoreModal"
+      :point="selectedPoint"
+      @save="saveScore"
+    />
   </div>
 </template>
 
@@ -149,6 +178,19 @@ import IconRefreshCw from '~icons/lucide/refresh-cw'
 import IconTrash from '~icons/lucide/trash-2'
 import IconTarget from '~icons/lucide/target'
 import IconCheck from '~icons/lucide/check'
+import IconTrendingUp from '~icons/lucide/trending-up'
+import IconChevronLeft from '~icons/lucide/chevron-left'
+import IconChevronRight from '~icons/lucide/chevron-right'
+
+import GrammarPointCard from '~/components/grammar/GrammarPointCard.vue'
+import GrammarScoreModal from '~/components/grammar/GrammarScoreModal.vue'
+
+interface GrammarPoint {
+  grammarPoint: string
+  english: string
+  level: string
+  userScore?: number
+}
 
 definePageMeta({ layout: 'default' })
 
@@ -157,18 +199,17 @@ const { grammarPoints, loadGrammarPoints, updateScore, getProficiencyForLevel, g
 const searchQuery = ref('')
 const selectedLevel = ref('')
 const currentPage = ref(1)
-const itemsPerPage = 30
-const levels = ['N5', 'N4', 'N3', 'N2', 'N1']
-const scoreModal = ref<HTMLDialogElement | null>(null)
-const selectedPoint = ref<any>(null)
-const tempScore = ref(0)
+const itemsPerPage = 16
+const levels = ['N5', 'N4', 'N3', 'N2', 'N1'] as const
+const showScoreModal = ref(false)
+const selectedPoint = ref<GrammarPoint | null>(null)
 
 const filteredPoints = computed(() => {
-  let filtered = grammarPoints.value
+  let filtered = grammarPoints.value as GrammarPoint[]
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
     filtered = filtered.filter(p =>
-      [p.grammarPoint, p.japanese, p.english].some(v => v.toLowerCase().includes(q))
+      [p.grammarPoint, p.english].some(v => v.toLowerCase().includes(q))
     )
   }
   if (selectedLevel.value) filtered = filtered.filter(p => p.level === selectedLevel.value)
@@ -190,20 +231,10 @@ const overallProficiency = computed(() => {
 
 const masteredCount = computed(() => grammarPoints.value.filter(p => (p.userScore ?? 0) >= 80).length)
 
-const getLevelBadgeClass = (level: string) => ({
-  N5: 'badge-success',
-  N4: 'badge-info',
-  N3: 'badge-warning',
-  N2: 'badge-secondary',
-  N1: 'badge-error'
-}[level] ?? 'badge-neutral')
-
-const getScoreButtonClass = (score: number) => {
-  if (score >= 80) return 'text-success border-success'
-  if (score >= 60) return 'text-info border-info'
-  if (score >= 40) return 'text-warning border-warning'
-  return 'text-error border-error'
-}
+const inProgressCount = computed(() => grammarPoints.value.filter(p => {
+  const score = p.userScore ?? 0
+  return score > 0 && score < 80
+}).length)
 
 const resetFilters = () => {
   searchQuery.value = ''
@@ -211,27 +242,20 @@ const resetFilters = () => {
   currentPage.value = 1
 }
 
-const openScoreModal = (point: any) => {
+const openScoreModal = (point: GrammarPoint) => {
   selectedPoint.value = point
-  tempScore.value = point.userScore ?? 0
-  scoreModal.value?.showModal()
+  showScoreModal.value = true
 }
 
-const closeScoreModal = () => {
-  scoreModal.value?.close()
-  selectedPoint.value = null
-}
-
-const saveScore = () => {
+const saveScore = (score: number) => {
   if (selectedPoint.value) {
-    selectedPoint.value.userScore = tempScore.value
-    updateScore(selectedPoint.value.grammarPoint, tempScore.value)
-    closeScoreModal()
+    selectedPoint.value.userScore = score
+    updateScore(selectedPoint.value.grammarPoint, score)
   }
 }
 
 const resetPointScore = (grammarPoint: string) => {
-  const p = grammarPoints.value.find(x => x.grammarPoint === grammarPoint)
+  const p = grammarPoints.value.find((x: GrammarPoint) => x.grammarPoint === grammarPoint)
   if (p) {
     p.userScore = 0
     updateScore(grammarPoint, 0)
@@ -239,16 +263,16 @@ const resetPointScore = (grammarPoint: string) => {
 }
 
 const resetAllScores = () => {
-  if (confirm('Reset all grammar scores?')) resetScores()
+  if (confirm('Are you sure you want to reset all grammar scores? This cannot be undone.')) {
+    resetScores()
+  }
 }
+
+watch([searchQuery, selectedLevel], () => {
+  currentPage.value = 1
+})
 
 onMounted(async () => {
   await loadGrammarPoints()
 })
 </script>
-
-<style scoped>
-.no-animation {
-  pointer-events: none;
-}
-</style>
