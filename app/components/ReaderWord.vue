@@ -38,7 +38,7 @@
         </rt>
       </ruby>
 
-      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle" to="body">
+      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isMobile" to="body">
         <div
           ref="tooltipRef"
           class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
@@ -156,6 +156,7 @@ const wrapperRef = ref<HTMLElement | null>(null)
 const localWord = ref<ParsedWord>({ ...props.word })
 const arrowPosition = ref<'top' | 'bottom'>('top')
 const tooltipPosition = ref<CSSProperties>({})
+const isMobile = ref(false)
 let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let keepTooltip = false
 
@@ -294,65 +295,50 @@ const truncateMeaning = (meaning: string): string => {
 }
 
 const calculateTooltipPosition = (): void => {
-  if (!wrapperRef.value) return
+  if (!wrapperRef.value || !tooltipRef.value) return
   
   const rect = wrapperRef.value.getBoundingClientRect()
+  const tooltip = tooltipRef.value
   const gap = 8
-  const padding = 8
-
+  const tooltipHeight = tooltip.offsetHeight
+  const tooltipWidth = tooltip.offsetWidth
+  
+  const viewportHeight = window.innerHeight
+  const spaceBelow = viewportHeight - rect.bottom
+  const spaceAbove = rect.top
+  
+  const tooltipTop = spaceBelow > tooltipHeight + gap
+    ? rect.bottom + gap
+    : rect.top - tooltipHeight - gap
+  
+  arrowPosition.value = spaceBelow > tooltipHeight + gap ? 'top' : 'bottom'
+  
+  const tooltipLeft = Math.max(
+    8,
+    Math.min(
+      window.innerWidth - tooltipWidth - 8,
+      rect.left + rect.width / 2 - tooltipWidth / 2
+    )
+  )
+  
   tooltipPosition.value = {
-    top: `${Math.max(padding, rect.top - 200)}px`,
-    left: `${Math.max(padding, rect.left + rect.width / 2 - 140)}px`
+    top: `${tooltipTop}px`,
+    left: `${tooltipLeft}px`
   }
-
-  nextTick(() => {
-    if (!tooltipRef.value) return
-    const tooltipRect = tooltipRef.value.getBoundingClientRect()
-
-    let top = rect.top - tooltipRect.height - gap
-    let left = rect.left + rect.width / 2 - tooltipRect.width / 2
-
-    if (left < padding) {
-      left = padding
-    }
-    if (left + tooltipRect.width > window.innerWidth - padding) {
-      left = window.innerWidth - tooltipRect.width - padding
-    }
-
-    if (top < padding) {
-      top = rect.bottom + gap
-      arrowPosition.value = 'top'
-    } else {
-      arrowPosition.value = 'bottom'
-    }
-
-    tooltipPosition.value = {
-      top: `${top}px`,
-      left: `${left}px`
-    }
-  })
 }
 
 const handleMouseEnter = (): void => {
-  if (props.disableHover || isParticle.value || !props.settings?.showTooltip) return
-
-  if (tooltipTimeout) {
-    clearTimeout(tooltipTimeout)
-  }
-
-  const delay = Math.max(0, (props.settings?.tooltipDelay ?? 200))
+  if (props.disableHover || isParticle.value || isMobile.value) return
   
+  if (tooltipTimeout) clearTimeout(tooltipTimeout)
   tooltipTimeout = setTimeout(() => {
     showTooltip.value = true
-    calculateTooltipPosition()
-  }, delay)
+    nextTick(() => calculateTooltipPosition())
+  }, props.settings?.tooltipDelay ?? 0)
 }
 
 const handleMouseLeave = (): void => {
-  if (tooltipTimeout) {
-    clearTimeout(tooltipTimeout)
-  }
-
+  if (tooltipTimeout) clearTimeout(tooltipTimeout)
   if (!keepTooltip) {
     showTooltip.value = false
   }
@@ -367,19 +353,25 @@ const onTooltipMouseLeave = (): void => {
   showTooltip.value = false
 }
 
-const handleClick = (e: MouseEvent): void => {
-  if (!props.disableHover) {
-    emit('click', localWord.value, e)
-  }
+const handleClick = (event: MouseEvent): void => {
+  emit('click', props.word, event)
+}
+
+const checkMobile = (): void => {
+  isMobile.value = window.matchMedia('(max-width: 768px)').matches
 }
 
 watch(() => props.word, (newWord: ParsedWord) => {
   localWord.value = { ...newWord }
 }, { deep: true })
 
-onUnmounted(() => {
-  if (tooltipTimeout) {
-    clearTimeout(tooltipTimeout)
-  }
+onMounted(() => {
+  checkMobile()
+  const mediaQuery = window.matchMedia('(max-width: 768px)')
+  mediaQuery.addEventListener('change', checkMobile)
+  
+  onUnmounted(() => {
+    mediaQuery.removeEventListener('change', checkMobile)
+  })
 })
 </script>

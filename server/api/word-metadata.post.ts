@@ -2,7 +2,11 @@ import { defineEventHandler, readBody } from 'h3'
 import { createOpenAIClient, parseJSON } from './utils/openai'
 
 export default defineEventHandler(async (event) => {
-  const { apiKey, words, model } = await readBody(event)
+  const { apiKey, words, model } = await readBody(event) as { 
+    apiKey: string
+    words: string[]
+    model?: string
+  }
 
   if (!apiKey?.trim() || !Array.isArray(words) || words.length === 0) {
     throw createError({
@@ -22,7 +26,7 @@ export default defineEventHandler(async (event) => {
       user: userPrompt,
       maxTokens: 1600
     })
-    const data = parseJSON(content)
+    const data = parseJSON(content) as Record<string, any>
 
     const normalized: Record<string, { reading: string; meaning: string; pos: string; jlptLevel: string }> = {}
     
@@ -40,7 +44,7 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     throw createError({
       statusCode: 502,
-      message: error.message || 'Metadata fetch failed'
+      message: error?.message || 'Metadata fetch failed'
     })
   }
 })
