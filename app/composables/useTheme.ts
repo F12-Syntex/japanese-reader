@@ -1,4 +1,3 @@
-// app/composables/useTheme.ts
 import { computed } from 'vue'
 import { useThemeStore } from '~/stores/useThemeStore'
 

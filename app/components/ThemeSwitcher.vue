@@ -1,323 +1,165 @@
-<!-- app/components/ThemeSwitcher.vue -->
 <template>
   <div class="relative">
     <button
-      class="btn btn-ghost btn-sm gap-2 h-10 px-4 z-50 flex items-center"
-      @click.stop="toggleDropdown"
+      class="btn btn-ghost btn-sm gap-2 h-10 px-4 flex items-center"
+      @click="isMobile ? openModal() : (showDropdown = !showDropdown)"
     >
       <IconPalette class="w-5 h-5 flex-shrink-0" />
       <span class="hidden md:inline">Theme</span>
     </button>
 
-    <!-- Desktop Dropdown -->
     <div
-      v-show="showDropdown"
-      tabindex="0"
-      class="hidden md:block dropdown-content z-[100] p-3 sm:p-4 shadow-2xl bg-base-300 rounded-box w-80 sm:w-[32rem] mt-2 max-h-[32rem] overflow-hidden flex flex-col gap-3 absolute right-0"
-      @click.stop
+      v-if="showDropdown && !isMobile"
+      class="dropdown-content absolute right-0 z-[100] mt-2 w-72 sm:w-80 bg-base-200 shadow-2xl rounded-box p-4 border border-base-content/20 dark:border-base-content/40"
     >
-      <div class="flex flex-col sm:flex-row gap-2 items-stretch">
-        <div class="join grow">
-          <input
-            v-model="query"
-            type="text"
-            placeholder="Search themes..."
-            class="input input-sm input-bordered join-item w-full"
-          />
-          <button class="btn btn-sm join-item" @click="query = ''" :disabled="!query">Clear</button>
-        </div>
-        <div class="flex gap-2 shrink-0">
-          <button class="btn btn-sm" @click="randomizeFromList" :disabled="filteredThemes.length === 0">
-            Random
-          </button>
-        </div>
-      </div>
-
-      <div class="text-xs opacity-70 flex items-center gap-2">
-        <span class="inline-flex items-center gap-2">
+      <div class="flex justify-between items-center mb-3 text-xs opacity-70">
+        <span class="flex items-center gap-2">
           <span class="font-medium">Current:</span>
-          <span class="badge badge-ghost capitalize">{{ currentTheme || 'system' }}</span>
+          <span class="badge badge-outline capitalize">{{ currentTheme || 'system' }}</span>
         </span>
-        <button class="btn btn-ghost btn-xs ml-auto" @click="resetToSystem">
-          System default
+        <button class="btn btn-ghost btn-xs" @click="resetTheme">System</button>
+      </div>
+
+      <div
+        class="overflow-y-auto overscroll-contain snap-y snap-mandatory scroll-smooth pb-2 max-h-[24rem] flex flex-col gap-2 pr-1 rounded-box"
+      >
+        <button
+          v-for="theme in allThemes"
+          :key="theme"
+          class="flex items-center justify-between p-3 rounded-lg bg-base-100 border border-transparent hover:border-primary hover:shadow transition-all snap-start"
+          @click="applyTheme(theme)"
+          :data-theme="theme"
+        >
+          <div class="flex items-center gap-2">
+            <span class="capitalize font-medium text-sm">{{ theme }}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span
+              v-for="(color, idx) in themePalettes.get(theme) || []"
+              :key="idx"
+              class="w-3 h-3 rounded-full border border-base-content/20"
+              :style="{ backgroundColor: color }"
+            ></span>
+            <IconCheck v-if="theme === currentTheme" class="w-4 h-4 text-primary ml-1" />
+          </div>
         </button>
+        <div class="w-full h-2 shrink-0"></div>
       </div>
 
-      <div class="overflow-y-auto min-h-0 grow pr-1">
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          <li v-for="t in filteredThemes" :key="t.value">
-            <button
-              @click="handleThemeChange(t.value)"
-              class="btn btn-ghost btn-sm w-full justify-between h-auto px-3 py-2 border border-transparent hover:border-base-content/10 transition-colors"
-              :class="currentTheme === t.value ? 'btn-active' : ''"
-              :data-theme="t.value"
-            >
-              <div class="flex items-start gap-2 w-full">
-                <ThemeSwatch :theme="t.value" class="mt-0.5" />
-
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <div class="font-medium capitalize truncate">{{ t.name }}</div>
-                    <div class="text-[11px] opacity-70 truncate hidden sm:inline">{{ t.value }}</div>
-                  </div>
-                  <ThemePalette :theme="t.value" />
-                </div>
-
-                <IconCheck
-                  v-if="currentTheme === t.value"
-                  class="w-4 h-4 flex-shrink-0 text-primary mt-1"
-                />
-              </div>
-            </button>
-          </li>
-        </ul>
-
-        <div v-if="!filteredThemes.length" class="py-8 text-center text-sm opacity-70">
-          No themes found
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between pt-1">
-        <button class="btn btn-ghost btn-sm" @click="closeAll">Close</button>
-        <div class="text-xs opacity-60">
-          {{ filteredThemes.length }} themes
-        </div>
+      <div class="flex justify-between items-center mt-4">
+        <button class="btn btn-ghost btn-sm w-1/2" @click="showDropdown = false">Close</button>
+        <button class="btn btn-primary btn-sm w-1/2" @click="randomizeTheme">Random</button>
       </div>
     </div>
 
-    <!-- Mobile Modal -->
-    <dialog :open="showModal" class="modal modal-bottom md:hidden">
-      <div class="modal-box w-full max-h-[90vh] flex flex-col gap-4">
-        <h3 class="font-bold text-lg">Select Theme</h3>
-
-        <div class="flex flex-col gap-2">
-          <div class="join w-full">
-            <input
-              v-model="query"
-              type="text"
-              placeholder="Search themes..."
-              class="input input-sm input-bordered join-item w-full"
-            />
-            <button class="btn btn-sm join-item" @click="query = ''" :disabled="!query">Clear</button>
-          </div>
-          <button class="btn btn-sm w-full" @click="randomizeFromList" :disabled="filteredThemes.length === 0">
-            Random
-          </button>
-        </div>
-
-        <div class="text-xs opacity-70 flex items-center justify-between">
-          <span class="inline-flex items-center gap-2">
+    <BaseModal v-model="showMobileModal" title="Choose Theme" size="md">
+      <div class="flex flex-col gap-3">
+        <div class="flex justify-between items-center text-sm opacity-70">
+          <span class="flex items-center gap-2">
             <span class="font-medium">Current:</span>
-            <span class="badge badge-ghost capitalize">{{ currentTheme || 'system' }}</span>
+            <span class="badge badge-outline capitalize">{{ currentTheme || 'system' }}</span>
           </span>
-          <button class="btn btn-ghost btn-xs" @click="resetToSystem">
-            System default
+          <button class="btn btn-ghost btn-xs" @click="resetTheme">System</button>
+        </div>
+
+        <div
+          class="overflow-y-auto overscroll-contain snap-y snap-mandatory scroll-smooth pb-3 max-h-[60vh] flex flex-col gap-3 rounded-box"
+        >
+          <button
+            v-for="theme in allThemes"
+            :key="theme"
+            class="flex items-center justify-between p-4 rounded-xl bg-base-100 border border-transparent hover:border-primary hover:shadow-md transition-all snap-start"
+            :data-theme="theme"
+            @click="applyTheme(theme)"
+          >
+            <span class="capitalize font-semibold">{{ theme }}</span>
+            <div class="flex items-center gap-2">
+              <span
+                v-for="(color, idx) in themePalettes.get(theme) || []"
+                :key="idx"
+                class="w-4 h-4 rounded-full border border-base-content/20"
+                :style="{ backgroundColor: color }"
+              ></span>
+              <IconCheck v-if="theme === currentTheme" class="w-5 h-5 text-primary" />
+            </div>
           </button>
-        </div>
-
-        <div class="overflow-y-auto min-h-0 flex-1 pr-2">
-          <ul class="grid grid-cols-1 gap-2">
-            <li v-for="t in filteredThemes" :key="t.value">
-              <button
-                @click="handleThemeChange(t.value)"
-                class="btn btn-ghost btn-sm w-full justify-start h-auto px-3 py-2 border border-transparent hover:border-base-content/10"
-                :class="currentTheme === t.value ? 'btn-active' : ''"
-                :data-theme="t.value"
-              >
-                <div class="flex items-start gap-3 w-full">
-                  <ThemeSwatch :theme="t.value" class="mt-0.5" />
-
-                  <div class="flex-1 min-w-0 text-left">
-                    <div class="font-medium capitalize">{{ t.name }}</div>
-                    <div class="text-[11px] opacity-70">{{ t.value }}</div>
-                    <ThemePalette :theme="t.value" />
-                  </div>
-
-                  <IconCheck
-                    v-if="currentTheme === t.value"
-                    class="w-4 h-4 flex-shrink-0 text-primary mt-1"
-                  />
-                </div>
-              </button>
-            </li>
-          </ul>
-
-          <div v-if="!filteredThemes.length" class="py-8 text-center text-sm opacity-70">
-            No themes found
-          </div>
-        </div>
-
-        <div class="modal-action">
-          <form method="dialog" @submit.prevent="closeAll">
-            <button class="btn btn-ghost" @click.prevent="closeAll">Close</button>
-          </form>
-          <div class="text-xs opacity-60">{{ filteredThemes.length }} themes</div>
+          <div class="w-full h-3 shrink-0"></div>
         </div>
       </div>
-      <form method="dialog" class="modal-backdrop" @submit.prevent="closeAll">
-        <button @click.prevent="closeAll">close</button>
-      </form>
-    </dialog>
 
-    <!-- Backdrop for desktop dropdown -->
-    <div v-if="showDropdown" class="fixed inset-0 z-[99]" @click.stop="closeAll"></div>
+      <template #footer>
+        <div class="flex gap-3 w-full">
+          <button class="btn btn-outline flex-1" @click="resetTheme">System</button>
+          <button class="btn btn-primary flex-1" @click="randomizeTheme">Random</button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <div v-if="showDropdown" class="fixed inset-0 z-[90]" @click="showDropdown = false"></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import IconPalette from '~icons/lucide/palette'
 import IconCheck from '~icons/lucide/check'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useTheme } from '~/composables/useTheme'
+import BaseModal from '~/components/BaseModal.vue'
 
-interface Theme {
-  name: string
-  value: string
-}
+const { currentTheme, setTheme, resetTheme, loadTheme } = useTheme()
+const showDropdown = ref(false)
+const showMobileModal = ref(false)
+const allThemes = ref<string[]>([])
+const themePalettes = ref<Map<string, string[]>>(new Map())
+const isMobile = ref(false)
 
-interface Props {
-  currentTheme: string
-}
-
-defineProps<Props>()
-const emit = defineEmits<{
-  'update:theme': [theme: string]
-}>()
-
-const route = useRoute()
-
-const THEME_NAMES = [
-  'light', 'dark', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'synthwave', 'retro',
-  'cyberpunk', 'valentine', 'halloween', 'garden', 'forest', 'aqua', 'lofi', 'pastel',
-  'fantasy', 'wireframe', 'black', 'luxury', 'dracula', 'cmyk', 'autumn', 'business',
-  'acid', 'lemonade', 'night', 'coffee', 'winter', 'dim', 'nord', 'sunset',
-  'caramelLatte', 'abyss'
+const defaultThemes = [
+  'light','dark','cupcake','bumblebee','emerald','corporate','synthwave','retro','cyberpunk','valentine',
+  'halloween','garden','forest','aqua','lofi','pastel','fantasy','wireframe','black','luxury',
+  'dracula','cmyk','autumn','business','acid','lemonade','night','coffee','winter'
 ]
 
-const showDropdown = ref<boolean>(false)
-const showModal = ref<boolean>(false)
-const query = ref<string>('')
-
-function toTitle(v: string): string {
-  return v
-    .replace(/[-_]+/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (m: string) => m.toUpperCase())
-}
-
-const allThemes = computed((): Theme[] =>
-  THEME_NAMES
-    .map((n) => ({ name: toTitle(n), value: n }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-)
-
-const filteredThemes = computed((): Theme[] => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return allThemes.value
-  return allThemes.value.filter((t) => t.name.toLowerCase().includes(q) || t.value.toLowerCase().includes(q))
-})
-
-const closeAll = (): void => {
-  showDropdown.value = false
-  showModal.value = false
-  query.value = ''
-}
-
-const toggleDropdown = (): void => {
-  if (typeof window === 'undefined') return
-  if (window.innerWidth < 768) {
-    showModal.value = !showModal.value
-    if (!showModal.value) query.value = ''
-  } else {
-    showDropdown.value = !showDropdown.value
-    if (!showDropdown.value) query.value = ''
-  }
-}
-
-const handleThemeChange = (theme: string): void => {
-  emit('update:theme', theme)
-  if (typeof document !== 'undefined') {
-    document.documentElement.setAttribute('data-theme', theme)
-  }
-  try {
-    localStorage.setItem('theme', theme)
-  } catch (e) {
-    console.error('Failed to save theme:', e)
-  }
-  closeAll()
-}
-
-const resetToSystem = (): void => {
-  emit('update:theme', '')
-  if (typeof document !== 'undefined') {
-    document.documentElement.removeAttribute('data-theme')
-  }
-  try {
-    localStorage.removeItem('theme')
-  } catch (e) {
-    console.error('Failed to remove theme:', e)
-  }
-  closeAll()
-}
-
-const randomizeFromList = (): void => {
-  const arr = filteredThemes.value.length ? filteredThemes.value : allThemes.value
-  if (!arr.length) return
-  const pick = arr[Math.floor(Math.random() * arr.length)]
-  if (!pick) return
-  handleThemeChange(pick.value)
-}
-
-watch(showModal, (newVal) => {
-  if (!newVal) {
-    query.value = ''
-  }
-})
-
-watch(() => route.path, () => {
-  closeAll()
-})
-
-const onKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    closeAll()
-  }
-}
-
 onMounted(() => {
+  loadTheme()
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', onKeydown)
+    const daisyThemes = (window as any).daisyUIThemes
+    allThemes.value = Array.isArray(daisyThemes) && daisyThemes.length ? daisyThemes : defaultThemes
+    generateThemeSamples()
   }
 })
 
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', onKeydown)
+function openModal() { showMobileModal.value = true }
+function checkMobile() { isMobile.value = window.innerWidth < 768 }
+function applyTheme(theme: string) {
+  setTheme(theme)
+  showDropdown.value = false
+  showMobileModal.value = false
+}
+function randomizeTheme() {
+  const list = allThemes.value
+  if (!list.length) return
+  const pick = list[Math.floor(Math.random() * list.length)]
+  if (pick) setTheme(pick)
+  showDropdown.value = false
+  showMobileModal.value = false
+}
+function generateThemeSamples() {
+  const temp = document.createElement('div')
+  document.body.appendChild(temp)
+  for (const theme of allThemes.value) {
+    temp.setAttribute('data-theme', theme)
+    const style = getComputedStyle(temp)
+    const colors = [
+      style.getPropertyValue('oklch(var(--p))'),
+      style.getPropertyValue('oklch(var(--s))'),
+      style.getPropertyValue('oklch(var(--a))'),
+      style.getPropertyValue('oklch(var(--n))'),
+      style.getPropertyValue('oklch(var(--b1))')
+    ].filter(c => c.trim() !== '')
+    themePalettes.value.set(theme, colors)
   }
-})
+  temp.remove()
+}
 </script>
-
-<style scoped>
-button.btn.btn-ghost:hover {
-  transform: translateY(-1px);
-  transition: transform 150ms ease;
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-thumb {
-  background-color: color-mix(in oklab, currentColor 20%, transparent);
-  border-radius: 9999px;
-}
-
-.theme-swatch {
-  --bg: oklch(from var(--b1) l c h);
-  background-color: var(--b2, var(--bg));
-  border: 1px solid color-mix(in oklab, currentColor 15%, transparent);
-  border-radius: 10px;
-  width: 30px;
-  height: 22px;
-}
-</style>
