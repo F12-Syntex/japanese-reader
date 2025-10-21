@@ -2,14 +2,11 @@
   <span
     ref="wrapperRef"
     class="inline-block relative transition-all"
-    :class="{
-      'mr-0': !settings?.showWordSpacing,
-      'mx-1': settings?.alwaysShowTranslation,
-    }"
+    :class="{ 'mx-1': settings?.alwaysShowTranslation }"
     :style="wordContainerStyle"
     @click="handleClick"
-    @mouseenter="!disableHover && handleMouseEnter()"
-    @mouseleave="onWrapperMouseLeave"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <span
       v-if="settings?.alwaysShowTranslation && word?.meaning && !isParticle"
@@ -20,10 +17,8 @@
     </span>
 
     <span
-      class="inline-block relative group transition-colors duration-150"
-      :class="{
-        'rounded-md': !isParticle && word?.kanji && !disableHover
-      }"
+      class="inline-block relative transition-colors duration-150"
+      :class="{ 'rounded-md': !isParticle && word?.kanji && !disableHover }"
     >
       <ruby class="[ruby-align:center]">
         <span
@@ -43,97 +38,99 @@
         </rt>
       </ruby>
 
-      <div
-        v-if="settings?.showTooltip && showTooltip && !isParticle"
-        ref="tooltipRef"
-        class="fixed z-[100] pointer-events-auto"
-        @mouseenter="onTooltipMouseEnter"
-        @mouseleave="onTooltipMouseLeave"
-      >
-        <div 
-          class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
-          :style="arrowStyle"
-        ></div>
-        
+      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle" to="body">
         <div
-          class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
-          :class="tooltipTextSize"
-          style="max-width:min(88vw,28rem)"
+          ref="tooltipRef"
+          class="fixed z-[100] pointer-events-auto"
+          :style="tooltipPosition"
         >
-          <div class="h-1.5 bg-primary"></div>
+          <div 
+            class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
+            :style="arrowStyle"
+          ></div>
           
-          <div class="p-4 sm:p-5">
-            <div class="flex items-start justify-between gap-3 mb-3">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2.5 mb-1">
-                  <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
-                    {{ localWord.kanji }}
+          <div
+            class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
+            :class="tooltipTextSize"
+            style="max-width:min(88vw,28rem)"
+            @mouseenter="onTooltipMouseEnter"
+            @mouseleave="onTooltipMouseLeave"
+          >
+            <div class="h-1.5 bg-primary"></div>
+            
+            <div class="p-4 sm:p-5">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2.5 mb-1">
+                    <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
+                      {{ localWord.kanji }}
+                    </div>
+                    <div 
+                      v-if="localWord.jlptLevel" 
+                      class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
+                    >
+                      {{ localWord.jlptLevel }}
+                    </div>
                   </div>
-                  <div 
-                    v-if="localWord.jlptLevel" 
-                    class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
+                  <div v-if="localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
+                    {{ localWord.reading }}
+                  </div>
+                </div>
+
+                <div
+                  v-if="(settings?.showPartOfSpeech && localWord.pos) || localWord.isKnown !== undefined"
+                  class="flex flex-col gap-2 items-end shrink-0"
+                >
+                  <span
+                    v-if="settings?.showPartOfSpeech && localWord.pos"
+                    class="badge badge-neutral badge-sm font-semibold"
                   >
-                    {{ localWord.jlptLevel }}
-                  </div>
+                    {{ localWord.pos }}
+                  </span>
+                  <span
+                    v-if="localWord.isKnown !== undefined"
+                    class="badge badge-sm font-semibold"
+                    :class="localWord.isKnown 
+                      ? 'badge-success badge-outline' 
+                      : 'badge-warning badge-outline'"
+                  >
+                    {{ localWord.isKnown ? 'Known' : 'Learning' }}
+                  </span>
                 </div>
-                <div v-if="localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
-                  {{ localWord.reading }}
-                </div>
+              </div>
+
+              <div class="divider my-2"></div>
+
+              <div class="mb-3">
+                <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
+                  {{ localWord.meaning || 'No meaning available' }}
+                </p>
               </div>
 
               <div
-                v-if="(settings?.showPartOfSpeech && localWord.pos) || localWord.isKnown !== undefined"
-                class="flex flex-col gap-2 items-end shrink-0"
+                v-if="showTooltipExtras"
+                class="space-y-2.5 pt-2 border-t border-base-300"
               >
-                <span
-                  v-if="settings?.showPartOfSpeech && localWord.pos"
-                  class="badge badge-neutral badge-sm font-semibold"
-                >
-                  {{ localWord.pos }}
-                </span>
-                <span
-                  v-if="localWord.isKnown !== undefined"
-                  class="badge badge-sm font-semibold"
-                  :class="localWord.isKnown 
-                    ? 'badge-success badge-outline' 
-                    : 'badge-warning badge-outline'"
-                >
-                  {{ localWord.isKnown ? 'Known' : 'Learning' }}
-                </span>
-              </div>
-            </div>
-
-            <div class="divider my-2"></div>
-
-            <div class="mb-3">
-              <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
-                {{ localWord.meaning || 'No meaning available' }}
-              </p>
-            </div>
-
-            <div
-              v-if="showTooltipExtras"
-              class="space-y-2.5 pt-2 border-t border-base-300"
-            >
-              <div v-if="settings?.showPitchAccent && localWord.pitchAccent" class="flex items-center gap-2">
-                <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
-                <span class="text-sm font-medium text-base-content">{{ localWord.pitchAccent }}</span>
-              </div>
-              <div v-if="settings?.showExample && localWord.example" class="alert alert-info py-2 px-3">
-                <p class="text-sm leading-relaxed italic">
-                  "{{ localWord.example }}"
-                </p>
+                <div v-if="settings?.showPitchAccent && localWord.pitchAccent" class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
+                  <span class="text-sm font-medium text-base-content">{{ localWord.pitchAccent }}</span>
+                </div>
+                <div v-if="settings?.showExample && localWord.example" class="alert alert-info py-2 px-3">
+                  <p class="text-sm leading-relaxed italic">
+                    "{{ localWord.example }}"
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </teleport>
     </span>
   </span>
 </template>
 
 <script setup lang="ts">
-import { nextTick, computed, ref, watch } from 'vue'
+import { nextTick, computed, ref, watch, onUnmounted } from 'vue'
 import type { ParsedWord } from '~/types/japanese'
 import type { ReaderSettings } from '~/types/reader'
 import type { CSSProperties } from 'vue'
@@ -158,6 +155,8 @@ const tooltipRef = ref<HTMLElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
 const localWord = ref<ParsedWord>({ ...props.word })
 const arrowPosition = ref<'top' | 'bottom'>('top')
+const tooltipPosition = ref<CSSProperties>({})
+let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let keepTooltip = false
 
 const isParticle = computed(() => localWord.value?.pos === 'particle')
@@ -288,79 +287,94 @@ const truncateMeaning = (meaning: string): string => {
   }
   
   if (firstMeaning.length > maxLength) {
-    firstMeaning = firstMeaning.substring(0, maxLength) + '…'
+    firstMeaning = firstMeaning.substring(0, maxLength) + '...'
   }
   
   return firstMeaning
 }
 
-const handleClick = (e: MouseEvent) => {
-  if (!props.disableHover) {
-    emit('click', localWord.value, e)
-  }
+const calculateTooltipPosition = (): void => {
+  nextTick(() => {
+    const wrapper = wrapperRef.value
+    const tooltip = tooltipRef.value
+    if (!wrapper || !tooltip) return
+
+    const rect = wrapper.getBoundingClientRect()
+    if (!rect) return
+
+    const tooltipRect = tooltip.getBoundingClientRect()
+    const gap = 8
+
+    let top = rect.top - tooltipRect.height - gap
+    let left = rect.left + rect.width / 2 - tooltipRect.width / 2
+
+    const padding = 8
+    if (left < padding) {
+      left = padding
+    }
+    if (left + tooltipRect.width > window.innerWidth - padding) {
+      left = window.innerWidth - tooltipRect.width - padding
+    }
+
+    if (top < padding) {
+      top = rect.bottom + gap
+      arrowPosition.value = 'top'
+    } else {
+      arrowPosition.value = 'bottom'
+    }
+
+    tooltipPosition.value = {
+      top: `${top}px`,
+      left: `${left}px`
+    }
+  })
 }
 
-const handleMouseEnter = async () => {
-  if (isParticle.value || !props.settings?.showTooltip) return
+const handleMouseEnter = (): void => {
+  if (props.disableHover || isParticle.value || !props.settings?.showTooltip) return
 
-  await nextTick()
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout)
+  }
 
-  if (props.settings?.tooltipDelay && props.settings.tooltipDelay > 0) {
-    setTimeout(() => {
-      showTooltip.value = true
-      positionTooltip()
-    }, props.settings.tooltipDelay)
-  } else {
+  tooltipTimeout = setTimeout(() => {
     showTooltip.value = true
-    positionTooltip()
-  }
+    calculateTooltipPosition()
+  }, props.settings?.tooltipDelay ?? 200)
 }
 
-const positionTooltip = () => {
-  if (!tooltipRef.value || !wrapperRef.value) return
-
-  const tooltipRect = tooltipRef.value.getBoundingClientRect()
-  const wrapperRect = wrapperRef.value.getBoundingClientRect()
-  const viewportHeight = window.innerHeight
-
-  const spaceAbove = wrapperRect.top
-  const spaceBelow = viewportHeight - wrapperRect.bottom
-  const tooltipHeight = tooltipRect.height
-
-  if (spaceAbove > tooltipHeight + 20) {
-    arrowPosition.value = 'bottom'
-    tooltipRef.value.style.bottom = 'auto'
-    tooltipRef.value.style.top = `${wrapperRect.top - tooltipHeight - 16}px`
-  } else if (spaceBelow > tooltipHeight + 20) {
-    arrowPosition.value = 'top'
-    tooltipRef.value.style.top = 'auto'
-    tooltipRef.value.style.bottom = `${viewportHeight - wrapperRect.bottom - 16}px`
-  } else {
-    arrowPosition.value = 'top'
-    tooltipRef.value.style.top = `${wrapperRect.bottom + 16}px`
+const handleMouseLeave = (): void => {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout)
   }
 
-  const leftPos = wrapperRect.left + wrapperRect.width / 2 - tooltipRect.width / 2
-  const clampedLeft = Math.max(8, Math.min(leftPos, window.innerWidth - tooltipRect.width - 8))
-  tooltipRef.value.style.left = `${clampedLeft}px`
-}
-
-const onTooltipMouseEnter = () => {
-  keepTooltip = true
-}
-
-const onTooltipMouseLeave = () => {
-  keepTooltip = false
-  showTooltip.value = false
-}
-
-const onWrapperMouseLeave = () => {
   if (!keepTooltip) {
     showTooltip.value = false
   }
 }
 
-watch(() => props.word, (newWord) => {
+const onTooltipMouseEnter = (): void => {
+  keepTooltip = true
+}
+
+const onTooltipMouseLeave = (): void => {
+  keepTooltip = false
+  showTooltip.value = false
+}
+
+const handleClick = (e: MouseEvent): void => {
+  if (!props.disableHover) {
+    emit('click', localWord.value, e)
+  }
+}
+
+watch(() => props.word, (newWord: ParsedWord) => {
   localWord.value = { ...newWord }
+}, { deep: true })
+
+onUnmounted(() => {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout)
+  }
 })
 </script>
