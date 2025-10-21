@@ -4,7 +4,7 @@
       <button 
         class="tab flex items-center gap-2" 
         :class="{ 'tab-active text-primary': activeTab === 'reader' }"
-        @click="$emit('update:activeTab', 'reader')"
+        @click="updateTab('reader')"
       >
         <IconBook class="w-5 h-5" />
         <span>Reader</span>
@@ -13,7 +13,7 @@
       <button 
         class="tab flex items-center gap-2" 
         :class="{ 'tab-active text-primary': activeTab === 'grammar' }"
-        @click="$emit('update:activeTab', 'grammar')"
+        @click="updateTab('grammar')"
       >
         <IconBookOpen class="w-5 h-5" />
         <span>Grammar</span>
@@ -21,35 +21,35 @@
 
       <button 
         class="tab flex items-center gap-2" 
-        :class="{ 'tab-active text-primary': activeTab === 'settings' }"
-        @click="$emit('update:activeTab', 'settings')"
+        :class="{ 'tab-active text-primary': activeTab === 'config' }"
+        @click="updateTab('config')"
       >
         <IconSettings class="w-5 h-5" />
-        <span>Settings</span>
+        <span>Config</span>
       </button>
 
       <button 
         class="tab flex items-center gap-2" 
         :class="{ 'tab-active text-primary': activeTab === 'stats' }"
-        @click="$emit('update:activeTab', 'stats')"
+        @click="updateTab('stats')"
       >
         <IconBarChart class="w-5 h-5" />
         <span>Stats</span>
       </button>
     </div>
 
-    <div class="md:hidden fixed bottom-0 w-full bg-base-200">
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-200 z-40">
       <div class="btm-nav">
-        <button :class="{ active: activeTab === 'reader' }" @click="$emit('update:activeTab', 'reader')">
+        <button :class="{ active: activeTab === 'reader' }" @click="updateTab('reader')">
           <IconBook class="w-5 h-5" />
         </button>
-        <button :class="{ active: activeTab === 'grammar' }" @click="$emit('update:activeTab', 'grammar')">
+        <button :class="{ active: activeTab === 'grammar' }" @click="updateTab('grammar')">
           <IconBookOpen class="w-5 h-5" />
         </button>
-        <button :class="{ active: activeTab === 'settings' }" @click="$emit('update:activeTab', 'settings')">
+        <button :class="{ active: activeTab === 'config' }" @click="updateTab('config')">
           <IconSettings class="w-5 h-5" />
         </button>
-        <button :class="{ active: activeTab === 'stats' }" @click="$emit('update:activeTab', 'stats')">
+        <button :class="{ active: activeTab === 'stats' }" @click="updateTab('stats')">
           <IconBarChart class="w-5 h-5" />
         </button>
       </div>
@@ -63,11 +63,17 @@ import IconBookOpen from '~icons/lucide/book'
 import IconSettings from '~icons/lucide/settings'
 import IconBarChart from '~icons/lucide/bar-chart-3'
 
-defineProps<{
+interface Props {
   activeTab: string
-}>()
+}
 
-defineEmits<{
+defineProps<Props>()
+
+const emit = defineEmits<{
   (e: 'update:activeTab', tab: string): void
 }>()
+
+const updateTab = (tab: string): void => {
+  emit('update:activeTab', tab)
+}
 </script>

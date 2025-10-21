@@ -32,14 +32,14 @@ const { loadApiKey } = useOpenAI()
 
 const activeTab = computed(() => {
   const path = route.path
-  if (path === '/settings') return 'settings'
+  if (path === '/config') return 'config'
   if (path === '/stats') return 'stats'
   if (path === '/grammar-catalog') return 'grammar'
   return 'reader'
 })
 
 const navigateToTab = (tab) => {
-  if (tab === 'settings') navigateTo('/settings')
+  if (tab === 'config') navigateTo('/config')
   else if (tab === 'stats') navigateTo('/stats')
   else if (tab === 'grammar') navigateTo('/grammar-catalog')
   else navigateTo('/')
