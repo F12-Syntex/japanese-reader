@@ -21,15 +21,6 @@
 
       <button 
         class="tab flex items-center gap-2" 
-        :class="{ 'tab-active text-primary': activeTab === 'config' }"
-        @click="updateTab('config')"
-      >
-        <IconSettings class="w-5 h-5" />
-        <span>Config</span>
-      </button>
-
-      <button 
-        class="tab flex items-center gap-2" 
         :class="{ 'tab-active text-primary': activeTab === 'stats' }"
         @click="updateTab('stats')"
       >
@@ -45,9 +36,6 @@
         </button>
         <button :class="{ active: activeTab === 'grammar' }" @click="updateTab('grammar')">
           <IconBookOpen class="w-5 h-5" />
-        </button>
-        <button :class="{ active: activeTab === 'config' }" @click="updateTab('config')">
-          <IconSettings class="w-5 h-5" />
         </button>
         <button :class="{ active: activeTab === 'stats' }" @click="updateTab('stats')">
           <IconBarChart class="w-5 h-5" />

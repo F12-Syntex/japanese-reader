@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Reader Settings" subtitle="Customize your reading experience" size="2xl">
+  <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Settings" subtitle="Customize your experience" size="2xl">
     <template #default>
       <div class="flex flex-col gap-4 h-full overflow-hidden">
         <div class="hidden md:flex tabs tabs-boxed bg-base-200 flex-shrink-0">
@@ -17,6 +17,7 @@
 
         <div class="overflow-y-auto flex-1 pr-2">
           <div class="space-y-6">
+            <AccountSettings v-show="activeTab === 'account'" />
             <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" />
             <MarketplaceSettings 
               v-show="activeTab === 'marketplace'" 
@@ -50,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import IconUser from '~icons/lucide/user'
 import IconType from '~icons/lucide/type'
 import IconShoppingBag from '~icons/lucide/shopping-bag'
 import IconRuler from '~icons/lucide/ruler'
@@ -58,8 +60,8 @@ import IconPalette from '~icons/lucide/palette'
 import IconEye from '~icons/lucide/eye'
 import IconMousePointer from '~icons/lucide/mouse-pointer'
 import { useReaderSettingsStore } from '~/stores/useReaderSettingsStore'
-import { defaultReaderSettings, type ReaderSettings } from '~/types/reader'
 
+import AccountSettings from './AccountSettings.vue'
 import TypographySettings from './TypographySettings.vue'
 import MarketplaceSettings from './MarketplaceSettings.vue'
 import FuriganaSettings from './FuriganaSettings.vue'
@@ -84,11 +86,11 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const activeTab = ref<string>('typography')
+const activeTab = ref<string>('account')
 const readerStore = useReaderSettingsStore()
-const localSettings = ref<ReaderSettings>({ ...defaultReaderSettings })
 
 const tabs: TabItem[] = [
+  { id: 'account', label: 'Account', icon: IconUser },
   { id: 'typography', label: 'Typography', icon: IconType },
   { id: 'marketplace', label: 'Marketplace', icon: IconShoppingBag },
   { id: 'furigana', label: 'Furigana', icon: IconRuler },
@@ -105,7 +107,7 @@ const handleReset = (): void => {
 
 watch(() => props.modelValue, (newVal: boolean) => {
   if (newVal) {
-    activeTab.value = 'typography'
+    activeTab.value = 'account'
   }
 })
 </script>
