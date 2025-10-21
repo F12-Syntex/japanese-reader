@@ -1,8 +1,9 @@
+<!-- app/components/ThemeSwitcher.vue -->
 <template>
   <div class="relative">
-    <button 
-      class="btn btn-ghost btn-sm gap-2 h-10 px-4"
-      @click="toggleDropdown"
+    <button
+      class="btn btn-ghost btn-sm gap-2 h-10 px-4 z-50 flex items-center"
+      @click.stop="toggleDropdown"
     >
       <IconPalette class="w-5 h-5 flex-shrink-0" />
       <span class="hidden md:inline">Theme</span>
@@ -77,7 +78,7 @@
       </div>
 
       <div class="flex items-center justify-between pt-1">
-        <button class="btn btn-ghost btn-sm" @click="closeDropdown">Close</button>
+        <button class="btn btn-ghost btn-sm" @click="closeAll">Close</button>
         <div class="text-xs opacity-60">
           {{ filteredThemes.length }} themes
         </div>
@@ -147,25 +148,26 @@
         </div>
 
         <div class="modal-action">
-          <form method="dialog">
-            <button class="btn btn-ghost">Close</button>
+          <form method="dialog" @submit.prevent="closeAll">
+            <button class="btn btn-ghost" @click.prevent="closeAll">Close</button>
           </form>
           <div class="text-xs opacity-60">{{ filteredThemes.length }} themes</div>
         </div>
       </div>
-      <form method="dialog" class="modal-backdrop">
-        <button>close</button>
+      <form method="dialog" class="modal-backdrop" @submit.prevent="closeAll">
+        <button @click.prevent="closeAll">close</button>
       </form>
     </dialog>
 
-    <div v-if="showDropdown" class="fixed inset-0 z-[99]" @click="closeDropdown"></div>
+    <!-- Backdrop for desktop dropdown -->
+    <div v-if="showDropdown" class="fixed inset-0 z-[99]" @click.stop="closeAll"></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import IconPalette from '~icons/lucide/palette'
 import IconCheck from '~icons/lucide/check'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 interface Theme {
@@ -183,6 +185,7 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+
 const THEME_NAMES = [
   'light', 'dark', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'synthwave', 'retro',
   'cyberpunk', 'valentine', 'halloween', 'garden', 'forest', 'aqua', 'lofi', 'pastel',
@@ -214,16 +217,21 @@ const filteredThemes = computed((): Theme[] => {
   return allThemes.value.filter((t) => t.name.toLowerCase().includes(q) || t.value.toLowerCase().includes(q))
 })
 
-const toggleDropdown = (): void => {
-  if (window.innerWidth < 768) {
-    showModal.value = true
-  } else {
-    showDropdown.value = !showDropdown.value
-  }
+const closeAll = (): void => {
+  showDropdown.value = false
+  showModal.value = false
+  query.value = ''
 }
 
-const closeDropdown = (): void => {
-  showDropdown.value = false
+const toggleDropdown = (): void => {
+  if (typeof window === 'undefined') return
+  if (window.innerWidth < 768) {
+    showModal.value = !showModal.value
+    if (!showModal.value) query.value = ''
+  } else {
+    showDropdown.value = !showDropdown.value
+    if (!showDropdown.value) query.value = ''
+  }
 }
 
 const handleThemeChange = (theme: string): void => {
@@ -231,14 +239,12 @@ const handleThemeChange = (theme: string): void => {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', theme)
   }
-  try { 
-    localStorage.setItem('theme', theme) 
+  try {
+    localStorage.setItem('theme', theme)
   } catch (e) {
     console.error('Failed to save theme:', e)
   }
-  closeDropdown()
-  showModal.value = false
-  query.value = ''
+  closeAll()
 }
 
 const resetToSystem = (): void => {
@@ -246,21 +252,19 @@ const resetToSystem = (): void => {
   if (typeof document !== 'undefined') {
     document.documentElement.removeAttribute('data-theme')
   }
-  try { 
-    localStorage.removeItem('theme') 
+  try {
+    localStorage.removeItem('theme')
   } catch (e) {
     console.error('Failed to remove theme:', e)
   }
-  closeDropdown()
-  showModal.value = false
-  query.value = ''
+  closeAll()
 }
 
 const randomizeFromList = (): void => {
   const arr = filteredThemes.value.length ? filteredThemes.value : allThemes.value
   if (!arr.length) return
   const pick = arr[Math.floor(Math.random() * arr.length)]
-  if(!pick) return
+  if (!pick) return
   handleThemeChange(pick.value)
 }
 
@@ -271,9 +275,25 @@ watch(showModal, (newVal) => {
 })
 
 watch(() => route.path, () => {
-  showDropdown.value = false
-  showModal.value = false
-  query.value = ''
+  closeAll()
+})
+
+const onKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    closeAll()
+  }
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeydown)
+  }
 })
 </script>
 
@@ -298,52 +318,6 @@ button.btn.btn-ghost:hover {
   border: 1px solid color-mix(in oklab, currentColor 15%, transparent);
   border-radius: 10px;
   width: 30px;
-  height: 30px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 3px;
-  padding: 4px;
-  flex-shrink: 0;
+  height: 22px;
 }
-
-.theme-swatch .dot {
-  display: inline-block;
-  border-radius: 9999px;
-  width: 9px;
-  height: 9px;
-  box-shadow: 0 0 0 1px color-mix(in oklab, black 12%, transparent) inset;
-}
-
-.theme-swatch .dot-a { background-color: var(--p); }
-.theme-swatch .dot-b { background-color: var(--s); }
-.theme-swatch .dot-c { background-color: var(--a); }
-.theme-swatch .dot-d { background-color: var(--n); }
-
-.palette {
-  margin-top: 6px;
-  display: grid;
-  gap: 6px;
-}
-
-.palette .row {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.palette .swatch {
-  display: block;
-  height: 14px;
-  border-radius: 6px;
-  background-color: var(--b2);
-  border: 1px solid color-mix(in oklab, currentColor 15%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, black 10%, transparent);
-}
-
-.palette .swatch[data-k="--p"] { background-color: var(--p); }
-.palette .swatch[data-k="--s"] { background-color: var(--s); }
-.palette .swatch[data-k="--a"] { background-color: var(--a); }
-.palette .swatch[data-k="--n"] { background-color: var(--n); }
-.palette .swatch[data-k="--b1"] { background-color: var(--b1); }
 </style>

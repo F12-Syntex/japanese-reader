@@ -38,7 +38,12 @@
       />
     </div>
 
-    <div v-if="japaneseText.length > 0" class="fixed bottom-8 right-8 flex gap-3 z-[50]">
+    <!-- Floating action button: hidden when any modal is open, positioned above mobile tab nav -->
+    <div
+      v-if="japaneseText.length > 0 && !anyModalOpen"
+      class="fixed right-8 z-[50]"
+      :class="fabContainerClasses"
+    >
       <button 
         @click="showFeedback = true" 
         class="btn btn-circle btn-primary shadow-lg"
@@ -74,7 +79,7 @@ import IconX from '~icons/lucide/x'
 import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
 import IconArrowRight from '~icons/lucide/arrow-right'
-import ReaderSettingsModal from '~/components/settings/ReaderSettingsModal.vue'  // Added import for ReaderSettingsModal
+import ReaderSettingsModal from '~/components/settings/ReaderSettingsModal.vue'
 import { useReaderSettings } from '~/composables/useReaderSettings'
 
 const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback } = useJapaneseText()
@@ -89,6 +94,22 @@ const selectedWord = ref(null)
 const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
 const showFeedback = ref(false)
+
+/**
+ * Hide FAB when any modal is open
+ */
+const anyModalOpen = computed(() => {
+  return showSettings.value || showWordModal.value || showAnalysisModal.value || showFeedback.value
+})
+
+/**
+ * Keep FAB above mobile bottom tab navigation.
+ * On small screens, use a larger bottom offset (e.g., 88px).
+ * On md+ screens, use the original bottom-8 spacing.
+ */
+const fabContainerClasses = computed(() => {
+  return ['bottom-[88px]', 'md:bottom-8']
+})
 
 const closeAllModals = () => {
   showSettings.value = false
