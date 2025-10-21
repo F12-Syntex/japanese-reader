@@ -1,4 +1,3 @@
-apps/web/components/WordModal.vue
 <template>
   <div v-if="modelValue && word" class="fixed inset-0 bg-black/50 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="closeModal">
     <div class="bg-base-100 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md transform transition-all duration-300 max-h-[90vh] sm:max-h-[85vh] flex flex-col" :class="modelValue ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'">
@@ -83,6 +82,7 @@ apps/web/components/WordModal.vue
 import { computed, ref, watch } from 'vue'
 import IconX from '~icons/lucide/x'
 import IconExternalLink from '~icons/lucide/external-link'
+import { useWordMetadataStore } from '~/stores/useWordMetadataStore'
 
 interface Word {
   kanji: string
@@ -107,24 +107,23 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
+const metadataStore = useWordMetadataStore()
 const isLoading = ref(false)
-const enrichedData = ref<Record<string, Partial<Word>>>({})
 
 const displayWord = computed((): Word => {
   if (!props.word) return { kanji: '' }
   
-  const base = { ...props.word }
-  const kanji = base.kanji || ''
-  const enriched = enrichedData.value[kanji] || {}
+  const kanji = props.word.kanji || ''
+  const cached = metadataStore.getWord(kanji)
   
   return {
-    kanji: base.kanji,
-    kana: base.kana || (enriched as any)?.reading || base.reading,
-    reading: base.reading || (enriched as any)?.reading,
-    meaning: base.meaning || (enriched as any)?.meaning,
-    pos: base.pos || (enriched as any)?.pos,
-    example: base.example,
-    pitchAccent: base.pitchAccent
+    kanji: props.word.kanji,
+    kana: props.word.kana || cached?.kana || props.word.reading,
+    reading: props.word.reading || cached?.reading,
+    meaning: props.word.meaning || cached?.meaning,
+    pos: props.word.pos || cached?.pos,
+    example: props.word.example,
+    pitchAccent: props.word.pitchAccent || cached?.pitchAccent
   }
 })
 
@@ -148,7 +147,7 @@ const formatPos = (pos: string): string => {
 }
 
 const enrichWordData = async (kanji: string): Promise<void> => {
-  if (!kanji || enrichedData.value[kanji]) return
+  if (!kanji || metadataStore.hasWord(kanji)) return
   
   isLoading.value = true
   try {
@@ -169,7 +168,8 @@ const enrichWordData = async (kanji: string): Promise<void> => {
     })
 
     if (data && data[kanji]) {
-      enrichedData.value[kanji] = data[kanji]
+      const metadata = { kanji, ...data[kanji] }
+      metadataStore.setWord(kanji, metadata)
     }
   } catch (error) {
     console.error('Failed to enrich word data:', error)
@@ -183,4 +183,8 @@ watch(() => props.word?.kanji, (newKanji) => {
     enrichWordData(newKanji)
   }
 }, { immediate: true })
+
+onMounted(() => {
+  metadataStore.loadCache()
+})
 </script>
