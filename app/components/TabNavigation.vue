@@ -29,8 +29,8 @@
       </button>
     </div>
 
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-200 z-40">
-      <div class="btm-nav">
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-200 dark:bg-base-800 border-t border-base-300 dark:border-base-700 z-40">
+      <div class="btm-nav bg-base-200 dark:bg-base-800">
         <button :class="{ active: activeTab === 'reader' }" @click="updateTab('reader')">
           <IconBook class="w-5 h-5" />
         </button>
@@ -40,6 +40,10 @@
         <button :class="{ active: activeTab === 'stats' }" @click="updateTab('stats')">
           <IconBarChart class="w-5 h-5" />
         </button>
+        <button @click="openSettings">
+          <IconSettings class="w-5 h-5" />
+        </button>
+        <ThemeSwitcher :current-theme="currentTheme" @update:theme="handleThemeUpdate" />
       </div>
     </div>
   </div>
@@ -50,18 +54,30 @@ import IconBook from '~icons/lucide/book-open'
 import IconBookOpen from '~icons/lucide/book'
 import IconSettings from '~icons/lucide/settings'
 import IconBarChart from '~icons/lucide/bar-chart-3'
+import ThemeSwitcher from '~/components/ThemeSwitcher.vue'
 
 interface Props {
   activeTab: string
+  currentTheme: string
 }
 
 defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'update:activeTab', tab: string): void
+  'update:activeTab': [tab: string]
+  'open-settings': []
+  'update:theme': [theme: string]
 }>()
 
 const updateTab = (tab: string): void => {
   emit('update:activeTab', tab)
+}
+
+const openSettings = (): void => {
+  emit('open-settings')
+}
+
+const handleThemeUpdate = (theme: string): void => {
+  emit('update:theme', theme)
 }
 </script>

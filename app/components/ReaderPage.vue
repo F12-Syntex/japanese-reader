@@ -40,14 +40,6 @@
 
     <div v-if="japaneseText.length > 0" class="fixed bottom-8 right-8 flex gap-3 z-[50]">
       <button 
-        @click="showSettings = true" 
-        class="btn btn-circle btn-ghost shadow-lg bg-base-100 border border-base-300"
-        title="Reader settings"
-      >
-        <IconSettings class="w-5 h-5" />
-      </button>
-      
-      <button 
         @click="showFeedback = true" 
         class="btn btn-circle btn-primary shadow-lg"
         title="Next text"
@@ -55,11 +47,6 @@
         <IconArrowRight class="w-5 h-5" />
       </button>
     </div>
-
-    <ReaderSettingsModal
-      :model-value="showSettings"
-      @update:model-value="showSettings = $event"
-    />
 
     <ReaderWordModal
       :model-value="showWordModal"
