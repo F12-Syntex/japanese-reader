@@ -154,8 +154,13 @@
                                 <div class="text-[10px] text-base-content/60">{{ byteSize(localGet(k)) }}</div>
                               </div>
                               <div class="join">
-                                <button class="btn btn-ghost btn-xs join-item" @click="openLocal(k)" aria-label="View">
-                                  <div class="tooltip tooltip-left" data-tip="View">
+                                <button 
+                                  class="btn btn-ghost btn-xs join-item" 
+                                  @click="openLocal(k)" 
+                                  :disabled="isLocalKeyTooLarge(k)"
+                                  aria-label="View"
+                                >
+                                  <div class="tooltip tooltip-left" :data-tip="isLocalKeyTooLarge(k) ? 'Too large (>5MB)' : 'View'">
                                     <IconEye class="w-4 h-4" />
                                   </div>
                                 </button>
@@ -205,12 +210,23 @@
                   <div class="min-w-0 flex-1">
                     <div class="text-xs truncate">{{ k }}</div>
                     <div class="text-[10px] text-base-content/60">{{ byteSize(localGet(k)) }}</div>
+                    <div v-if="isLocalKeyTooLarge(k)" class="badge badge-warning badge-xs mt-1">Too large</div>
                   </div>
                   <div class="join">
-                    <button class="btn btn-ghost btn-xs join-item" @click="openLocal(k)" aria-label="View">
+                    <button 
+                      class="btn btn-ghost btn-xs join-item" 
+                      @click="openLocal(k)" 
+                      :disabled="isLocalKeyTooLarge(k)"
+                      aria-label="View"
+                    >
                       <IconEye class="w-4 h-4" />
                     </button>
-                    <button class="btn btn-primary btn-xs join-item" @click="editLocal(k)" aria-label="Edit">
+                    <button 
+                      class="btn btn-primary btn-xs join-item" 
+                      @click="editLocal(k)" 
+                      :disabled="isLocalKeyTooLarge(k)"
+                      aria-label="Edit"
+                    >
                       <IconPencil class="w-4 h-4" />
                     </button>
                     <button class="btn btn-error btn-outline btn-xs join-item" @click="removeLocal(k)" aria-label="Delete">
@@ -235,14 +251,27 @@
                 </thead>
                 <tbody>
                   <tr v-for="k in filteredLocalKeys" :key="k">
-                    <td class="max-w-[40vw] truncate">{{ k }}</td>
+                    <td class="max-w-[40vw] truncate">
+                      {{ k }}
+                      <span v-if="isLocalKeyTooLarge(k)" class="badge badge-warning badge-xs ml-2">Too large</span>
+                    </td>
                     <td class="text-right">{{ byteSize(localGet(k)) }}</td>
                     <td class="text-right">
                       <div class="join justify-end">
-                        <button class="btn btn-ghost btn-xs join-item" @click="openLocal(k)" aria-label="View">
+                        <button 
+                          class="btn btn-ghost btn-xs join-item" 
+                          @click="openLocal(k)" 
+                          :disabled="isLocalKeyTooLarge(k)"
+                          aria-label="View"
+                        >
                           <IconEye class="w-4 h-4" />
                         </button>
-                        <button class="btn btn-primary btn-xs join-item" @click="editLocal(k)" aria-label="Edit">
+                        <button 
+                          class="btn btn-primary btn-xs join-item" 
+                          @click="editLocal(k)" 
+                          :disabled="isLocalKeyTooLarge(k)"
+                          aria-label="Edit"
+                        >
                           <IconPencil class="w-4 h-4" />
                         </button>
                         <button class="btn btn-error btn-outline btn-xs join-item" @click="removeLocal(k)" aria-label="Delete">
@@ -366,6 +395,9 @@ interface StoreItem {
   id: string
   state?: Record<string, unknown>
 }
+
+const MAX_SIZE_MB = 5
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
 const tab = ref<'stores' | 'local' | 'io'>('stores')
 const storeQuery = ref<string>('')
@@ -507,11 +539,25 @@ const filteredLocalKeys = computed(() => {
   return localKeys.value.filter(k => k.toLowerCase().includes(q))
 })
 
+const getLocalKeySize = (key: string): number => {
+  const val = localGet(key)
+  if (!val) return 0
+  return new Blob([val]).size
+}
+
+const isLocalKeyTooLarge = (key: string): boolean => {
+  return getLocalKeySize(key) > MAX_SIZE_BYTES
+}
+
 const localModal = ref<HTMLDialogElement | null>(null)
 const activeLocalKey = ref<string>('')
 const localEditor = ref<string>('')
 
 const openLocal = (key: string): void => {
+  if (isLocalKeyTooLarge(key)) {
+    showToast('File too large (>5MB)', 'error')
+    return
+  }
   activeLocalKey.value = key
   localEditor.value = localGet(key) ?? ''
   localModal.value?.showModal()

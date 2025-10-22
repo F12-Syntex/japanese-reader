@@ -8,6 +8,9 @@ export interface ParsedWord {
   jlptLevel?: string
   pitchAccent?: string
   example?: string
+  alternativeReadings?: string[]
+  alternativeKanji?: string[]
+  jmdictId?: string
 }
 
 export interface ParsedSentence {
