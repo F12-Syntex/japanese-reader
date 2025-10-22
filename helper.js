@@ -48,7 +48,6 @@ function searchFilesByContent(files, searchTerm) {
   });
 }
 
-
 function getFilesByExtension(files, extension) {
   const ext = extension.startsWith('.') ? extension : `.${extension}`;
   return files.filter(file => file.endsWith(ext));
@@ -61,22 +60,16 @@ function getRecentlyModified(files, hours = 24) {
       try {
         const stats = fs.statSync(file);
         return stats.mtimeMs > cutoffTime;
-      } catch (error) {
+      } catch {
         return false;
       }
     })
-    .sort((a, b) => {
-      const aTime = fs.statSync(a).mtimeMs;
-      const bTime = fs.statSync(b).mtimeMs;
-      return bTime - aTime;
-    });
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
 }
 
 function listFiles(files) {
   console.log('\n📁 Files included:');
-  files.forEach((file, index) => {
-    console.log(`  ${index + 1}. ${file}`);
-  });
+  files.forEach((file, index) => console.log(`  ${index + 1}. ${file}`));
   console.log(`\n📊 Total: ${files.length} file(s)`);
 }
 
@@ -84,13 +77,9 @@ function copyToClipboard(text, fileList) {
   const platform = process.platform;
   let command;
 
-  if (platform === 'darwin') {
-    command = 'pbcopy';
-  } else if (platform === 'win32') {
-    command = 'clip';
-  } else {
-    command = 'xclip -selection clipboard';
-  }
+  if (platform === 'darwin') command = 'pbcopy';
+  else if (platform === 'win32') command = 'clip';
+  else command = 'xclip -selection clipboard';
 
   const child = exec(command, error => {
     if (error) {
@@ -99,9 +88,7 @@ function copyToClipboard(text, fileList) {
       console.log(text);
     } else {
       console.log('✅ Content copied to clipboard!');
-      if (fileList) {
-        listFiles(fileList);
-      }
+      if (fileList) listFiles(fileList);
     }
   });
 
@@ -109,12 +96,10 @@ function copyToClipboard(text, fileList) {
   child.stdin.end();
 }
 
-// ✅ UPDATED FUNCTION — applies CSV, ICO, and truncation logic
 function buildOutput(files) {
   let output = '';
 
   files.forEach(filePath => {
-    // Skip .ico entirely
     if (filePath.endsWith('.ico')) return;
 
     const content = fs.readFileSync(filePath, 'utf8');
@@ -125,9 +110,8 @@ function buildOutput(files) {
       finalContent = lines.join('\n') + '\n... (truncated CSV preview)\n';
     } else {
       const lines = content.split(/\r?\n/);
-      if (lines.length > 300) {
+      if (lines.length > 300)
         finalContent = lines.slice(0, 300).join('\n') + '\n... (truncated after 300 lines)\n';
-      }
     }
 
     output += `File: ${filePath}\n`;
@@ -137,72 +121,56 @@ function buildOutput(files) {
   return output;
 }
 
-// 🌳 Build tree with optional “safe” ASCII output
-function buildTreeOutput(dirPath, prefix = '', isRoot = true, useAscii = false) {
-  let output = '';
-  const files = fs.readdirSync(dirPath);
-  const lastIndex = files.length - 1;
+// 🌳 New buildTreeOutput — prints absolute file paths in dot notation
+function buildTreeOutput(dirPath) {
+  const files = [];
 
-  files.forEach((file, index) => {
-    const fullPath = path.join(dirPath, file);
-    const stat = fs.statSync(fullPath);
-    const isLast = index === lastIndex;
+  function recurse(currentDir) {
+    const entries = fs.readdirSync(currentDir);
+    entries.forEach(entry => {
+      const fullPath = path.join(currentDir, entry);
+      const stat = fs.statSync(fullPath);
 
-    if (file === 'node_modules' || file.startsWith('.')) return;
+      if (entry === 'node_modules' || entry.startsWith('.')) return;
 
-    const connector = useAscii ? (isLast ? '\\-- ' : '|-- ') : (isLast ? '└── ' : '├── ');
-    const newPrefix = useAscii ? (isLast ? '    ' : '|   ') : (isLast ? '    ' : '│   ');
+      if (stat.isDirectory()) {
+        recurse(fullPath);
+      } else if (
+        !entry.endsWith('.lock') &&
+        !entry.endsWith('.md') &&
+        entry !== '.gitignore' &&
+        !entry.endsWith('.json')
+      ) {
+        const relative = path.relative(dirPath, fullPath);
+        const dotted = relative.replace(/[\\/]/g, '.');
+        files.push(dotted);
+      }
+    });
+  }
 
-    if (stat.isDirectory()) {
-      output += `${prefix}${connector}${file}/\n`;
-      output += buildTreeOutput(fullPath, prefix + newPrefix, false, useAscii);
-    } else if (
-      !file.endsWith('.lock') &&
-      !file.endsWith('.md') &&
-      file !== '.gitignore' &&
-      !file.endsWith('.json')
-    ) {
-      output += `${prefix}${connector}${file}\n`;
-    }
-  });
-
-  return output;
+  recurse(dirPath);
+  return files.join('\n');
 }
 
 function showHelp() {
-  const helpText = `
+  const text = `
 📚 Code Helper - Smart Codebase Navigator
 
-Usage: node helper [command] [argument(s)]
-
 Commands:
-  (no args)              Copy all code files to clipboard
+  tree        Show dot-notation absolute file paths (src.a.b.c)
+  name ...    Search filenames containing substring(s)
+  content ... Search files by content term
+  ext ...     Filter by extension
+  recent ...  Show recently modified files
+  list        Copy all relevant files
+  ? or help   Show this help message
 
-  ? or help              Show this help message
-
-  name <substring(s)>    Find files containing one or more substrings in filename
-  content <term>         Find files containing term in their content
-  ext <extension>        Get all files with specific extension
-  recent [hours]         Get recently modified files (default: 24h)
-  list                   List all files and copy to clipboard
-  tree                   Show directory tree structure and copy to clipboard
-
-Exclusions and Formatting:
-  - .ico files skipped entirely
-  - .csv files: first 3 lines only
-  - Files >300 lines truncated
-
-Examples:
-  node helper
-  node helper name component
-  node helper content API
-  node helper ext .js
-  node helper recent 12
+Example:
   node helper tree
+  node helper name service
 `;
-
-  console.log(helpText);
-  copyToClipboard(helpText.trim());
+  console.log(text);
+  copyToClipboard(text.trim());
 }
 
 function main() {
@@ -218,12 +186,10 @@ function main() {
     }
 
     if (command === 'tree') {
-      console.log('📂 Project Structure:');
-      console.log(path.basename(currentDir) + '/');
-      const fancyTree = path.basename(currentDir) + '/\n' + buildTreeOutput(currentDir, '', true, false);
-      const safeTree = path.basename(currentDir) + '/\n' + buildTreeOutput(currentDir, '', true, true);
-      copyToClipboard(safeTree); // copy ASCII-safe tree
-      console.log(fancyTree);    // pretty tree in terminal
+      console.log('📂 Project Structure (dot format):');
+      const output = buildTreeOutput(currentDir);
+      console.log(output);
+      copyToClipboard(output);
       return;
     }
 
@@ -235,8 +201,7 @@ function main() {
     if (command === 'name' && args.length > 1) {
       selectedFiles = searchFilesByName(allFiles, ...args.slice(1));
       console.log(`🔍 Searching filenames: ${args.slice(1).join(', ')}`);
-      const project = path.basename(currentDir);
-      const structure = `${project}/\n${buildTreeOutput(currentDir, '', true, true)}`;
+      const structure = buildTreeOutput(currentDir);
       const files = buildOutput(selectedFiles);
       output = `<structure>\n${structure}\n\n<files>\n${files}`;
     } else if (command === 'content' && argument) {
