@@ -13,8 +13,8 @@
           enter-from-class="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
           leave-to-class="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
         >
-          <div v-if="modelValue" class="bg-base-100 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full overflow-hidden" :class="sizeClass">
-            <div class="sticky top-0 z-10 p-4 sm:p-6 border-b border-base-200 bg-base-100 flex items-center justify-between">
+          <div v-if="modelValue" class="bg-base-100 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col" :class="sizeClass" :style="dimensionStyle">
+            <div class="flex-shrink-0 p-4 sm:p-6 border-b border-base-200 bg-base-100 flex items-center justify-between">
               <div class="flex-1 min-w-0">
                 <h2 class="text-lg sm:text-2xl font-bold">{{ title }}</h2>
                 <p v-if="subtitle" class="text-xs sm:text-sm text-base-content/60 mt-1">{{ subtitle }}</p>
@@ -24,11 +24,11 @@
               </button>
             </div>
 
-            <div class="overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 custom-scrollbar" style="max-height: 70vh">
+            <div class="flex-1 overflow-hidden px-4 sm:px-6 py-4 sm:py-6 min-h-0">
               <slot />
             </div>
 
-            <div v-if="$slots.footer" class="sticky bottom-0 p-4 sm:p-6 border-t border-base-200 bg-base-100 flex gap-2 sm:gap-3 justify-end flex-wrap sm:flex-nowrap">
+            <div v-if="$slots.footer" class="flex-shrink-0 p-4 sm:p-6 border-t border-base-200 bg-base-100 flex gap-2 sm:gap-3 justify-end flex-wrap sm:flex-nowrap">
               <slot name="footer" />
             </div>
           </div>
@@ -46,11 +46,13 @@ interface Props {
   title: string
   subtitle?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
+  fixedHeight?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'lg',
-  subtitle: undefined
+  subtitle: undefined,
+  fixedHeight: undefined
 })
 
 const emit = defineEmits<{
@@ -67,6 +69,13 @@ const sizeClass = computed((): string => {
     '4xl': 'sm:max-w-7xl'
   }
   return sizes[props.size] ?? 'sm:max-w-2xl'
+})
+
+const dimensionStyle = computed((): string => {
+  if (props.fixedHeight) {
+    return `height: ${props.fixedHeight}; max-height: ${props.fixedHeight};`
+  }
+  return ''
 })
 
 const close = (): void => {

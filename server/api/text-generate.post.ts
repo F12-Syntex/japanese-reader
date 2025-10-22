@@ -48,7 +48,11 @@ Grammar points (use at least 3):
 ${shuffledGrammar.slice(0, 5).map((g: GrammarPoint) => `- ${g.point}: ${g.english}`).join('\n')}
 
 For each sentence, include the grammar points used from the list above. all particles are considered grammar points.
-Respond ONLY with JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["point1", "point2"]}]}`
+Respond ONLY with JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["point1", "point2"]}]}
+
+
+ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.
+`
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',

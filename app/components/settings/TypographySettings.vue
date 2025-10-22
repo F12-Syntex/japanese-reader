@@ -7,7 +7,7 @@
             <IconType class="w-5 h-5" />
             Font Settings
           </h3>
-          <button @click="$emit('openMarketplace')" class="btn btn-primary btn-sm gap-2 w-full md:w-auto">
+          <button @click="emit('openMarketplace')" class="btn btn-primary btn-sm gap-2 w-full md:w-auto">
             <IconShoppingBag class="w-4 h-4" />
             Browse Marketplace
           </button>
@@ -138,6 +138,10 @@ import { useFontStore } from '~/stores/useFontStore'
 
 const props = defineProps<{
   settings: ReaderSettings
+}>()
+
+const emit = defineEmits<{
+  openMarketplace: []
 }>()
 
 const fontStore = useFontStore()

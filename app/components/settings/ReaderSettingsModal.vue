@@ -1,34 +1,33 @@
 <template>
-  <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Settings" subtitle="Customize your experience" size="2xl">
+  <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Settings" subtitle="Customize your experience" size="4xl" fixed-height="85vh">
     <template #default>
-      <div class="flex flex-col gap-4 h-full overflow-hidden">
-        <div class="hidden md:flex tabs tabs-boxed bg-base-200 flex-shrink-0">
+      <div class="flex flex-col md:flex-row h-full gap-4 md:gap-6">
+        <div class="hidden md:flex md:flex-col md:w-48 lg:w-56 flex-shrink-0 gap-2 overflow-y-auto pr-2">
           <button 
             v-for="tab in tabs" 
             :key="tab.id"
             @click="activeTab = tab.id"
-            class="tab flex items-center gap-2 text-xs md:text-sm"
-            :class="activeTab === tab.id ? 'tab-active' : ''"
+            class="btn justify-start gap-3 w-full flex-shrink-0"
+            :class="activeTab === tab.id ? 'btn-primary' : 'btn-ghost'"
           >
-            <component :is="tab.icon" class="w-4 h-4" />
-            <span class="hidden lg:inline">{{ tab.label }}</span>
+            <component :is="tab.icon" class="w-5 h-5" />
+            <span class="text-sm">{{ tab.label }}</span>
           </button>
         </div>
 
-        <div class="overflow-y-auto flex-1 pr-2">
-          <div class="space-y-6">
-            <AccountSettings v-show="activeTab === 'account'" />
-            <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" />
-            <MarketplaceSettings 
-              v-show="activeTab === 'marketplace'" 
-              :settings="readerStore.settings"
-            />
-            <FuriganaSettings v-show="activeTab === 'furigana'" :settings="readerStore.settings" />
-            <TooltipSettings v-show="activeTab === 'tooltip'" :settings="readerStore.settings" />
-            <HighlightingSettings v-show="activeTab === 'highlighting'" :settings="readerStore.settings" />
-            <DisplaySettings v-show="activeTab === 'display'" :settings="readerStore.settings" />
-            <InteractionSettings v-show="activeTab === 'interaction'" :settings="readerStore.settings" @reset="handleReset" />
-          </div>
+        <div class="flex-1 overflow-y-auto pr-2 pb-20 md:pb-0 min-h-0">
+          <AccountSettings v-show="activeTab === 'account'" />
+          <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" @open-marketplace="activeTab = 'marketplace'" />
+          <MarketplaceSettings 
+            v-show="activeTab === 'marketplace'" 
+            :settings="readerStore.settings"
+            @back="activeTab = 'typography'"
+          />
+          <FuriganaSettings v-show="activeTab === 'furigana'" :settings="readerStore.settings" />
+          <TooltipSettings v-show="activeTab === 'tooltip'" :settings="readerStore.settings" />
+          <HighlightingSettings v-show="activeTab === 'highlighting'" :settings="readerStore.settings" />
+          <DisplaySettings v-show="activeTab === 'display'" :settings="readerStore.settings" />
+          <InteractionSettings v-show="activeTab === 'interaction'" :settings="readerStore.settings" @reset="handleReset" />
         </div>
 
         <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 z-50">
@@ -92,7 +91,6 @@ const readerStore = useReaderSettingsStore()
 const tabs: TabItem[] = [
   { id: 'account', label: 'Account', icon: IconUser },
   { id: 'typography', label: 'Typography', icon: IconType },
-  { id: 'marketplace', label: 'Marketplace', icon: IconShoppingBag },
   { id: 'furigana', label: 'Furigana', icon: IconRuler },
   { id: 'tooltip', label: 'Tooltip', icon: IconMessageCircle },
   { id: 'highlighting', label: 'Highlighting', icon: IconPalette },
