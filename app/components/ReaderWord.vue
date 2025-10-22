@@ -10,7 +10,7 @@
   >
     <span
       v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle"
-      class="block text-center opacity-70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
+      class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
       :style="translationStyle"
     >
       {{ truncateMeaning(displayMeaning) }}
@@ -23,7 +23,8 @@
       <ruby class="[ruby-align:center]">
         <span
           class="transition-colors duration-150 px-0.5 rounded-sm"
-          :style="mergedSurfaceStyle"
+          :class="highlightClass"
+          :style="[surfaceClampStyle, opacityAndDecorationStyle]"
         >
           <span class="align-middle leading-none">
             {{ word?.kanji }}
@@ -31,7 +32,7 @@
         </span>
         <rt
           v-if="!isParticle && settings?.showFurigana && word?.kana !== word?.kanji"
-          class="select-none transition-opacity duration-150 opacity-95"
+          class="select-none transition-opacity duration-150 opacity-70"
           :style="furiganaStyle"
         >
           {{ word?.kana }}
@@ -130,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, computed, ref, watch, onUnmounted } from 'vue'
+import { nextTick, computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import type { ParsedWord } from '~/types/japanese'
 import type { ReaderSettings } from '~/types/reader'
 import type { CSSProperties } from 'vue'
@@ -171,12 +172,58 @@ const displayMeaning = computed(() => {
   return enrichedMeaning.value?.meaning || localWord.value?.meaning || ''
 })
 
-const isParticle = computed(() => enrichedMeaning.value?.pos === 'particle' || localWord.value?.pos === 'particle')
+const pos = computed(() => enrichedMeaning.value?.pos || localWord.value?.pos)
+
+const isParticle = computed(() => pos.value === 'particle')
 
 const showTooltipExtras = computed(() =>
   (props.settings?.showPitchAccent && (enrichedMeaning.value?.pitchAccent || localWord.value.pitchAccent)) ||
   (props.settings?.showExample && (enrichedMeaning.value?.example || localWord.value.example))
 )
+
+const highlightClass = computed(() => {
+  if (isGrammarHighlighted.value && props.settings?.highlightGrammar) {
+    return 'text-success'
+  }
+  if (pos.value === 'particle' && props.settings?.highlightParticles) {
+    return 'text-warning'
+  }
+  if (pos.value === 'verb' && props.settings?.highlightVerbs) {
+    return 'text-info'
+  }
+  if (pos.value === 'adjective' && props.settings?.highlightAdjectives) {
+    return 'text-accent'
+  }
+  if (pos.value === 'noun' && props.settings?.highlightNouns) {
+    return 'text-primary'
+  }
+  return 'text-inherit'
+})
+
+const opacityAndDecorationStyle = computed((): CSSProperties => {
+  const style: CSSProperties = {}
+
+  if (props.settings?.highlightKnownWords && localWord.value.isKnown) {
+    if (props.settings?.dimKnownWords) {
+      style.opacity = 0.6
+    } else {
+      style.opacity = (props.settings?.knownWordOpacity ?? 100) / 100
+    }
+  } else {
+    style.opacity = 1
+  }
+
+  if (props.settings?.strikethroughKnown && localWord.value.isKnown) {
+    style.textDecoration = 'line-through'
+    style.textDecorationColor = 'currentColor'
+  } else if (props.settings?.underlineUnknown && !localWord.value.isKnown) {
+    style.textDecoration = 'underline dashed'
+    style.textDecorationColor = 'currentColor'
+    style.textUnderlineOffset = '4px'
+  }
+
+  return style
+})
 
 const arrowStyle = computed((): CSSProperties => {
   const baseStyle: CSSProperties = { zIndex: -1 }
@@ -197,45 +244,6 @@ const arrowStyle = computed((): CSSProperties => {
   }
 })
 
-const wordColorStyle = computed((): CSSProperties => {
-  const style: CSSProperties = {}
-
-  if (props.isGrammarHighlighted && props.settings?.highlightGrammar) {
-    style.color = '#16A34A'
-    return style
-  }
-
-  const pos = enrichedMeaning.value?.pos || localWord.value?.pos
-
-  if (props.settings?.highlightParticles && pos === 'particle') {
-    style.color = 'hsl(12, 78%, 45%)'
-  } else if (props.settings?.highlightVerbs && pos === 'verb') {
-    style.color = 'hsl(212, 78%, 45%)'
-  } else if (props.settings?.highlightAdjectives && pos === 'adjective') {
-    style.color = 'hsl(276, 65%, 50%)'
-  } else if (props.settings?.highlightNouns && pos === 'noun') {
-    style.color = 'hsl(48, 85%, 45%)'
-  }
-
-  if (props.settings?.highlightKnownWords && localWord.value?.isKnown) {
-    style.opacity = (props.settings?.knownWordOpacity ?? 100) / 100
-    if (props.settings?.dimKnownWords) {
-      style.opacity = 0.6
-    }
-    if (props.settings?.strikethroughKnown) {
-      style.textDecoration = 'line-through'
-    }
-  }
-
-  if (props.settings?.underlineUnknown && !localWord.value?.isKnown) {
-    style.textDecoration = 'underline dashed'
-    style.textDecorationColor = 'currentColor'
-    style.textUnderlineOffset = '4px'
-  }
-
-  return style
-})
-
 const surfaceClampStyle = computed((): CSSProperties => ({
   maxWidth: '24ch',
   display: 'inline-block',
@@ -243,11 +251,6 @@ const surfaceClampStyle = computed((): CSSProperties => ({
   lineHeight: '1.06',
   wordBreak: 'keep-all',
   overflow: 'hidden'
-}))
-
-const mergedSurfaceStyle = computed((): CSSProperties => ({
-  ...surfaceClampStyle.value,
-  ...wordColorStyle.value
 }))
 
 const wordContainerStyle = computed((): CSSProperties => {
@@ -265,16 +268,14 @@ const translationStyle = computed((): CSSProperties => {
   return {
     fontSize: `${size}px`,
     marginBottom: `${gap}px`,
-    lineHeight: '1',
-    color: 'hsl(220, 10%, 56%)'
+    lineHeight: '1'
   }
 })
 
 const furiganaStyle = computed((): CSSProperties => {
   const em = Math.max(0.35, Math.min(0.6, props.settings?.furiganaSize ?? 0.45))
   return {
-    fontSize: `${em}em`,
-    color: 'hsl(220, 10%, 56%)'
+    fontSize: `${em}em`
   }
 })
 
@@ -283,6 +284,8 @@ const tooltipTextSize = computed(() => {
   if (props.settings?.tooltipSize === 'lg') return 'text-base'
   return 'text-sm'
 })
+
+const isGrammarHighlighted = computed(() => props.isGrammarHighlighted)
 
 const truncateMeaning = (meaning: string): string => {
   if (!meaning) return ''

@@ -51,12 +51,12 @@ export default defineEventHandler(async (event) => {
     const tokenizer = await getTokenizer()
     const tokens = tokenizer.tokenize(text)
     
-    console.log('Parsed tokens:', tokens.map((t: any) => ({
-      surface: t.surface_form,
-      base: t.basic_form,
-      reading: t.reading,
-      pos: t.pos
-    })))
+    // console.log('Parsed tokens:', tokens.map((t: any) => ({
+    //   surface: t.surface_form,
+    //   base: t.basic_form,
+    //   reading: t.reading,
+    //   pos: t.pos
+    // })))
     
     const words = tokens.map((token: any) => {
       const surface = token.surface_form
