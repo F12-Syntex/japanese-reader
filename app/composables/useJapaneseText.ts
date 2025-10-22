@@ -20,35 +20,33 @@ export const useJapaneseText = () => {
     store.setError(null)
     store.setSentences([])
     store.setStreaming('')
+
     let accumulated = ''
-    let raw: Array<{ text: string; grammar?: string[] }> = []
+
     try {
       const knownList = Array.from(knownWords.value.keys())
       const currentLevel = getLevelFromScore(difficulty.value)
-      await streamGenerateText(currentLevel, knownList, (chunk: string) => {
-        accumulated += chunk
-        try {
-          const cleaned = accumulated.replace(/```json\n?/g, '').replace(/```\n?/g, '')
-          const textRegex = /"text"\s*:\s*"([^"]*)"/g
-          let match
-          const pieces: string[] = []
-          while ((match = textRegex.exec(cleaned)) !== null) {
-            if (match[1] !== undefined) pieces.push(match[1])
+
+      await streamGenerateText(
+        currentLevel,
+        knownList,
+        (chunk: string) => {
+          accumulated += chunk
+          store.setStreaming(accumulated)
+        },
+        async (finalText: string) => {
+          try {
+            const parsed = JSON.parse(finalText)
+            if (!Array.isArray(parsed.sentences)) throw new Error('Invalid response structure')
+
+            const sentences: ParsedSentence[] = await parseSentences(parsed.sentences)
+            store.setSentences(sentences)
+          } catch (e: any) {
+            store.setError(e.message || 'Failed to parse final response')
+            console.error('Parse error:', e)
           }
-          if (pieces.length) store.setStreaming(pieces.join('πÇé') + 'ΓÇª')
-          const full = cleaned.replace(/^[^{]*/, '').replace(/[^}]*$/, '').trim()
-          if (full.startsWith('{') && full.endsWith('}')) {
-            const parsed = JSON.parse(full)
-            if (Array.isArray(parsed.sentences)) {
-              raw = parsed.sentences
-              store.setStreaming(parsed.sentences.map((s: any) => s.text).join('πÇé'))
-            }
-          }
-        } catch {}
-      })
-      if (!raw.length) throw new Error('Failed to parse generated text from the model')
-      const parsed: ParsedSentence[] = await parseSentences(raw)
-      store.setSentences(parsed)
+        }
+      )
     } catch (e: any) {
       store.setError(e.message || 'Text generation failed')
       console.error('Generation error:', e)

@@ -12,7 +12,8 @@ export const useOpenAI = () => {
   const streamGenerateText = async (
     level: string,
     knownWords: string[],
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
+    onDone: (finalText: string) => void
   ) => {
     const apiKey = getApiKey()
     if (!apiKey) throw new Error('API key not set')
@@ -46,9 +47,12 @@ export const useOpenAI = () => {
 
             try {
               const parsed = JSON.parse(data)
-              const content = parsed.value || ''
 
-              if (parsed.type === 'content') onChunk(content)
+              if (parsed.type === 'delta') {
+                onChunk(parsed.value)
+              } else if (parsed.type === 'done') {
+                onDone(parsed.value)
+              }
             } catch {}
           }
         }

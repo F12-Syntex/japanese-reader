@@ -50,9 +50,7 @@ ${shuffledGrammar.slice(0, 5).map((g: GrammarPoint) => `- ${g.point}: ${g.englis
 For each sentence, include the grammar points used from the list above. all particles are considered grammar points.
 Respond ONLY with JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["point1", "point2"]}]}
 
-
-ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.
-`
+ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.`
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',
@@ -71,6 +69,18 @@ ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.
     const reader = body.getReader()
     const decoder = new TextDecoder()
 
+    const isJapanese = (char: string): boolean => {
+      const code = char.charCodeAt(0)
+      return (
+        (code >= 0x3040 && code <= 0x309F) ||
+        (code >= 0x30A0 && code <= 0x30FF) ||
+        (code >= 0x4E00 && code <= 0x9FAF) ||
+        (code >= 0xFF66 && code <= 0xFF9F) ||
+        char === '。' || char === '、' || char === '！' || char === '？' ||
+        char === '　' || char === '\n'
+      )
+    }
+
     const readable = new ReadableStream({
       start(controller) {
         controller.enqueue(`data: ${JSON.stringify({ type: 'grammar', data: relevantGrammar })}\n\n`)
@@ -78,6 +88,7 @@ ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.
       async pull(controller) {
         try {
           let buffer = ''
+          let accumulatedText = ''
 
           while (true) {
             const { done, value } = await reader.read()
@@ -89,30 +100,30 @@ ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.
 
             for (const line of lines) {
               if (!line.trim()) continue
+              if (line.startsWith('event: ')) continue
+
               if (line.startsWith('data: ')) {
                 const data = line.slice(6).trim()
                 if (data === '[DONE]') continue
 
                 try {
                   const parsed = JSON.parse(data)
-                  const content = (parsed?.choices?.[0]?.delta?.content ?? parsed?.text ?? '')
 
-                  if (content) {
-                    controller.enqueue(`data: ${JSON.stringify({ type: 'content', value: content })}\n\n`)
+                  if (parsed.type === 'response.output_text.delta') {
+                    const delta = parsed.delta ?? ''
+                    accumulatedText += delta
+                    
+                    const japaneseOnly = Array.from(String(delta)).filter(isJapanese).join('')
+                    if (japaneseOnly) {
+                      controller.enqueue(`data: ${JSON.stringify({ type: 'delta', value: japaneseOnly })}\n\n`)
+                    }
+                  } else if (parsed.type === 'response.output_text.done') {
+                    const finalText = parsed.text ?? accumulatedText
+                    controller.enqueue(`data: ${JSON.stringify({ type: 'done', value: finalText })}\n\n`)
                   }
                 } catch {}
               }
             }
-          }
-
-          if (buffer.trim()) {
-            try {
-              const parsed = JSON.parse(buffer)
-              const content = (parsed?.choices?.[0]?.delta?.content ?? parsed?.text ?? '')
-              if (content) {
-                controller.enqueue(`data: ${JSON.stringify({ type: 'content', value: content })}\n\n`)
-              }
-            } catch {}
           }
         } catch (error) {
           console.error('Stream error:', error)
