@@ -28,6 +28,9 @@
           <HighlightingSettings v-show="activeTab === 'highlighting'" :settings="readerStore.settings" />
           <DisplaySettings v-show="activeTab === 'display'" :settings="readerStore.settings" />
           <InteractionSettings v-show="activeTab === 'interaction'" :settings="readerStore.settings" @reset="handleReset" />
+          <ClientOnly>
+            <StorageSettings v-show="activeTab === 'storage'" />
+          </ClientOnly>
         </div>
 
         <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 z-50">
@@ -58,6 +61,7 @@ import IconMessageCircle from '~icons/lucide/message-circle'
 import IconPalette from '~icons/lucide/palette'
 import IconEye from '~icons/lucide/eye'
 import IconMousePointer from '~icons/lucide/mouse-pointer'
+import IconDatabase from '~icons/lucide/database'
 import { useReaderSettingsStore } from '~/stores/useReaderSettingsStore'
 
 import AccountSettings from './AccountSettings.vue'
@@ -68,6 +72,7 @@ import TooltipSettings from './TooltipSettings.vue'
 import HighlightingSettings from './HighlightingSettings.vue'
 import DisplaySettings from './DisplaySettings.vue'
 import InteractionSettings from './InteractionSettings.vue'
+import StorageSettings from './StorageSettings.vue'
 
 interface TabItem {
   id: string
@@ -95,7 +100,8 @@ const tabs: TabItem[] = [
   { id: 'tooltip', label: 'Tooltip', icon: IconMessageCircle },
   { id: 'highlighting', label: 'Highlighting', icon: IconPalette },
   { id: 'display', label: 'Display', icon: IconEye },
-  { id: 'interaction', label: 'Interaction', icon: IconMousePointer }
+  { id: 'interaction', label: 'Interaction', icon: IconMousePointer },
+  { id: 'storage', label: 'Storage', icon: IconDatabase }
 ]
 
 const handleReset = (): void => {
