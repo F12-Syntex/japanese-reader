@@ -1,4 +1,4 @@
-import { computed, reactive } from 'vue'
+import { computed, shallowReactive } from 'vue'
 import type { Pinia, StateTree } from 'pinia'
 import { getActivePinia } from 'pinia'
 import { useNuxtApp } from '#app'
@@ -23,7 +23,7 @@ export const usePiniaExplorer = () => {
     return p ?? null
   }
 
-  const ctx = reactive<{ pinia: unknown }>({ pinia: resolvePinia() })
+  const ctx = shallowReactive<{ pinia: Pinia | null }>({ pinia: resolvePinia() })
 
   const stores = computed<StoreMeta[]>(() => {
     const p = ctx.pinia as unknown as { _s?: Map<string, AnyStore>; state?: { value?: Record<string, StateTree> } } | null
@@ -103,11 +103,84 @@ export const usePiniaExplorer = () => {
     ctx.pinia = resolvePinia()
   }
 
+  const listLocal = (): string[] => {
+    if (typeof window === 'undefined') return []
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k) keys.push(k)
+    }
+    return keys.sort((a, b) => a.localeCompare(b))
+  }
+
+  const localGet = (key: string): string | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  }
+
+  const localSet = (key: string, value: string): void => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(key, value)
+  }
+
+  const localRemove = (key: string): void => {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem(key)
+  }
+
+  const localClearAll = (): void => {
+    if (typeof window === 'undefined') return
+    localStorage.clear()
+  }
+
+  const exportBundle = (): string => {
+    const data: { stores: Record<string, unknown>; localStorage: Record<string, string | null> } = {
+      stores: {},
+      localStorage: {}
+    }
+    stores.value.forEach(s => {
+      data.stores[s.id] = s.state
+    })
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k) data.localStorage[k] = localStorage.getItem(k)
+      }
+    }
+    return JSON.stringify(data, null, 2)
+  }
+
+  const importBundle = (json: string): void => {
+    const parsed = JSON.parse(json) as { stores?: Record<string, unknown>; localStorage?: Record<string, string | null> }
+    if (parsed.stores && typeof parsed.stores === 'object') {
+      Object.entries(parsed.stores).forEach(([id, state]) => {
+        patchState(id, (state || {}) as Record<string, unknown>)
+      })
+    }
+    if (typeof window !== 'undefined' && parsed.localStorage && typeof parsed.localStorage === 'object') {
+      Object.entries(parsed.localStorage).forEach(([k, v]) => {
+        if (typeof v === 'string') localStorage.setItem(k, v)
+        else localStorage.removeItem(k)
+      })
+    }
+  }
+
   return {
     stores,
     getStore,
     patchState,
     tryResetOrClear,
-    refreshStores
+    refreshStores,
+    listLocal,
+    localGet,
+    localSet,
+    localRemove,
+    localClearAll,
+    exportBundle,
+    importBundle
   }
 }
