@@ -26,15 +26,13 @@ export default defineEventHandler(async (event) => {
 
     const parsed = parseJSON(content)
 
-    const normalized: Record<string, { reading: string; meaning: string; pos: string; jlptLevel: string }> = {}
+    const normalized: Record<string, { reading: string; meaning: string;}> = {}
 
     for (const w of wordList) {
       const entry = parsed[w] ?? {}
       normalized[w] = {
         reading: String(entry.reading ?? ''),
         meaning: String(entry.meaning ?? ''),
-        pos: String(entry.pos ?? ''),
-        jlptLevel: String(entry.jlptLevel ?? '')
       }
     }
 
