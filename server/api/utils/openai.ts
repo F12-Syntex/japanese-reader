@@ -37,12 +37,15 @@ export const createOpenAIClient = (apiKey: string, model: string = 'gpt-5-mini')
       const data = await response.json()
       return extractContent(data)
     },
-
     async stream(params: {
-      system: string
+      system?: string
       user: string
       maxTokens?: number
     }) {
+      const input: { role: string; content: string | undefined }[] = []
+      if (params.system) input.push({ role: 'system', content: params.system })
+      input.push({ role: 'user', content: params.user })
+
       const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
@@ -51,29 +54,26 @@ export const createOpenAIClient = (apiKey: string, model: string = 'gpt-5-mini')
         },
         body: JSON.stringify({
           model,
-          input: [
-            { role: 'system', content: params.system },
-            { role: 'user', content: params.user }
-          ],
-          reasoning: { effort: 'minimal' },
-          text: { verbosity: 'high' },
+          input,
+          reasoning: { effort: 'low' },
+          text: { verbosity: 'low' },
           max_output_tokens: params.maxTokens ?? 2500,
           stream: true
         })
       })
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`)
-      }
+          if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.status}`)
+          }
 
-      if (!response.body) {
-        throw new Error('No response body')
-      }
+          if (!response.body) {
+            throw new Error('No response body')
+          }
 
-      return response.body
-    }
-  }
-}
+          return response.body
+        }
+      }
+    } 
 
 function extractContent(envelope: any): string {
   if (typeof envelope?.output_text === 'string') {

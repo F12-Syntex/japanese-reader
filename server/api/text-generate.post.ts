@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, setResponseHeaders, sendStream } from 'h3'
 import { createOpenAIClient } from './utils/openai'
 import { getGrammarByLevel, loadGrammarPoints } from './utils/grammar'
+import { writeFile } from 'fs/promises'
 
 interface GrammarPoint {
   point: string
@@ -27,8 +28,6 @@ export default defineEventHandler(async (event) => {
   const themes = ['medieval', 'sci-fi', 'fantasy', 'school', 'romance', 'adventure', 'mystery']
   const theme = themes[Math.floor(Math.random() * themes.length)]
 
-  const systemPrompt = `You are a Japanese language teacher. Generate a N${cleanLevel} story about ${theme}.
-Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["grammar point used"]}]}`
 
   const shuffleArray = <T,>(arr: T[]): T[] => {
     const a = arr.slice()
@@ -41,16 +40,56 @@ Respond ONLY with valid JSON: {"sentences": [{"text": "Japanese sentence", "gram
 
   const shuffledGrammar = shuffleArray(relevantGrammar)
 
-  const userPrompt = `Generate 5-7 sentences in Japanese at N${cleanLevel} level about a ${theme} theme.
-${wordList}
+const userPrompt = `
+You are a Japanese language writing assistant. Produce natural, realistic, and coherent Japanese that matches the learner’s reading level.
 
-Grammar points (use at least 3):
-${shuffledGrammar.slice(0, 5).map((g: GrammarPoint) => `- ${g.point}: ${g.english}`).join('\n')}
+Task:
+- Write 5–7 sentences in Japanese at the ${cleanLevel} level about the theme: ${theme}.
+- All sentences must be linked and form a coherent, realistic mini-story with a beginning, development, and light resolution.
+- Prefer the words in the Word List below. If the list is too short to remain natural, you may add common, level-appropriate words sparingly.
+- Use at least 3 distinct grammar points from the list across the story. In each sentence, list only the grammar actually used.
+- Particles count as grammar points.
+- Keep vocabulary and grammar appropriate to ${cleanLevel}; avoid idioms or kanji that exceed the level unless essential.
 
-For each sentence, include the grammar points used from the list above. all particles are considered grammar points.
-Respond ONLY with JSON: {"sentences": [{"text": "Japanese sentence", "grammar": ["point1", "point2"]}]}
+Word List (prefer and reuse these; add minimally if needed):
+- ${wordList}
 
-ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.`
+Grammar Points (choose from these; use at least 3 across the story):
+${shuffledGrammar
+  .slice(0, 20)
+  .map((g: GrammarPoint) => `- ${g.point}: ${g.english}`)
+  .join('\\n')}
+
+Style and cohesion:
+- Use natural, context-rich sentences reflecting everyday situations for the chosen theme.
+- Maintain cohesion (consistent subjects, time, place); use referents like それ/その日/そこで when helpful.
+- Avoid overly textbook-like phrasing; prefer authentic, level-appropriate expressions.
+- Vary sentence length modestly; keep readability at ${cleanLevel}.
+- If you introduce a name or noun, keep it consistent throughout.
+- Keep register consistent (plain or polite) unless a justified switch is clear and minimal.
+
+Output format:
+Respond ONLY with valid JSON in exactly this shape:
+{
+  "sentences": [
+    { "text": "Japanese sentence 1", "grammar": ["point1", "point2"] },
+    { "text": "Japanese sentence 2", "grammar": ["point3"] }
+  ]
+}
+
+Validation rules:
+- The JSON must parse.
+- 5–7 sentences total.
+- Each sentence must include at least one grammar point from the provided list (particles count).
+- Do not include explanations, translations, romaji, furigana, or any extra fields.
+
+Notes for naturalness:
+- Prefer topic continuity with は and referents like その/この/あの.
+- Use connectors suitable for ${cleanLevel} (e.g., それで, でも, だから, それから).
+- Avoid sudden time or viewpoint shifts unless clearly signposted.
+`;
+
+await writeFile('prompts.txt', userPrompt)
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',
@@ -61,7 +100,6 @@ ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.`
   try {
     const client = createOpenAIClient(apiKey, model ?? 'gpt-5-mini')
     const body = await client.stream({
-      system: systemPrompt,
       user: userPrompt,
       maxTokens: 1500,
     })
@@ -108,6 +146,7 @@ ALL SENTENCES MUST BE LINKED, forming a COHERENT STORY.`
 
                 try {
                   const parsed = JSON.parse(data)
+                  console.log('Parsed chunk:', parsed)
 
                   if (parsed.type === 'response.output_text.delta') {
                     const delta = parsed.delta ?? ''
