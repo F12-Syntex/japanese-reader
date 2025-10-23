@@ -2,7 +2,7 @@ import { useAnki } from '~/composables/useAnki'
 import type { ParsedSentence, ParsedWord } from '~/types/japanese'
 
 export const useKuromojiParser = () => {
-  const { knownWords } = useAnki()
+  const { knownWords, isWordKnown } = useAnki()
 
   const parseText = async (text: string): Promise<ParsedWord[]> => {
     try {
@@ -27,17 +27,14 @@ export const useKuromojiParser = () => {
       const { lookupKanji } = useDictionaryStore()
 
       const words = await Promise.all((data.words ?? []).map(async (word: any): Promise<ParsedWord> => {
-        const surfaceMatch = knownWords.value.get(word.surface)
-        const baseMatch = knownWords.value.get(word.baseForm)
-        const knownWordData = baseMatch ?? surfaceMatch
         const meaningEntries = lookupKanji(word.baseForm).join(', ')
 
         return {
           kanji: word.surface ?? '',
           kana: word.reading ?? '',
-          meaning: meaningEntries ?? knownWordData?.meaning ?? '',
+          meaning: meaningEntries ?? '',
           pos: word.pos ?? 'other',
-          isKnown: !!knownWordData,
+          isKnown: isWordKnown(word.surface),
           reading: word.reading ?? '',
           jlptLevel: '',
           pitchAccent: '',

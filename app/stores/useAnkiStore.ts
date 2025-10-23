@@ -1,16 +1,15 @@
 import { ref, readonly } from 'vue'
-import type { KnownWord } from '~/types/anki'
 
 export const useAnkiStore = defineStore(
   'anki',
   () => {
-    const _knownWords = ref<Map<string, KnownWord>>(new Map())
+    const _knownWords = ref<Set<string>>(new Set())
     const isLoading = ref(false)
     const error = ref<string | null>(null)
 
     const knownWords = computed(() => _knownWords.value)
 
-    const processAnkiFile = async (file: File): Promise<{ success: boolean; totalWords?: number; error?: string }> => {
+    const processAnkiFile = async (file: File, apiKey: string): Promise<{ success: boolean; totalWords?: number; error?: string }> => {
       isLoading.value = true
       error.value = null
 
@@ -35,94 +34,48 @@ export const useAnkiStore = defineStore(
 
         const db = new SQL.Database(new Uint8Array(arrayBuffer))
 
-        const notesResult = db.exec('SELECT id, mid, flds, tags FROM notes')
-        const cardsResult = db.exec('SELECT nid, type, queue, ivl, reps, lapses FROM cards')
+        const notesResult = db.exec('SELECT id, flds FROM notes')
+        const cardsResult = db.exec('SELECT nid, queue, reps FROM cards')
 
-        const colResult = db.exec('SELECT models FROM col')
-        let models: Record<string, any> | null = null
-        if (colResult.length > 0 && colResult[0]?.values?.[0]?.[0]) {
-          models = JSON.parse(colResult[0].values[0][0] as string)
-        }
-
-        const noteMap = new Map<number, any>()
-        if (notesResult.length > 0 && notesResult[0]?.columns && notesResult[0]?.values) {
-          const columns = notesResult[0].columns
-          notesResult[0].values.forEach((row: any[]) => {
-            const note: Record<string, any> = {}
-            columns.forEach((col: string, i: number) => {
-              note[col] = row[i]
-            })
-            noteMap.set(note.id, note)
+        const reviewedNoteIds = new Set<number>()
+        if (cardsResult.length > 0 && cardsResult[0]?.values) {
+          cardsResult[0].values.forEach((row: any[]) => {
+            const [nid, queue, reps] = row
+            if (queue !== 0 && reps > 0) {
+              reviewedNoteIds.add(nid as number)
+            }
           })
         }
 
-        const seenWords = new Map<string, KnownWord>()
+        const japaneseWords = new Set<string>()
+        if (notesResult.length > 0 && notesResult[0]?.values) {
+          notesResult[0].values.forEach((row: any[]) => {
+            const noteId = row[0] as number
+            if (!reviewedNoteIds.has(noteId)) return
 
-        if (cardsResult.length > 0 && cardsResult[0]?.columns && cardsResult[0]?.values) {
-          const columns = cardsResult[0].columns
-          cardsResult[0].values.forEach((row: any[]) => {
-            const card: Record<string, any> = {}
-            columns.forEach((col: string, i: number) => {
-              card[col] = row[i]
-            })
+            const fieldsRaw = row[1] as string
+            const fields = fieldsRaw.split('\x1f')
 
-            if (card.queue === 0 && card.reps === 0) {
-              return
-            }
-
-            const note = noteMap.get(card.nid)
-            if (!note) return
-
-            const fields = note.flds.split('\x1f')
-            const model = models?.[note.mid]
-
-            if (!model) return
-
-            const fieldNames = model.flds.map((f: any) => f.name)
-            const wordData: Record<string, string> = {}
-
-            fieldNames.forEach((name: string, idx: number) => {
-              wordData[name] = fields[idx] || ''
-            })
-
-            if (model.name === 'Japanese-Core') {
-              const expression = cleanHTML(wordData.Expression || '')
-              const reading = extractReading(wordData.Reading || '')
-              const meaning = cleanHTML(wordData.Meaning || '')
-              const grammar = wordData.Grammar || ''
-
-              if (expression) {
-                const cardState = getCardState(card.queue, card.type)
-
-                seenWords.set(expression, {
-                  word: expression,
-                  reading: reading,
-                  meaning: meaning,
-                  pos: mapGrammarToPos(grammar),
-                  interval: card.ivl,
-                  reviews: card.reps,
-                  lapses: card.lapses,
-                  tags: note.tags?.trim().split(' ').filter(Boolean) || [],
-                  state: cardState,
-                  isKnown: cardState === 'review' || cardState === 'relearning'
-                })
-              }
+            for (const field of fields) {
+              if (!field) continue
+              const cleaned = cleanHTML(field)
+              const words = extractJapaneseWords(cleaned)
+              words.forEach(word => japaneseWords.add(word))
             }
           })
         }
 
         db.close()
 
-        _knownWords.value = seenWords
+        _knownWords.value = japaneseWords
 
         if (process.client) {
-          const serialized = Array.from(seenWords.entries())
-          localStorage.setItem('ankiKnownWords', JSON.stringify(serialized))
+          localStorage.setItem('ankiKnownWords', JSON.stringify([...japaneseWords]))
         }
 
         return {
           success: true,
-          totalWords: seenWords.size
+          totalWords: japaneseWords.size
         }
       } catch (err: any) {
         error.value = err.message
@@ -140,16 +93,12 @@ export const useAnkiStore = defineStore(
       return _knownWords.value.has(word)
     }
 
-    const getWordData = (word: string): KnownWord | undefined => {
-      return _knownWords.value.get(word)
-    }
-
-    const getKnownWordsList = (): KnownWord[] => {
-      return Array.from(_knownWords.value.values())
+    const getKnownWordsList = (): string[] => {
+      return [..._knownWords.value]
     }
 
     const clearAnkiData = (): void => {
-      _knownWords.value = new Map()
+      _knownWords.value = new Set()
       if (process.client) {
         localStorage.removeItem('ankiKnownWords')
       }
@@ -160,8 +109,8 @@ export const useAnkiStore = defineStore(
         const stored = localStorage.getItem('ankiKnownWords')
         if (stored) {
           try {
-            const entries = JSON.parse(stored)
-            _knownWords.value = new Map(entries)
+            const words = JSON.parse(stored)
+            _knownWords.value = new Set(words)
           } catch (e) {
             console.error('Failed to load Anki data from storage:', e)
           }
@@ -175,7 +124,6 @@ export const useAnkiStore = defineStore(
       error: readonly(error),
       processAnkiFile,
       isWordKnown,
-      getWordData,
       getKnownWordsList,
       clearAnkiData,
       loadFromStorage
@@ -186,33 +134,35 @@ export const useAnkiStore = defineStore(
   }
 )
 
-function getCardState(queue: number, type: number): string {
-  if (queue === -1) return 'suspended'
-  if (queue === -2 || queue === -3) return 'buried'
-  if (queue === 0) return 'new'
-  if (queue === 1) return 'learning'
-  if (queue === 2) return 'review'
-  if (queue === 3) return 'relearning'
-  return 'unknown'
-}
-
 function cleanHTML(text: string): string {
   return text.replace(/<[^>]*>/g, '').trim()
 }
 
-function extractReading(reading: string): string {
-  const match = reading.match(/\[([^\]]+)\]/)
-  return match && match[1] ? match[1] : cleanHTML(reading) || ''
-}
+function extractJapaneseWords(text: string): string[] {
+  const cleaned = text.replace(/\[[^\]]*\]/g, '').replace(/\([^\)]*\)/g, '')
+  const words: string[] = []
+  let current = ''
 
-function mapGrammarToPos(grammar: string): string {
-  const lower = grammar.toLowerCase()
+  for (const char of cleaned) {
+    const code = char.charCodeAt(0)
+    const isJapanese = 
+      (code >= 0x3040 && code <= 0x309f) ||
+      (code >= 0x30a0 && code <= 0x30ff) ||
+      (code >= 0x4e00 && code <= 0x9faf)
 
-  if (lower.includes('noun')) return 'noun'
-  if (lower.includes('verb')) return 'verb'
-  if (lower.includes('adjective')) return 'adjective'
-  if (lower.includes('particle')) return 'particle'
-  if (lower.includes('adverb')) return 'adverb'
+    if (isJapanese) {
+      current += char
+    } else if (current) {
+      if (current.length > 1) {
+        words.push(current)
+      }
+      current = ''
+    }
+  }
 
-  return 'noun'
+  if (current && current.length > 1) {
+    words.push(current)
+  }
+
+  return words
 }

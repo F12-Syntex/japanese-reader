@@ -9,7 +9,6 @@ export const useAnki = () => {
     error: computed(() => store.error),
     processAnkiFile: store.processAnkiFile,
     isWordKnown: store.isWordKnown,
-    getWordData: store.getWordData,
     getKnownWordsList: store.getKnownWordsList,
     clearAnkiData: store.clearAnkiData,
     loadFromStorage: store.loadFromStorage

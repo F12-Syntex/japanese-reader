@@ -16,7 +16,7 @@
         </div>
 
         <div class="flex-1 overflow-y-auto pr-2 pb-20 md:pb-0 min-h-0">
-          <AccountSettings v-show="activeTab === 'account'" />
+          <AccountSettings v-show="activeTab === 'account'" @open-anki-data="activeTab = 'ankidata'" />
           <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" @open-marketplace="activeTab = 'marketplace'" />
           <MarketplaceSettings 
             v-show="activeTab === 'marketplace'" 
@@ -30,6 +30,7 @@
           <InteractionSettings v-show="activeTab === 'interaction'" :settings="readerStore.settings" @reset="handleReset" />
           <ClientOnly>
             <StorageSettings v-show="activeTab === 'storage'" />
+            <AnkiDataSettings v-show="activeTab === 'ankidata'" @back="activeTab = 'account'" />
           </ClientOnly>
         </div>
 
@@ -55,7 +56,6 @@
 <script setup lang="ts">
 import IconUser from '~icons/lucide/user'
 import IconType from '~icons/lucide/type'
-import IconShoppingBag from '~icons/lucide/shopping-bag'
 import IconRuler from '~icons/lucide/ruler'
 import IconMessageCircle from '~icons/lucide/message-circle'
 import IconPalette from '~icons/lucide/palette'
@@ -73,6 +73,7 @@ import HighlightingSettings from './HighlightingSettings.vue'
 import DisplaySettings from './DisplaySettings.vue'
 import InteractionSettings from './InteractionSettings.vue'
 import StorageSettings from './StorageSettings.vue'
+import AnkiDataSettings from './AnkiDataSettings.vue'
 
 interface TabItem {
   id: string

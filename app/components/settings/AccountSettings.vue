@@ -74,10 +74,10 @@
       <div class="card-body p-4 md:p-6">
         <h3 class="text-base font-bold flex items-center gap-2 mb-4">
           <IconDatabase class="w-5 h-5" />
-          Learning Data
+          Anki deck
         </h3>
         <p class="text-sm text-base-content/60">
-          {{ knownWords.size > 0 ? `${knownWords.size.toLocaleString()} words imported` : 'No data imported yet' }}
+          {{ knownWords.size > 0 ? `${knownWords.size.toLocaleString()} words imported` : 'import your japanese anki deck.' }}
         </p>
         <div class="card-actions justify-end gap-2 mt-4">
           <button
@@ -89,7 +89,7 @@
           </button>
           <button
             v-if="knownWords.size > 0"
-            @click="showAnkiVisualizer = true"
+            @click="emit('openAnkiData')"
             class="btn btn-ghost btn-sm"
           >
             <IconEye class="w-4 h-4" />
@@ -108,7 +108,6 @@
 
     <ClientOnly>
       <AnkiImportModal v-model="showAnkiImport" />
-      <AnkiVisualizer v-model="showAnkiVisualizer" />
     </ClientOnly>
   </div>
 </template>
@@ -129,6 +128,10 @@ import IconUpload from '~icons/lucide/upload'
 import { ref, onMounted, watch } from 'vue'
 import { useAnki } from '~/composables/useAnki'
 
+const emit = defineEmits<{
+  openAnkiData: []
+}>()
+
 const { knownWords, clearAnkiData, loadFromStorage } = useAnki()
 
 const apiKey = ref<string>('')
@@ -137,7 +140,6 @@ const isSaving = ref<boolean>(false)
 const isTesting = ref<boolean>(false)
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 const showAnkiImport = ref<boolean>(false)
-const showAnkiVisualizer = ref<boolean>(false)
 
 const saveApiKey = async (): Promise<void> => {
   if (!apiKey.value) return

@@ -1,14 +1,5 @@
 export interface KnownWord {
   readonly word: string
-  readonly reading: string
-  readonly meaning: string
-  readonly pos: string
-  readonly interval: number
-  readonly reviews: number
-  readonly lapses: number
-  readonly tags: readonly string[]
-  readonly state: string
-  readonly isKnown: boolean
 }
 
 export interface AnkiFileData {
