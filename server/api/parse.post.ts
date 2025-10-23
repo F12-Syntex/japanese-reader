@@ -1,59 +1,52 @@
 import kuromoji from 'kuromoji'
 import wanakana from 'wanakana'
 
-let tokenizerPromise: Promise<any> | null = null
+let tokenizer: any = null
 
-function getDicHttpBase(event: any): string {
-  // Build an absolute HTTP base to static /dict so kuromoji can fetch files in prod
-  const config = useRuntimeConfig(event)
-  // Prefer public baseURL if set (Nuxt app.baseURL). Build absolute from request.
-  const baseURL = (config.app?.baseURL as string) || '/'
-  const req = event.node?.req
-  // Derive origin from request (works on Vercel)
-  const proto = (req?.headers['x-forwarded-proto'] as string) || 'https'
-  const host = (req?.headers['x-forwarded-host'] as string) || (req?.headers['host'] as string) || ''
-  const origin = host ? `${proto}://${host}` : ''
-  const base = baseURL.endsWith('/') ? baseURL : baseURL + '/'
-  return origin ? `${origin}${base}dict` : `${base}dict`
-}
+const getTokenizer = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (tokenizer) {
+      resolve(tokenizer)
+      return
+    }
 
-function getTokenizer(event: any): Promise<any> {
-  if (tokenizerPromise) return tokenizerPromise
-
-  tokenizerPromise = new Promise((resolve, reject) => {
-    // Always use HTTP path in prod so the compiled dict files are fetched correctly.
-    const dicPath = getDicHttpBase(event)
-
-    kuromoji.builder({ dicPath }).build((err: any, built: any) => {
+    const dicPath = '/dict'
+    
+    console.log('Building tokenizer with dictionary path:', dicPath)
+    
+    kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
       if (err) {
-        console.error('Kuromoji build error:', err, 'dicPath:', dicPath)
-        tokenizerPromise = null
+        console.error('Kuromoji build error:', err)
         reject(err)
         return
       }
-      resolve(built)
+      console.log('Tokenizer built successfully')
+      tokenizer = _tokenizer
+      resolve(tokenizer)
     })
   })
-
-  return tokenizerPromise
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { text } = body || {}
+    const { text } = body
 
-    if (!text || typeof text !== 'string') {
-      throw createError({ statusCode: 400, message: 'Text is required' })
+    if (!text) {
+      throw createError({
+        statusCode: 400,
+        message: 'Text is required'
+      })
     }
 
-    const tokenizer = await getTokenizer(event)
+    const tokenizer = await getTokenizer()
     const tokens = tokenizer.tokenize(text)
-
+    
     const words = tokens.map((token: any) => {
       const surface = token.surface_form
-      const baseForm = token.basic_form && token.basic_form !== '*' ? token.basic_form : surface
-      const reading = token.reading && token.reading !== '*' ? token.reading : surface
+      const baseForm = token.basic_form || surface
+      const reading = token.reading || surface
+      
       return {
         surface,
         baseForm,
@@ -66,13 +59,13 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error('Parse error:', error)
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: 500,
       message: error.message || 'Failed to parse text'
     })
   }
 })
 
-function mapPos(pos: string | undefined): string {
+function mapPos(pos: string): string {
   if (!pos) return 'other'
   if (pos.includes('名詞')) return 'noun'
   if (pos.includes('動詞')) return 'verb'
