@@ -28,7 +28,7 @@ export default defineNuxtConfig({
     publicAssets: [
       {
         baseURL: '/dict',
-        dir: '../node_modules/kuromoji/dict'
+        dir: './node_modules/kuromoji/dict'
       }
     ]
   }
