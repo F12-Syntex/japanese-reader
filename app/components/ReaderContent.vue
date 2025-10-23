@@ -11,12 +11,12 @@
         { 'writing-mode-vertical-rl': settings.verticalText }
       ]"
     >
-      <template v-for="(sentence, sIndex) in paginatedText" :key="`${currentPage}-${sIndex}`">
+      <template v-for="(sentence, sIndex) in text" :key="sIndex">
         <span 
           v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'left'"
           class="inline-block mr-2 opacity-50 text-sm"
         >
-          {{ getGlobalSentenceIndex(sIndex) + 1 }}.
+          {{ sIndex + 1 }}.
         </span>
 
         <span 
@@ -24,7 +24,7 @@
           :class="{ 'bg-primary/10': hoveredSentence === sIndex && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex && isCtrlPressed }"
           @mouseenter="handleSentenceHover(sIndex, $event)"
           @mouseleave="hoveredSentence = null"
-          @click="handleSentenceClick(getGlobalSentenceIndex(sIndex), sentence, $event)"
+          @click="handleSentenceClick(sIndex, sentence, $event)"
         >
           <ReaderWord
             v-for="(word, wIndex) in sentence.words" 
@@ -41,47 +41,15 @@
           v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'right'"
           class="inline-block ml-2 opacity-50 text-sm"
         >
-          .{{ getGlobalSentenceIndex(sIndex) + 1 }}
+          .{{ sIndex + 1 }}
         </span>
 
-        <span v-if="sIndex < paginatedText.length - 1" class="inline px-1">&nbsp;</span>
+        <span v-if="sIndex < text.length - 1" class="inline px-1">&nbsp;</span>
       </template>
       
-      <span v-if="streamingText && isLastPage" class="opacity-50 animate-pulse">
+      <span v-if="streamingText" class="opacity-50 animate-pulse">
         {{ streamingText }}
       </span>
-    </div>
-
-    <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-8">
-      <button 
-        @click="previousPage" 
-        :disabled="currentPage === 0"
-        class="btn btn-sm btn-circle"
-        :class="currentPage === 0 ? 'btn-disabled' : 'btn-primary'"
-      >
-        ‹
-      </button>
-      
-      <div class="join">
-        <button 
-          v-for="page in visiblePages" 
-          :key="page"
-          @click="currentPage = page"
-          class="join-item btn btn-sm"
-          :class="currentPage === page ? 'btn-primary' : 'btn-ghost'"
-        >
-          {{ page + 1 }}
-        </button>
-      </div>
-
-      <button 
-        @click="nextPage" 
-        :disabled="currentPage === totalPages - 1"
-        class="btn btn-sm btn-circle"
-        :class="currentPage === totalPages - 1 ? 'btn-disabled' : 'btn-primary'"
-      >
-        ›
-      </button>
     </div>
   </div>
 </template>
@@ -94,12 +62,9 @@ interface Props {
   text: ParsedSentence[]
   settings: ReaderSettings
   streamingText: string
-  sentencesPerPage?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  sentencesPerPage: 10
-})
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'word-click': [word: ParsedWord, event?: MouseEvent]
@@ -108,45 +73,6 @@ const emit = defineEmits<{
 
 const hoveredSentence = ref<number | null>(null)
 const isCtrlPressed = ref(false)
-const currentPage = ref(0)
-
-const totalPages = computed(() => Math.ceil(props.text.length / props.sentencesPerPage))
-
-const paginatedText = computed(() => {
-  const start = currentPage.value * props.sentencesPerPage
-  const end = start + props.sentencesPerPage
-  return props.text.slice(start, end)
-})
-
-const isLastPage = computed(() => currentPage.value === totalPages.value - 1)
-
-const visiblePages = computed(() => {
-  const total = totalPages.value
-  const current = currentPage.value
-  const pages: number[] = []
-  
-  if (total <= 7) {
-    for (let i = 0; i < total; i++) pages.push(i)
-    return pages
-  }
-  
-  pages.push(0)
-  
-  if (current > 3) pages.push(-1)
-  
-  const start = Math.max(1, current - 1)
-  const end = Math.min(total - 2, current + 1)
-  
-  for (let i = start; i <= end; i++) {
-    if (!pages.includes(i)) pages.push(i)
-  }
-  
-  if (current < total - 4) pages.push(-1)
-  
-  pages.push(total - 1)
-  
-  return pages
-})
 
 const maxWidthClass = computed(() => {
   const widths: Record<string, string> = {
@@ -178,24 +104,6 @@ const textStyles = computed(() => ({
   fontWeight: props.settings.fontWeight,
   letterSpacing: `${props.settings.letterSpacing}px`
 }))
-
-const getGlobalSentenceIndex = (localIndex: number): number => {
-  return currentPage.value * props.sentencesPerPage + localIndex
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value - 1) {
-    currentPage.value++
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
-const previousPage = () => {
-  if (currentPage.value > 0) {
-    currentPage.value--
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
 
 const isWordGrammarHighlighted = (word: ParsedWord, grammarPoints: string[]): boolean => {
   if (!grammarPoints?.length) return false
@@ -232,8 +140,6 @@ const handleKeyDown = (e: KeyboardEvent) => {
   if (e.ctrlKey || e.metaKey) {
     isCtrlPressed.value = true
   }
-  if (e.key === 'ArrowLeft') previousPage()
-  if (e.key === 'ArrowRight') nextPage()
 }
 
 const handleKeyUp = (e: KeyboardEvent) => {
@@ -241,10 +147,6 @@ const handleKeyUp = (e: KeyboardEvent) => {
     isCtrlPressed.value = false
   }
 }
-
-watch(() => props.text.length, () => {
-  currentPage.value = 0
-})
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
