@@ -14,17 +14,17 @@ function buildTokenizer(dicBaseUrl: string): Promise<kuromoji.Tokenizer<kuromoji
 
 export default defineEventHandler(async (event) => {
   try {
-    const { origin } = getRequestURL(event)
-    // Important: absolute URL so Kuromoji fetches via HTTP, not fs
-    const dicBaseUrl = `${origin}/dict/`
+    const reqURL = getRequestURL(event)
+    // Build a proper absolute URL with trailing slash
+    const dicBase = new URL('/dict/', reqURL.origin).toString()
 
     if (!tokenizer) {
-      // Optional quick check the static file is reachable from the server
-      const head = await fetch(`${dicBaseUrl}base.dat.gz`, { method: 'HEAD' })
+      // Verify reachability
+      const head = await fetch(new URL('base.dat.gz', dicBase), { method: 'HEAD' })
       if (!head.ok) {
-        throw new Error(`HEAD ${dicBaseUrl}base.dat.gz -> ${head.status} ${head.statusText}`)
+        throw new Error(`HEAD ${new URL('base.dat.gz', dicBase)} -> ${head.status} ${head.statusText}`)
       }
-      tokenizer = await buildTokenizer(dicBaseUrl)
+      tokenizer = await buildTokenizer(dicBase)
     }
 
     const text = 'すもももももももものうち'

@@ -14,19 +14,17 @@ function buildTokenizer(dicBaseUrl: string): Promise<kuromoji.Tokenizer<kuromoji
   })
 }
 
-async function getTokenizer(event: any) {
-  const { origin } = getRequestURL(event)
-  const dicBaseUrl = `${origin}/dict/`
+async function getTokenizer(event: H3Event) {
+  const reqURL = getRequestURL(event)
+  const dicBase = new URL('/dict/', reqURL.origin).toString()
 
-  // Rebuild if cold or origin changed (e.g., preview deployments)
-  if (!tokenizer || tokenizerOrigin !== origin) {
-    // Optional: verify reachability
-    const head = await fetch(`${dicBaseUrl}base.dat.gz`, { method: 'HEAD' })
+  if (!tokenizer || tokenizerOrigin !== reqURL.origin) {
+    const head = await fetch(new URL('base.dat.gz', dicBase), { method: 'HEAD' })
     if (!head.ok) {
-      throw new Error(`HEAD ${dicBaseUrl}base.dat.gz -> ${head.status} ${head.statusText}`)
+      throw new Error(`HEAD ${new URL('base.dat.gz', dicBase)} -> ${head.status} ${head.statusText}`)
     }
-    tokenizer = await buildTokenizer(dicBaseUrl)
-    tokenizerOrigin = origin
+    tokenizer = await buildTokenizer(dicBase)
+    tokenizerOrigin = reqURL.origin
   }
   return tokenizer
 }
