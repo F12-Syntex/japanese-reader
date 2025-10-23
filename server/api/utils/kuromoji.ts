@@ -1,71 +1,45 @@
-// app/server/utils/kuromoji.ts
 import kuromoji from 'kuromoji'
-import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
-import { gunzipSync } from 'node:zlib'
+import { join } from 'path'
+import wanakana from 'wanakana'
+import { existsSync } from 'fs'
 
-let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null
-let dicDirOnDisk: string | null = null
+let tokenizer: any = null
 
-// Files kuromoji expects for the ipadic dict packaged on npm
-const DICT_FILES = [
-  'base.dat.gz',
-  'cc.dat.gz',
-  'check.dat.gz',
-  'tid.dat.gz',
-  'unk.dat.gz',
-  'matrix.bin.gz'
-]
+export const getKuromojiTokenizer = async (): Promise<any> => {
+  if (tokenizer) return tokenizer
 
-// Read a server-bundled asset using Nitro's runtime helper
-async function readDictAsset(name: string): Promise<Buffer> {
-  // assets:dict/<name> was created by nitro.serverAssets
-  const url = new URL(`assets:dict/${name}`, import.meta.url)
-  // Nitro maps assets: URLs to actual files and allows fetch(url)
-  // But to get a Buffer reliably, use global $fetch.raw if available or Node fetch
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Failed to read server asset ${name}: ${res.status} ${res.statusText}`)
-  }
-  const arrayBuf = await res.arrayBuffer()
-  return Buffer.from(arrayBuf)
-}
+  const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
 
-async function ensureDictOnDisk(): Promise<string> {
-  if (dicDirOnDisk) return dicDirOnDisk
-  const base = '/tmp/kuromoji-dict'
-  await fs.mkdir(base, { recursive: true })
-
-  // Copy each required file from server assets into /tmp
-  for (const name of DICT_FILES) {
-    const target = join(base, name)
-    try {
-      // Skip if already present (warm lambda)
-      await fs.access(target)
-      continue
-    } catch {}
-    const buf = await readDictAsset(name)
-    await fs.writeFile(target, buf)
+  if (!existsSync(dicPath)) {
+    throw new Error(`Dictionary not found at ${dicPath}`)
   }
 
-  // Sanity: ensure matrix.bin exists in uncompressed form if kuromoji needs it
-  // The npm dict uses matrix.bin.gz; kuromoji expects that name and will gunzip internally.
-  dicDirOnDisk = base.endsWith('/') ? base : base + '/'
-  return dicDirOnDisk
-}
-
-function buildTokenizer(dicPath: string): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
   return new Promise((resolve, reject) => {
-    kuromoji.builder({ dicPath }).build((err, t) => {
-      if (err) return reject(err)
-      resolve(t)
+    kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
+      if (err) reject(err)
+      else {
+        tokenizer = _tokenizer
+        resolve(tokenizer)
+      }
     })
   })
 }
 
-export async function getTokenizer(): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
-  if (tokenizer) return tokenizer
-  const dicPath = await ensureDictOnDisk()
-  tokenizer = await buildTokenizer(dicPath)
-  return tokenizer
+export const tokenizeText = async (text: string): Promise<any[]> => {
+  const tk = await getKuromojiTokenizer()
+  return tk.tokenize(text)
+}
+
+export const mapPOS = (pos: string): string => {
+  if (pos.includes('名詞')) return 'noun'
+  if (pos.includes('動詞')) return 'verb'
+  if (pos.includes('形容詞')) return 'adjective'
+  if (pos.includes('助詞')) return 'particle'
+  if (pos.includes('副詞')) return 'adverb'
+  return 'other'
+}
+
+export const extractReading = (token: any): string => {
+  if (!token.reading) return token.surface_form
+  return wanakana.toHiragana(token.reading)
 }
