@@ -3,37 +3,27 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 
 export default defineEventHandler(async () => {
-  // In Nitro on Vercel, process.cwd() points to the server working dir.
-  // Public assets are emitted under a public folder in the output.
-  // Accessing via join(process.cwd(), 'public', ...) is safe for runtime read.
+  // Matches your deployed structure: /dict/*.dat.gz
   const baseDir = join(process.cwd(), 'public', 'dict')
 
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true })
-    const files = entries
-      .filter(e => e.isFile())
-      .map(e => e.name)
+    const files = entries.filter(e => e.isFile()).map(e => e.name)
 
-    // Read a sample file if present (adjust file name/logic as needed)
     let sampleFile = null
-    let sampleContent = null
-    if (files.length > 0) {
+    let samplePreview = null
+    let size = null
+
+    if (files.length) {
       sampleFile = files[0]
-      sampleContent = await fs.readFile(join(baseDir, sampleFile), 'utf8')
+      const buf = await fs.readFile(join(baseDir, sampleFile))
+      size = buf.length
+      // Show a tiny preview of gzip header bytes in hex
+      samplePreview = [...buf.slice(0, 16)].map(b => b.toString(16).padStart(2, '0')).join(' ')
     }
 
-    return {
-      ok: true,
-      baseDir,
-      files,
-      sampleFile,
-      samplePreview: sampleContent?.slice(0, 200) ?? null
-    }
-  } catch (err: any) {
-    return {
-      ok: false,
-      baseDir,
-      error: err?.message || String(err)
-    }
+    return { ok: true, baseDir, files, sampleFile, size, samplePreview }
+  } catch (e: any) {
+    return { ok: false, baseDir, error: e?.message || String(e) }
   }
 })
