@@ -1,31 +1,34 @@
-import kuromoji from 'kuromoji'
+import * as kuromoji from '@patdx/kuromoji'
 import { join } from 'path'
 import wanakana from 'wanakana'
 import { existsSync } from 'fs'
 
-let tokenizer: any = null
+let tokenizer : any = null
 
-export const getKuromojiTokenizer = async (): Promise<any> => {
-  if (tokenizer) return tokenizer
-
-  const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
-
-  if (!existsSync(dicPath)) {
-    throw new Error(`Dictionary not found at ${dicPath}`)
-  }
-
-  return new Promise((resolve, reject) => {
-    kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
-      if (err) reject(err)
-      else {
-        tokenizer = _tokenizer
-        resolve(tokenizer)
-      }
-    })
-  })
+const myLoader: kuromoji.LoaderConfig = {
+  async loadArrayBuffer(url: string): Promise<ArrayBufferLike> {
+    url = url.replace('.gz', '')
+    const res = await fetch(
+      'https://cdn.jsdelivr.net/npm/@aiktb/kuromoji@1.0.2/dict/' + url,
+    )
+    if (!res.ok) {
+      throw new Error(`Failed to fetch ${url}, status: ${res.status}`)
+    }
+    return res.arrayBuffer()
+  },
 }
 
-export const tokenizeText = async (text: string): Promise<any[]> => {
+export const getKuromojiTokenizer = async () => {
+  if (tokenizer) return tokenizer
+
+  tokenizer = await new kuromoji.TokenizerBuilder({
+    loader: myLoader,
+  }).build()
+
+  return tokenizer
+}
+
+export const tokenizeText = async (text: string): Promise<kuromoji.IpadicFeatures[]> => {
   const tk = await getKuromojiTokenizer()
   return tk.tokenize(text)
 }
@@ -39,7 +42,7 @@ export const mapPOS = (pos: string): string => {
   return 'other'
 }
 
-export const extractReading = (token: any): string => {
+export const extractReading = (token: kuromoji.IpadicFeatures): string => {
   if (!token.reading) return token.surface_form
   return wanakana.toHiragana(token.reading)
 }
