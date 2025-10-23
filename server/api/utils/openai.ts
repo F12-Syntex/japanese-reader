@@ -55,7 +55,7 @@ export const createOpenAIClient = (apiKey: string, model: string = 'gpt-5-mini')
         body: JSON.stringify({
           model,
           input,
-          reasoning: { effort: 'low' },
+          reasoning: { effort: 'minimal' },
           text: { verbosity: 'low' },
           max_output_tokens: params.maxTokens ?? 2500,
           stream: true

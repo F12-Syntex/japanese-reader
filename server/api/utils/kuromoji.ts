@@ -1,13 +1,21 @@
 import kuromoji from 'kuromoji'
+import { join } from 'path'
 import wanakana from 'wanakana'
+import { existsSync } from 'fs'
 
 let tokenizer: any = null
 
 export const getKuromojiTokenizer = async (): Promise<any> => {
   if (tokenizer) return tokenizer
 
+  const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
+
+  if (!existsSync(dicPath)) {
+    throw new Error(`Dictionary not found at ${dicPath}`)
+  }
+
   return new Promise((resolve, reject) => {
-    kuromoji.builder({ dicPath: '/dict' }).build((err: any, _tokenizer: any) => {
+    kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
       if (err) reject(err)
       else {
         tokenizer = _tokenizer
