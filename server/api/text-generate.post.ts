@@ -1,7 +1,6 @@
 import { defineEventHandler, readBody, setResponseHeaders, sendStream } from 'h3'
 import { createOpenAIClient } from './utils/openai'
 import { getGrammarByLevel, loadGrammarPoints } from './utils/grammar'
-import { writeFile } from 'fs/promises'
 
 interface GrammarPoint {
   point: string
@@ -88,8 +87,6 @@ Notes for naturalness:
 - Use connectors suitable for ${cleanLevel} (e.g., それで, でも, だから, それから).
 - Avoid sudden time or viewpoint shifts unless clearly signposted.
 `;
-
-await writeFile('prompts.txt', userPrompt)
 
   setResponseHeaders(event, {
     'Content-Type': 'text/event-stream',
