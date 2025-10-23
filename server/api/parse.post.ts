@@ -14,7 +14,7 @@ function buildTokenizer(dicBaseUrl: string): Promise<kuromoji.Tokenizer<kuromoji
   })
 }
 
-async function getTokenizer(event: H3Event) {
+async function getTokenizer(event: any) {
   const reqURL = getRequestURL(event)
   const dicBase = new URL('/dict/', reqURL.origin).toString()
 
