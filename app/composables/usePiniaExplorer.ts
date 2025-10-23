@@ -14,31 +14,66 @@ type AnyStore = {
   $reset?: () => void
 } & Record<string, unknown>
 
+/* ---------------------------------------------------
+   Config
+--------------------------------------------------- */
+const MAX_STORE_SIZE_MB = 3
+const MAX_STORE_SIZE_BYTES = MAX_STORE_SIZE_MB * 1024 * 1024
+
+/* fast skip predicate — no JSON.stringify */
+const isMassiveObject = (obj: unknown): boolean => {
+  if (!obj) return false
+  // skip certain huge known structures
+  const keys = Object.keys(obj as Record<string, unknown>)
+  if (keys.length > 5000) return true // many keys = likely large
+  // dictionaries often have "words" or "entries" arrays
+  if ('words' in (obj as Record<string, unknown>)) return true
+  if ('kanji' in (obj as Record<string, unknown>) && (obj as any).kanji?.length > 1000) return true
+  return false
+}
+
+/* ---------------------------------------------------
+   Composable
+--------------------------------------------------- */
 export const usePiniaExplorer = () => {
   const resolvePinia = (): Pinia | null => {
     const active = getActivePinia()
     if (active) return active
     const nuxt = useNuxtApp()
-    const p = (nuxt as unknown as { $pinia?: Pinia }).$pinia
-    return p ?? null
+    return (nuxt as unknown as { $pinia?: Pinia }).$pinia ?? null
   }
 
-  const ctx = shallowReactive<{ pinia: Pinia | null }>({ pinia: resolvePinia() })
+  const ctx = shallowReactive<{ pinia: Pinia | null }>({
+    pinia: resolvePinia(),
+  })
 
+  /* ----------------- List all stores ----------------- */
   const stores = computed<StoreMeta[]>(() => {
-    const p = ctx.pinia as unknown as { _s?: Map<string, AnyStore>; state?: { value?: Record<string, StateTree> } } | null
+    const p = ctx.pinia as unknown as {
+      _s?: Map<string, AnyStore>
+      state?: { value?: Record<string, StateTree> }
+    } | null
+
     if (!p || !p._s) return []
-    const map = p._s
     const root = (p.state?.value ?? {}) as Record<string, unknown>
     const list: StoreMeta[] = []
-    map.forEach((store, key) => {
+
+    p._s.forEach((store, key) => {
       const id = store?.$id || key
       if (!id) return
-      list.push({ id, state: (root[id] as Record<string, unknown>) ?? {} })
+      const state = (root[id] as Record<string, unknown>) ?? {}
+
+      // ✅ Quick size & name check: skip dictionary‑like or massive state entirely
+      if (id.toLowerCase().includes('dict') || id.toLowerCase().includes('dictionary')) return
+      if (isMassiveObject(state)) return
+
+      list.push({ id, state })
     })
+
     return list.sort((a, b) => a.id.localeCompare(b.id))
   })
 
+  /* ----------------- Store access helpers ----------------- */
   const getStore = (id: string): AnyStore | null => {
     const p = ctx.pinia as unknown as { _s?: Map<string, AnyStore> } | null
     if (!p || !p._s) return null
@@ -50,52 +85,41 @@ export const usePiniaExplorer = () => {
     if (!inst) return
     if (typeof inst.$patch === 'function') {
       inst.$patch(partial as Partial<StateTree>)
-      return
-    }
-    const p = ctx.pinia as unknown as { state?: { value?: Record<string, StateTree> } } | null
-    const root = p?.state?.value
-    if (root && root[id]) {
-      Object.assign(root[id], partial)
+    } else {
+      const root = (ctx.pinia as any)?.state?.value
+      if (root && root[id]) Object.assign(root[id], partial)
     }
   }
 
   const tryResetOrClear = (id: string): void => {
     const inst = getStore(id)
     if (!inst) return
+
     if (typeof inst.$reset === 'function') {
       inst.$reset()
       return
     }
-    const candidates = [
+
+    const clearCandidates = [
       'clear',
       'reset',
-      'resetScores',
       'clearCache',
       'clearAnkiData',
       'resetToSystem',
       'load',
-      'loadCache'
+      'loadCache',
     ]
-    for (const name of candidates) {
-      const fn = (inst as Record<string, unknown>)[name]
-      if (typeof fn === 'function' && (fn as (...a: unknown[]) => unknown).length === 0) {
+    for (const fnName of clearCandidates) {
+      const fn = (inst as Record<string, unknown>)[fnName]
+      if (typeof fn === 'function' && (fn as Function).length === 0) {
         ;(fn as () => unknown)()
       }
     }
-    const p = ctx.pinia as unknown as { state?: { value?: Record<string, StateTree> } } | null
-    const root = p?.state?.value
-    if (root && root[id]) {
-      const curr = root[id] as Record<string, unknown>
-      Object.keys(curr).forEach(k => {
-        const v = curr[k]
-        if (Array.isArray(v)) curr[k] = [] as unknown
-        else if (v instanceof Map) curr[k] = new Map() as unknown
-        else if (v instanceof Set) curr[k] = new Set() as unknown
-        else if (v !== null && typeof v === 'object') curr[k] = {} as unknown
-        else if (typeof v === 'number') curr[k] = 0 as unknown
-        else if (typeof v === 'boolean') curr[k] = false as unknown
-        else curr[k] = '' as unknown
-      })
+
+    const root = (ctx.pinia as any)?.state?.value
+    const curr = root?.[id]
+    if (curr && typeof curr === 'object') {
+      for (const k of Object.keys(curr)) (curr[k] = null)
     }
   }
 
@@ -103,69 +127,88 @@ export const usePiniaExplorer = () => {
     ctx.pinia = resolvePinia()
   }
 
-  const listLocal = (): string[] => {
-    if (typeof window === 'undefined') return []
-    const keys: string[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i)
-      if (k) keys.push(k)
-    }
-    return keys.sort((a, b) => a.localeCompare(b))
-  }
-
-  const localGet = (key: string): string | null => {
-    if (typeof window === 'undefined') return null
+  /* ----------------- LocalStorage utils (skip >3 MB) ----------------- */
+  const safeRead = (key: string): string | null => {
     try {
-      return localStorage.getItem(key)
+      const val = localStorage.getItem(key)
+      if (!val) return null
+      if (val.length * 2 > MAX_STORE_SIZE_BYTES) return null // rough 2B per char
+      return val
     } catch {
       return null
     }
   }
 
-  const localSet = (key: string, value: string): void => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem(key, value)
+  const listLocal = (): string[] => {
+    if (typeof window === 'undefined') return []
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (!k) continue
+      const val = localStorage.getItem(k)
+      if (val && val.length * 2 < MAX_STORE_SIZE_BYTES) keys.push(k)
+    }
+    return keys.sort((a, b) => a.localeCompare(b))
   }
 
+  const localGet = (key: string): string | null => (typeof window === 'undefined' ? null : safeRead(key))
+  const localSet = (key: string, value: string): void => {
+    if (typeof window === 'undefined') return
+    if (value.length * 2 > MAX_STORE_SIZE_BYTES) {
+      console.warn(`[PiniaExplorer] Skipped saving ${key}: value > ${MAX_STORE_SIZE_MB} MB`)
+      return
+    }
+    localStorage.setItem(key, value)
+  }
   const localRemove = (key: string): void => {
     if (typeof window === 'undefined') return
     localStorage.removeItem(key)
   }
-
   const localClearAll = (): void => {
     if (typeof window === 'undefined') return
     localStorage.clear()
   }
 
+  /* ----------------- Export / Import ----------------- */
   const exportBundle = (): string => {
     const data: { stores: Record<string, unknown>; localStorage: Record<string, string | null> } = {
       stores: {},
-      localStorage: {}
+      localStorage: {},
     }
+
     stores.value.forEach(s => {
-      data.stores[s.id] = s.state
+      if (!isMassiveObject(s.state)) data.stores[s.id] = s.state
     })
+
     if (typeof window !== 'undefined') {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i)
-        if (k) data.localStorage[k] = localStorage.getItem(k)
+        if (!k) continue
+        const val = safeRead(k)
+        if (val) data.localStorage[k] = val
       }
     }
+
     return JSON.stringify(data, null, 2)
   }
 
   const importBundle = (json: string): void => {
-    const parsed = JSON.parse(json) as { stores?: Record<string, unknown>; localStorage?: Record<string, string | null> }
-    if (parsed.stores && typeof parsed.stores === 'object') {
-      Object.entries(parsed.stores).forEach(([id, state]) => {
-        patchState(id, (state || {}) as Record<string, unknown>)
-      })
+    const parsed = JSON.parse(json) as {
+      stores?: Record<string, unknown>
+      localStorage?: Record<string, string | null>
     }
-    if (typeof window !== 'undefined' && parsed.localStorage && typeof parsed.localStorage === 'object') {
-      Object.entries(parsed.localStorage).forEach(([k, v]) => {
-        if (typeof v === 'string') localStorage.setItem(k, v)
-        else localStorage.removeItem(k)
-      })
+
+    if (parsed.stores) {
+      for (const [id, st] of Object.entries(parsed.stores)) {
+        if (isMassiveObject(st)) continue
+        patchState(id, st as Record<string, unknown>)
+      }
+    }
+
+    if (parsed.localStorage && typeof window !== 'undefined') {
+      for (const [k, v] of Object.entries(parsed.localStorage)) {
+        if (v && v.length * 2 < MAX_STORE_SIZE_BYTES) localStorage.setItem(k, v)
+      }
     }
   }
 
@@ -181,6 +224,6 @@ export const usePiniaExplorer = () => {
     localRemove,
     localClearAll,
     exportBundle,
-    importBundle
+    importBundle,
   }
 }

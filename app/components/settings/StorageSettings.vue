@@ -11,171 +11,114 @@
             <button
               class="tab tab-sm p-2"
               :class="{ 'tab-active': tab === 'stores' }"
-              aria-label="Stores"
               @click="tab = 'stores'"
             >
-              <div class="tooltip tooltip-bottom" data-tip="Stores">
-                <IconPackage class="w-4 h-4" />
-              </div>
+              <IconPackage class="w-4 h-4" />
             </button>
             <button
               class="tab tab-sm p-2"
               :class="{ 'tab-active': tab === 'local' }"
-              aria-label="Local Storage"
               @click="tab = 'local'"
             >
-              <div class="tooltip tooltip-bottom" data-tip="Local Storage">
-                <IconHardDrive class="w-4 h-4" />
-              </div>
+              <IconHardDrive class="w-4 h-4" />
             </button>
             <button
               class="tab tab-sm p-2"
               :class="{ 'tab-active': tab === 'io' }"
-              aria-label="Import/Export"
               @click="tab = 'io'"
             >
-              <div class="tooltip tooltip-bottom" data-tip="Import">
-                <IconImport class="w-4 h-4" />
-              </div>
+              <IconImport class="w-4 h-4" />
             </button>
           </div>
         </div>
 
         <div class="divider my-2"></div>
 
+        <!-- -----------------------
+             STORES TAB
+        ------------------------ -->
         <div v-if="tab === 'stores'" class="flex-1 min-h-0 flex flex-col gap-3">
-          <div class="flex items-center gap-2">
-            <div class="join w-full">
-              <input v-model="storeQuery" type="text" placeholder="Search stores" class="input input-bordered input-sm w-full join-item" />
-              <button @click="refreshStores()" class="btn btn-ghost btn-sm join-item" aria-label="Refresh">
-                <IconRefreshCw class="w-4 h-4" />
-              </button>
+          <div class="join w-full">
+            <input
+              v-model="storeQuery"
+              type="text"
+              placeholder="Search stores"
+              class="input input-bordered input-sm w-full join-item"
+            />
+            <button @click="refreshStores()" class="btn btn-ghost btn-sm join-item">
+              <IconRefreshCw class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div v-if="filteredStores.length === 0" class="flex-1 flex items-center justify-center">
+            <div class="text-center text-xs text-base-content/60 space-y-2">
+              <IconSearch class="w-8 h-8 mx-auto text-base-content/30" />
+              <p>No stores found</p>
             </div>
           </div>
 
-          <div v-if="filteredStores.length === 0" class="flex-1 min-h-0 flex items-center justify-center">
-            <div class="text-center space-y-2">
-              <IconSearch class="w-10 h-10 mx-auto text-base-content/30" />
-              <p class="text-xs text-base-content/60">No stores found</p>
-            </div>
-          </div>
-
-          <div v-else class="flex-1 min-h-0 overflow-y-auto space-y-3">
+          <div v-else class="flex-1 overflow-y-auto space-y-3">
             <div
               v-for="s in filteredStores"
               :key="s.id"
               class="card bg-base-200/50 border border-base-300"
             >
-              <div class="collapse collapse-arrow peer">
-                <input type="checkbox" class="peer" />
-                <div class="collapse-title flex items-start justify-between gap-3 peer-checked:bg-base-300/50">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="badge badge-primary badge-sm">{{ s.id }}</span>
-                      <span class="badge badge-ghost badge-sm">keys: {{ Object.keys(s.state || {}).length }}</span>
-                    </div>
+              <div class="collapse collapse-arrow">
+                <input type="checkbox" />
+                <div class="collapse-title flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="badge badge-primary badge-sm">{{ s.id }}</span>
+                    <span class="badge badge-ghost badge-sm"
+                      >keys: {{ Object.keys(s.state || {}).length }}</span
+                    >
                   </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
-                    <button @click.stop="reloadEditor(s.id)" class="btn btn-ghost btn-xs" aria-label="Reload">
-                      <div class="tooltip tooltip-bottom" data-tip="Reload">
-                        <IconRotateCcw class="w-4 h-4" />
-                      </div>
+                  <div class="flex gap-1">
+                    <button @click.stop="reloadEditor(s.id)" class="btn btn-ghost btn-xs">
+                      <IconRotateCcw class="w-4 h-4" />
                     </button>
-                    <button @click.stop="resetOrClear(s.id)" class="btn btn-error btn-outline btn-xs" aria-label="Clear">
-                      <div class="tooltip tooltip-bottom" data-tip="Clear">
-                        <IconTrash class="w-4 h-4" />
-                      </div>
+                    <button @click.stop="resetOrClear(s.id)" class="btn btn-error btn-outline btn-xs">
+                      <IconTrash class="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div class="collapse-content">
-                  <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <div class="space-y-2">
-                      <div class="form-control">
-                        <label class="label">
-                          <span class="label-text text-xs sm:text-sm font-medium">State JSON</span>
-                          <span v-if="parseErrors[s.id]" class="badge badge-error badge-xs">{{ parseErrors[s.id] }}</span>
-                        </label>
-                        <textarea
-                          v-model="editors[s.id]"
-                          class="textarea textarea-bordered font-mono text-xs min-h-[200px] sm:min-h-[220px]"
-                          spellcheck="false"
-                          @input="validateEditor(s.id)"
-                        ></textarea>
-                      </div>
 
-                      <div class="flex flex-wrap gap-1">
+                <div class="collapse-content">
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-2">
+                    <div>
+                      <label class="label-text text-xs font-medium">State JSON</label>
+                      <textarea
+                        v-model="editors[s.id]"
+                        class="textarea textarea-bordered font-mono text-xs min-h-[200px]"
+                        spellcheck="false"
+                        @input="validateEditor(s.id)"
+                      ></textarea>
+
+                      <div class="flex gap-1 mt-1">
                         <button
                           @click="saveState(s.id)"
                           class="btn btn-primary btn-sm"
                           :disabled="!!parseErrors[s.id] || savingId === s.id"
-                          aria-label="Save"
                         >
                           <span v-if="savingId === s.id" class="loading loading-spinner loading-xs"></span>
-                          <div v-else class="tooltip tooltip-bottom" data-tip="Save">
-                            <IconSave class="w-4 h-4" />
-                          </div>
+                          <span v-else>Save</span>
                         </button>
-
-                        <div class="dropdown dropdown-end">
-                          <label tabindex="0" class="btn btn-ghost btn-sm" aria-label="Actions">
-                            <div class="tooltip tooltip-bottom" data-tip="Actions">
-                              <IconPlay class="w-4 h-4" />
-                            </div>
-                          </label>
-                          <ul tabindex="0" class="dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box border border-base-300 w-48 max-h-64 overflow-auto">
-                            <li v-for="a in zeroArgActions(s.id)" :key="s.id + '-' + a">
-                              <button class="btn btn-ghost btn-xs justify-start" @click="callAction(s.id, a)">{{ a }}</button>
-                            </li>
-                            <li v-if="zeroArgActions(s.id).length === 0" class="px-3 py-1 text-xs text-base-content/60">No zero-arg actions</li>
-                          </ul>
-                        </div>
                       </div>
                     </div>
 
-                    <div class="space-y-2">
-                      <div class="form-control">
-                        <label class="label">
-                          <span class="label-text text-xs sm:text-sm font-medium">State Preview</span>
-                        </label>
-                        <pre class="p-3 rounded border border-base-300 bg-base-100 overflow-x-auto text-xs">{{ prettyState(s.state) }}</pre>
+                    <div>
+                      <label class="label-text text-xs font-medium">State Preview</label>
+                      <div
+                        v-if="!isTooLargeToDisplay(s.state)"
+                        class="p-3 rounded border border-base-300 bg-base-100 overflow-x-auto text-xs"
+                      >
+                        <pre>{{ prettyState(s.state) }}</pre>
                       </div>
-
-                      <div class="form-control">
-                        <label class="label">
-                          <span class="label-text text-xs sm:text-sm font-medium">Matching Local Storage</span>
-                        </label>
-                        <div class="space-y-2">
-                          <div v-if="matchedLocalKeys(s.id).length === 0" class="text-xs text-base-content/60">No matching keys</div>
-                          <div v-else class="space-y-2">
-                            <div v-for="k in matchedLocalKeys(s.id)" :key="k" class="flex items-center justify-between gap-2 rounded border border-base-300 bg-base-100 p-2">
-                              <div class="min-w-0 flex-1">
-                                <div class="text-xs truncate">{{ k }}</div>
-                                <div class="text-[10px] text-base-content/60">{{ byteSize(localGet(k)) }}</div>
-                              </div>
-                              <div class="join">
-                                <button 
-                                  class="btn btn-ghost btn-xs join-item" 
-                                  @click="openLocal(k)" 
-                                  :disabled="isLocalKeyTooLarge(k)"
-                                  aria-label="View"
-                                >
-                                  <div class="tooltip tooltip-left" :data-tip="isLocalKeyTooLarge(k) ? 'Too large (>5MB)' : 'View'">
-                                    <IconEye class="w-4 h-4" />
-                                  </div>
-                                </button>
-                                <button class="btn btn-error btn-outline btn-xs join-item" @click="removeLocal(k)" aria-label="Delete">
-                                  <div class="tooltip tooltip-left" data-tip="Delete">
-                                    <IconTrash class="w-4 h-4" />
-                                  </div>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                      <div
+                        v-else
+                        class="p-3 rounded border border-base-300 bg-base-100 text-error text-xs"
+                      >
+                        ⚠ Data too large to display (&gt;{{ MAX_VISIBLE_SIZE_MB }} MB)
                       </div>
-
-                      <div v-if="localEditorKey === s.id" class="hidden"></div>
                     </div>
                   </div>
                 </div>
@@ -190,180 +133,73 @@
           </div>
         </div>
 
-        <div v-if="tab === 'local'" class="flex-1 min-h-0 flex flex-col gap-3">
-          <div class="flex items-center gap-2">
-            <div class="join w-full">
-              <input v-model="localQuery" type="text" placeholder="Search localStorage" class="input input-bordered input-sm w-full join-item" />
-              <button @click="reloadLocal()" class="btn btn-ghost btn-sm join-item" aria-label="Refresh">
-                <IconRefreshCw class="w-4 h-4" />
-              </button>
-            </div>
-            <button @click="clearAllLocal()" class="btn btn-error btn-outline btn-sm" aria-label="Clear All">
+        <!-- -----------------------
+             LOCAL TAB (simplified)
+        ------------------------ -->
+        <div v-else-if="tab === 'local'" class="flex-1 overflow-y-auto">
+          <div class="join w-full mb-3">
+            <input
+              v-model="localQuery"
+              type="text"
+              placeholder="Search localStorage"
+              class="input input-bordered input-sm w-full join-item"
+            />
+            <button @click="reloadLocal()" class="btn btn-ghost btn-sm join-item">
+              <IconRefreshCw class="w-4 h-4" />
+            </button>
+            <button @click="clearAllLocal()" class="btn btn-error btn-outline btn-sm join-item">
               <IconTrash class="w-4 h-4" />
             </button>
           </div>
 
-          <div class="md:hidden flex-1 min-h-0 overflow-y-auto space-y-2">
-            <div v-for="k in filteredLocalKeys" :key="k" class="card bg-base-100 border border-base-300">
-              <div class="card-body p-3">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0 flex-1">
-                    <div class="text-xs truncate">{{ k }}</div>
-                    <div class="text-[10px] text-base-content/60">{{ byteSize(localGet(k)) }}</div>
-                    <div v-if="isLocalKeyTooLarge(k)" class="badge badge-warning badge-xs mt-1">Too large</div>
-                  </div>
-                  <div class="join">
-                    <button 
-                      class="btn btn-ghost btn-xs join-item" 
-                      @click="openLocal(k)" 
-                      :disabled="isLocalKeyTooLarge(k)"
-                      aria-label="View"
-                    >
-                      <IconEye class="w-4 h-4" />
-                    </button>
-                    <button 
-                      class="btn btn-primary btn-xs join-item" 
-                      @click="editLocal(k)" 
-                      :disabled="isLocalKeyTooLarge(k)"
-                      aria-label="Edit"
-                    >
-                      <IconPencil class="w-4 h-4" />
-                    </button>
-                    <button class="btn btn-error btn-outline btn-xs join-item" @click="removeLocal(k)" aria-label="Delete">
-                      <IconTrash class="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-if="filteredLocalKeys.length === 0" class="text-center text-xs text-base-content/60 py-6">No keys</div>
-          </div>
-
-          <div class="hidden md:block flex-1 min-h-0 overflow-y-auto">
-            <div class="overflow-x-auto">
-              <table class="table table-xs w-full">
-                <thead>
-                  <tr>
-                    <th>Key</th>
-                    <th class="text-right">Size</th>
-                    <th class="w-32 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="k in filteredLocalKeys" :key="k">
-                    <td class="max-w-[40vw] truncate">
-                      {{ k }}
-                      <span v-if="isLocalKeyTooLarge(k)" class="badge badge-warning badge-xs ml-2">Too large</span>
-                    </td>
-                    <td class="text-right">{{ byteSize(localGet(k)) }}</td>
-                    <td class="text-right">
-                      <div class="join justify-end">
-                        <button 
-                          class="btn btn-ghost btn-xs join-item" 
-                          @click="openLocal(k)" 
-                          :disabled="isLocalKeyTooLarge(k)"
-                          aria-label="View"
-                        >
-                          <IconEye class="w-4 h-4" />
-                        </button>
-                        <button 
-                          class="btn btn-primary btn-xs join-item" 
-                          @click="editLocal(k)" 
-                          :disabled="isLocalKeyTooLarge(k)"
-                          aria-label="Edit"
-                        >
-                          <IconPencil class="w-4 h-4" />
-                        </button>
-                        <button class="btn btn-error btn-outline btn-xs join-item" @click="removeLocal(k)" aria-label="Delete">
-                          <IconTrash class="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredLocalKeys.length === 0">
-                    <td colspan="3" class="text-center text-xs text-base-content/60 py-6">No keys</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <table class="table table-xs w-full">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th class="text-right">Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="k in filteredLocalKeys" :key="k">
+                <td class="truncate max-w-[40vw]">
+                  {{ k }}
+                  <span v-if="getLocalKeySize(k) > MAX_VISIBLE_SIZE_BYTES"
+                    class="badge badge-warning badge-xs ml-1">Large</span>
+                </td>
+                <td class="text-right">{{ byteSize(localGet(k)) }}</td>
+                <td class="text-right">
+                  <button
+                    class="btn btn-ghost btn-xs"
+                    :disabled="getLocalKeySize(k) > MAX_VISIBLE_SIZE_BYTES"
+                    @click="openLocal(k)"
+                  >
+                    <IconEye class="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <div v-if="tab === 'io'" class="flex-1 min-h-0 grid grid-rows-1 gap-3">
-          <div class="card bg-base-100 border border-base-300 h-full">
-            <div class="card-body p-3 sm:p-4 h-full flex flex-col gap-2">
-              <div class="flex items-center justify-between">
-                <h4 class="font-semibold text-sm">Export</h4>
-                <div class="join">
-                  <button class="btn btn-primary btn-sm join-item" @click="refreshExport()" aria-label="Refresh">
-                    <IconRefreshCw class="w-4 h-4" />
-                  </button>
-                  <button class="btn btn-ghost btn-sm join-item" @click="copy(exportJson)" aria-label="Copy">
-                    <IconClipboard class="w-4 h-4" />
-                  </button>
-                  <button class="btn btn-secondary btn-sm join-item" @click="downloadExport()" aria-label="Download">
-                    <IconDownload class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div class="flex-1 min-h-0">
-                <textarea class="textarea textarea-bordered font-mono text-xs w-full h-full min-h-[200px]" readonly :value="exportJson"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="card bg-base-100 border border-base-300 h-full">
-            <div class="card-body p-3 sm:p-4 h-full flex flex-col gap-2">
-              <div class="flex items-center justify-between">
-                <h4 class="font-semibold text-sm">Import</h4>
-                <div class="join">
-                  <button class="btn btn-primary btn-sm join-item" @click="triggerFile()" aria-label="Pick File">
-                    <IconUpload class="w-4 h-4" />
-                  </button>
-                  <button class="btn btn-ghost btn-sm join-item" @click="clearImport()" aria-label="Reset">
-                    <IconRotateCcw class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <input ref="fileInput" type="file" accept="application/json,.json" class="hidden" @change="pickImportFile" />
-              <div class="flex-1 min-h-0">
-                <textarea v-model="importJson" class="textarea textarea-bordered font-mono text-xs w-full h-full min-h-[200px]" placeholder='Paste JSON bundle here'></textarea>
-              </div>
-              <div class="flex items-center justify-end gap-2">
-                <button class="btn btn-primary btn-sm" @click="applyImport()" :disabled="!importJson.trim()" aria-label="Import">
-                  <IconUpload class="w-4 h-4" />
-                </button>
-                <button class="btn btn-ghost btn-sm" @click="clearImport()" aria-label="Reset">
-                  <IconRotateCcw class="w-4 h-4" />
-                </button>
-              </div>
-              <div v-if="importError" class="alert alert-error text-xs">
-                {{ importError }}
+        <!-- -----------------------
+             IO TAB (export/import)
+        ------------------------ -->
+        <div v-else-if="tab === 'io'" class="flex-1 overflow-y-auto">
+          <div class="card bg-base-100 border border-base-300">
+            <div class="card-body p-3">
+              <h4 class="font-semibold text-sm">Export</h4>
+              <textarea
+                class="textarea textarea-bordered font-mono text-xs w-full min-h-[180px]"
+                readonly
+              >{{ exportJson }}</textarea>
+              <div class="flex gap-2 mt-2">
+                <button class="btn btn-primary btn-sm" @click="refreshExport()">Refresh</button>
+                <button class="btn btn-secondary btn-sm" @click="downloadExport()">Download</button>
               </div>
             </div>
           </div>
         </div>
-
-        <dialog ref="localModal" class="modal">
-          <div class="modal-box max-w-2xl">
-            <h3 class="font-bold text-sm mb-3 flex items-center gap-2">
-              <IconHardDrive class="w-4 h-4" />
-              {{ activeLocalKey }}
-            </h3>
-            <textarea v-model="localEditor" class="textarea textarea-bordered font-mono text-xs w-full min-h-[260px]"></textarea>
-            <div class="modal-action">
-              <button class="btn btn-ghost btn-sm" @click="closeLocal()" aria-label="Close">
-                <IconX class="w-4 h-4" />
-              </button>
-              <button class="btn btn-primary btn-sm" @click="saveLocal()" aria-label="Save">
-                <IconSave class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <form method="dialog" class="modal-backdrop">
-            <button></button>
-          </form>
-        </dialog>
       </div>
     </div>
   </div>
@@ -376,104 +212,87 @@ import IconHardDrive from '~icons/lucide/hard-drive'
 import IconImport from '~icons/lucide/import'
 import IconRefreshCw from '~icons/lucide/refresh-cw'
 import IconSearch from '~icons/lucide/search'
-import IconSave from '~icons/lucide/save'
 import IconRotateCcw from '~icons/lucide/rotate-ccw'
 import IconTrash from '~icons/lucide/trash-2'
-import IconPlay from '~icons/lucide/play'
 import IconEye from '~icons/lucide/eye'
-import IconPencil from '~icons/lucide/pencil'
-import IconClipboard from '~icons/lucide/clipboard'
-import IconDownload from '~icons/lucide/download'
-import IconUpload from '~icons/lucide/upload'
-import IconX from '~icons/lucide/x'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { usePiniaExplorer } from '~/composables/usePiniaExplorer'
 
-type ToastType = 'success' | 'error'
+/* -------------------- constants --------------------- */
+const MAX_VISIBLE_SIZE_MB = 3
+const MAX_VISIBLE_SIZE_BYTES = MAX_VISIBLE_SIZE_MB * 1024 * 1024
+const MAX_SIZE_BYTES = 5 * 1024 * 1024 // for localStorage preview block
 
-interface StoreItem {
-  id: string
-  state?: Record<string, unknown>
+/* -------------------- helpers --------------------- */
+const pretty = (v: unknown): string => {
+  try {
+    return JSON.stringify(v, null, 2)
+  } catch {
+    return ''
+  }
+}
+const isTooLargeToDisplay = (obj: unknown): boolean => {
+  try {
+    const json = JSON.stringify(obj)
+    return new Blob([json]).size > MAX_VISIBLE_SIZE_BYTES
+  } catch {
+    return true
+  }
+}
+const byteSize = (v: string | null): string => {
+  const n = v ? new Blob([v]).size : 0
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`
 }
 
-const MAX_SIZE_MB = 5
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
-
-const tab = ref<'stores' | 'local' | 'io'>('stores')
-const storeQuery = ref<string>('')
-const localQuery = ref<string>('')
-
+/* -------------------- Pinia explorer composables --------------------- */
 const {
   stores,
   refreshStores,
   patchState,
   tryResetOrClear,
-  getStore,
   listLocal,
   localGet,
-  localSet,
   localRemove,
   localClearAll,
   exportBundle,
-  importBundle
 } = usePiniaExplorer()
 
+/* -------------------- reactive state --------------------- */
+const tab = ref<'stores' | 'local' | 'io'>('stores')
+const storeQuery = ref('')
+const localQuery = ref('')
 const editors = reactive<Record<string, string>>({})
 const parseErrors = reactive<Record<string, string | null>>({})
-const savingId = ref<string>('')
+const savingId = ref('')
+const toast = ref<{ message: string; type: 'success' | 'error' } | null>(null)
 
+/* -------------------- stores tab behavior --------------------- */
 const filteredStores = computed(() => {
   const q = storeQuery.value.trim().toLowerCase()
-  const arr = stores.value
-  if (!q) return arr
-  return arr.filter(s => s.id.toLowerCase().includes(q))
+  if (!q) return stores.value
+  return stores.value.filter(s => s.id.toLowerCase().includes(q))
 })
-
-const pretty = (v: unknown): string => {
-  try {
-    return JSON.stringify(
-      v,
-      (_k, val) => {
-        if (val instanceof Map) return { _type: 'Map', value: Array.from(val.entries()) }
-        if (val instanceof Set) return { _type: 'Set', value: Array.from(val.values()) }
-        return val
-      },
-      2
-    )
-  } catch {
-    return ''
-  }
-}
-
-const loadEditors = (): void => {
-  stores.value.forEach(s => {
-    const id = s.id
-    editors[id] = pretty(s.state)
-    parseErrors[id] = null
-  })
-}
-
+const prettyState = (state: unknown): string => pretty(state)
 const reloadEditor = (id: string): void => {
   const s = stores.value.find(x => x.id === id)
   if (!s) return
   editors[id] = pretty(s.state)
-  parseErrors[id] = null
 }
-
 const validateEditor = (id: string): void => {
   try {
     JSON.parse(editors[id] || '{}')
     parseErrors[id] = null
-  } catch (e: unknown) {
-    parseErrors[id] = e instanceof Error ? e.message : 'Invalid JSON'
+  } catch (e: any) {
+    parseErrors[id] = e.message
   }
 }
-
-const saveState = async (id: string): Promise<void> => {
+const saveState = async (id: string) => {
   if (parseErrors[id]) return
   savingId.value = id
   try {
-    const parsed = JSON.parse(editors[id] || '{}') as Record<string, unknown>
+    const parsed = JSON.parse(editors[id] || '{}')
     await patchState(id, parsed)
     reloadEditor(id)
     showToast('Saved', 'success')
@@ -483,188 +302,65 @@ const saveState = async (id: string): Promise<void> => {
     savingId.value = ''
   }
 }
-
-const zeroArgActions = (id: string): string[] => {
-  const inst = getStore(id) as Record<string, unknown> | null
-  if (!inst) return []
-  const keys = Object.keys(inst).filter(k => typeof (inst as Record<string, unknown>)[k] === 'function' && !k.startsWith('$'))
-  const list = keys.filter(k => {
-    const fn = (inst as Record<string, unknown>)[k] as unknown
-    return typeof fn === 'function' && (fn as (...a: unknown[]) => unknown).length === 0
-  })
-  return list.sort()
-}
-
-const callAction = (id: string, action: string): void => {
-  const inst = getStore(id) as Record<string, unknown> | null
-  if (!inst) return
-  const fn = (inst as Record<string, unknown>)[action]
-  if (typeof fn === 'function') {
-    try {
-      ;(fn as () => unknown)()
-      reloadEditor(id)
-      showToast(`Action: ${action}`, 'success')
-    } catch {
-      showToast(`Action failed: ${action}`, 'error')
-    }
-  }
-}
-
-const resetOrClear = (id: string): void => {
+const resetOrClear = (id: string) => {
   tryResetOrClear(id)
   reloadEditor(id)
   showToast('Cleared', 'success')
 }
-
-const matchedLocalKeys = (id: string): string[] => {
-  const all = listLocal()
-  return all.filter(k => k.toLowerCase().includes(id.toLowerCase()))
+const showToast = (m: string, t: 'success' | 'error') => {
+  toast.value = { message: m, type: t }
+  setTimeout(() => (toast.value = null), 1500)
 }
 
-const toast = ref<{ type: ToastType; message: string } | null>(null)
-let toastTimer: number | undefined
-const showToast = (message: string, type: ToastType): void => {
-  toast.value = { message, type }
-  if (toastTimer) window.clearTimeout(toastTimer)
-  toastTimer = window.setTimeout(() => (toast.value = null), 1800)
-}
-
+/* -------------------- local tab behavior --------------------- */
 const localKeys = ref<string[]>([])
-const reloadLocal = (): void => {
-  localKeys.value = listLocal()
-}
+const reloadLocal = () => (localKeys.value = listLocal())
 const filteredLocalKeys = computed(() => {
   const q = localQuery.value.trim().toLowerCase()
-  if (!q) return localKeys.value
-  return localKeys.value.filter(k => k.toLowerCase().includes(q))
+  return q ? localKeys.value.filter(k => k.toLowerCase().includes(q)) : localKeys.value
 })
-
-const getLocalKeySize = (key: string): number => {
-  const val = localGet(key)
-  if (!val) return 0
-  return new Blob([val]).size
+const getLocalKeySize = (key: string) => new Blob([localGet(key) ?? '']).size
+const openLocal = (key: string) => {
+  const v = localGet(key)
+  if (!v) return
+  alert(`${key}:\n\n${getLocalKeySize(key) > MAX_SIZE_BYTES ? 'Too large to display' : v}`)
 }
-
-const isLocalKeyTooLarge = (key: string): boolean => {
-  return getLocalKeySize(key) > MAX_SIZE_BYTES
-}
-
-const localModal = ref<HTMLDialogElement | null>(null)
-const activeLocalKey = ref<string>('')
-const localEditor = ref<string>('')
-
-const openLocal = (key: string): void => {
-  if (isLocalKeyTooLarge(key)) {
-    showToast('File too large (>5MB)', 'error')
-    return
-  }
-  activeLocalKey.value = key
-  localEditor.value = localGet(key) ?? ''
-  localModal.value?.showModal()
-}
-const editLocal = (key: string): void => openLocal(key)
-const closeLocal = (): void => {
-  localModal.value?.close()
-  activeLocalKey.value = ''
-  localEditor.value = ''
-}
-const saveLocal = (): void => {
-  if (!activeLocalKey.value) return
-  localSet(activeLocalKey.value, localEditor.value)
-  reloadLocal()
-  closeLocal()
-  showToast('Local key saved', 'success')
-}
-const removeLocal = (key: string): void => {
-  localRemove(key)
-  reloadLocal()
-  showToast('Local key removed', 'success')
-}
-const clearAllLocal = (): void => {
+const clearAllLocal = () => {
   localClearAll()
   reloadLocal()
-  showToast('LocalStorage cleared', 'success')
-}
-const byteSize = (v: string | null): string => {
-  const n = v ? new Blob([v]).size : 0
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`
+  showToast('Cleared localStorage', 'success')
 }
 
-const exportJson = ref<string>('')
-const refreshExport = (): void => {
-  exportJson.value = exportBundle()
-}
-const copy = async (text: string): Promise<void> => {
+/* -------------------- io tab --------------------- */
+const exportJson = ref('')
+const refreshExport = () => {
   try {
-    await navigator.clipboard.writeText(text)
-    showToast('Copied', 'success')
+    exportJson.value = exportBundle()
   } catch {
-    showToast('Copy failed', 'error')
+    exportJson.value = '{}'
   }
 }
-const downloadExport = (): void => {
+const downloadExport = () => {
   const blob = new Blob([exportJson.value], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = `storage-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
-  document.body.appendChild(a)
   a.click()
   URL.revokeObjectURL(url)
-  a.remove()
 }
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const triggerFile = (): void => {
-  fileInput.value?.click()
-}
-const importJson = ref<string>('')
-const importError = ref<string>('')
-
-const pickImportFile = async (e: Event): Promise<void> => {
-  const input = e.target as HTMLInputElement | null
-  if (!input || !input.files || input.files.length === 0) return
-  const file = input.files[0]
-  if (!file) return
-  const text = await file.text()
-  importJson.value = text
-}
-
-const clearImport = (): void => {
-  importJson.value = ''
-  importError.value = ''
-  if (fileInput.value) fileInput.value.value = ''
-}
-
-const applyImport = (): void => {
-  try {
-    importBundle(importJson.value)
-    refreshStores()
-    loadEditors()
-    reloadLocal()
-    refreshExport()
-    importError.value = ''
-    showToast('Imported', 'success')
-  } catch (e: unknown) {
-    importError.value = e instanceof Error ? e.message : 'Import failed'
-    showToast('Import failed', 'error')
-  }
-}
-
-const localEditorKey = ref<string>('')
-
-const prettyState = (state: unknown): string => pretty(state)
-
+/* -------------------- lifecycle --------------------- */
 onMounted(() => {
   refreshStores()
-  loadEditors()
   reloadLocal()
   refreshExport()
 })
-
-watch(editors, () => {
-  Object.keys(editors).forEach(validateEditor)
-})
 </script>
+
+<style scoped>
+.table td,
+.table th {
+  white-space: nowrap;
+}
+</style>

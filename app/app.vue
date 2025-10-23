@@ -1,12 +1,16 @@
 <template>
   <NuxtLayout>
+    <DictionaryLoader :visible="loading" />
     <NuxtPage />
   </NuxtLayout>
 </template>
+
 <script setup lang="ts">
-const fontStore = useFontStore()
+import DictionaryLoader from '~/components/DictionaryLoader.vue'
+
+const { loadDictionary, loading } = useDictionaryStore();
 
 onMounted(async () => {
-  await fontStore.loadInstalledFontsOnMount()
+  await loadDictionary()
 })
 </script>

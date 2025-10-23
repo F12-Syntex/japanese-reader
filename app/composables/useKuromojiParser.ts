@@ -23,23 +23,29 @@ export const useKuromojiParser = () => {
 
       const data = await response.json()
 
-      return (data.words ?? []).map((word: any): ParsedWord => {
+
+      const { lookupKanji } = useDictionaryStore()
+
+      const words = await Promise.all((data.words ?? []).map(async (word: any): Promise<ParsedWord> => {
         const surfaceMatch = knownWords.value.get(word.surface)
         const baseMatch = knownWords.value.get(word.baseForm)
         const knownWordData = baseMatch ?? surfaceMatch
+        const meaningEntries = lookupKanji(word.baseForm).join(', ')
 
         return {
           kanji: word.surface ?? '',
           kana: word.reading ?? '',
-          meaning: knownWordData?.meaning ?? '',
+          meaning: meaningEntries ?? knownWordData?.meaning ?? '',
           pos: word.pos ?? 'other',
           isKnown: !!knownWordData,
-          reading: word.reading,
+          reading: word.reading ?? '',
           jlptLevel: '',
           pitchAccent: '',
           example: ''
         }
-      })
+      }))
+
+      return words
     } catch (error) {
       console.error('parseText error:', error)
       return text.split('').map((char): ParsedWord => ({
