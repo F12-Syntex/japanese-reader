@@ -1,76 +1,91 @@
 <template>
-  <div class="space-y-6 px-2 md:px-0">
-    <div class="card bg-base-200/50 border border-base-300">
-      <div class="card-body p-4 md:p-6">
-        <h3 class="text-base font-bold flex items-center gap-2 mb-4">
-          <IconEye class="w-5 h-5" />
-          Display Options
-        </h3>
+  <div class="space-y-6">
+    <h3 class="text-lg font-semibold mb-4">Display Settings</h3>
 
-        <div class="space-y-4">
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text font-medium text-sm">Show Word Spacing</span>
-              <input v-model="settings.showWordSpacing" type="checkbox" class="checkbox checkbox-primary checkbox-sm" />
-            </label>
-          </div>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text">Text Alignment</span>
+      </label>
+      <select v-model="settings.textAlign" class="select select-bordered w-full">
+        <option value="left">Left</option>
+        <option value="center">Center</option>
+        <option value="right">Right</option>
+        <option value="justify">Justify</option>
+      </select>
+    </div>
 
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text font-medium text-sm">Always Show Translation</span>
-              <input v-model="settings.alwaysShowTranslation" type="checkbox" class="checkbox checkbox-primary checkbox-sm" />
-            </label>
-          </div>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text">Max Width</span>
+      </label>
+      <select v-model="settings.maxWidth" class="select select-bordered w-full">
+        <option value="full">Full Width</option>
+        <option value="2xl">2XL (672px)</option>
+        <option value="4xl">4XL (896px)</option>
+        <option value="6xl">6XL (1152px)</option>
+      </select>
+    </div>
 
-          <div class="divider my-2"></div>
+    <div class="form-control">
+      <label class="label cursor-pointer">
+        <span class="label-text">Vertical Text</span>
+        <input type="checkbox" v-model="settings.verticalText" class="toggle toggle-primary" />
+      </label>
+    </div>
 
-          <div class="space-y-4" :class="{ 'opacity-50 pointer-events-none': !settings.alwaysShowTranslation }">
-            <div class="form-control">
-              <div class="flex justify-between items-center mb-2">
-                <label class="label-text font-medium text-sm">Translation Size</label>
-                <span class="badge badge-primary badge-sm">{{ settings.translationSize }}px</span>
-              </div>
-              <input v-model.number="settings.translationSize" type="range" min="8" max="16" class="range range-primary range-xs" />
-            </div>
+    <div class="form-control">
+      <label class="label cursor-pointer">
+        <span class="label-text">Show Word Spacing</span>
+        <input type="checkbox" v-model="settings.showWordSpacing" class="toggle toggle-primary" />
+      </label>
+    </div>
 
-            <div class="form-control">
-              <div class="flex justify-between items-center mb-2">
-                <label class="label-text font-medium text-sm">Translation Gap</label>
-                <span class="badge badge-primary badge-sm">{{ settings.translationGap }}px</span>
-              </div>
-              <input v-model.number="settings.translationGap" type="range" min="2" max="10" class="range range-primary range-xs" />
-            </div>
-          </div>
+    <div class="form-control">
+      <label class="label cursor-pointer">
+        <span class="label-text">Show Sentence Numbers</span>
+        <input type="checkbox" v-model="settings.showSentenceNumbers" class="toggle toggle-primary" />
+      </label>
+    </div>
 
-          <div class="divider my-2"></div>
+    <div v-if="settings.showSentenceNumbers" class="form-control">
+      <label class="label">
+        <span class="label-text">Number Position</span>
+      </label>
+      <select v-model="settings.sentenceNumberPosition" class="select select-bordered w-full">
+        <option value="left">Left</option>
+        <option value="right">Right</option>
+      </select>
+    </div>
 
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text font-medium text-sm">Show Sentence Numbers</span>
-              <input v-model="settings.showSentenceNumbers" type="checkbox" class="checkbox checkbox-primary checkbox-sm" />
-            </label>
-          </div>
-
-          <div class="form-control" :class="{ 'opacity-50 pointer-events-none': !settings.showSentenceNumbers }">
-            <label class="label">
-              <span class="label-text font-medium text-sm">Number Position</span>
-            </label>
-            <select v-model="settings.sentenceNumberPosition" class="select select-bordered select-sm w-full">
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-            </select>
-          </div>
-        </div>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text">Sentences Per Page: {{ settings.sentencesPerPage }}</span>
+      </label>
+      <input 
+        type="range" 
+        v-model.number="settings.sentencesPerPage" 
+        min="5" 
+        max="50" 
+        step="5"
+        class="range range-primary" 
+      />
+      <div class="flex justify-between text-xs px-2 mt-1">
+        <span>5</span>
+        <span>15</span>
+        <span>25</span>
+        <span>35</span>
+        <span>50</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import IconEye from '~icons/lucide/eye'
-import { type ReaderSettings } from '~/types/reader'
+import type { ReaderSettings } from '~/types/reader'
 
-defineProps<{
+interface Props {
   settings: ReaderSettings
-}>()
+}
+
+defineProps<Props>()
 </script>

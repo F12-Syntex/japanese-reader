@@ -56,6 +56,21 @@ export const useJapaneseText = () => {
     }
   }
 
+  const setTextFromImport = async (text: string) => {
+    store.setGenerating(true)
+    store.setError(null)
+    
+    try {
+      const sentences = text.split(/[。！？\n]+/).filter(s => s.trim())
+      const parsed = await parseSentences(sentences.map(s => ({ text: s.trim() })))
+      store.setSentences(parsed)
+    } catch (error: any) {
+      store.setError(error.message || 'Failed to parse text')
+    } finally {
+      store.setGenerating(false)
+    }
+  }
+
   const giveFeedback = (feedback: 'easy' | 'okay' | 'hard') => {
     adjustDifficulty(feedback)
     addAttempt(feedback, difficulty.value)
@@ -70,6 +85,7 @@ export const useJapaneseText = () => {
     streamingText: computed(() => store.streamingText),
     generateText,
     clearText,
-    giveFeedback
+    giveFeedback,
+    setTextFromImport
   }
 }

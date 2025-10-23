@@ -1,7 +1,7 @@
 <template>
-  <div class="h-full bg-base-100 flex flex-col">
+  <div class="h-full bg-base-100 flex flex-col relative">
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div v-if="japaneseText.length > 0 || streamingText" class="w-full">
+      <div v-if="japaneseText.length > 0 || streamingText || isGenerating" class="w-full">
         <div v-if="!hasSeenInfo" class="px-6 sm:px-12 pt-6">
           <div class="alert alert-info shadow-sm">
             <IconInfo class="w-5 h-5" />
@@ -22,9 +22,17 @@
           </div>
         </div>
 
+        <div v-if="isGenerating && japaneseText.length === 0" class="flex items-center justify-center min-h-screen">
+          <div class="text-center space-y-4">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p class="text-lg text-base-content/70">Generating and parsing text...</p>
+          </div>
+        </div>
+
         <ReaderContent 
+          v-else
           :text="japaneseText"
-          :settings="localSettings"
+          :settings="settings"
           :streaming-text="streamingText"
           @word-click="handleWordClick"
           @sentence-analyze="handleSentenceAnalyze"
@@ -38,64 +46,53 @@
       />
     </div>
 
-    <div v-if="japaneseText.length > 0" class="fixed bottom-8 right-8 flex gap-3 z-[50]">
+   <div 
+      v-if="japaneseText.length > 0 && !anyModalOpen"
+      class="fixed right-8 z-40"
+      :class="fabContainerClasses"
+    >
       <button 
-        @click="openSettings" 
-        class="btn btn-circle btn-ghost shadow-lg bg-base-100 border border-base-300"
-        title="Reader settings"
-      >
-        <IconSettings class="w-5 h-5" />
-      </button>
-      
-      <button 
-        @click="clearText" 
-        class="btn btn-circle btn-error shadow-lg"
-        title="Clear text"
-      >
-        <IconTrash class="w-5 h-5" />
-      </button>
-      
-      <button 
-        @click="handleGenerate" 
+        @click="showFeedback = true" 
         class="btn btn-circle btn-primary shadow-lg"
-        :class="{ 'loading': isGenerating }"
-        :disabled="isGenerating"
-        title="Generate new text"
+        title="Next"
       >
-        <IconSparkles v-if="!isGenerating" class="w-5 h-5" />
+        <IconArrowRight class="w-5 h-5" />
       </button>
     </div>
 
-    <ReaderSettingsModal
-      v-model="showSettings"
-      :settings="localSettings"
-      @update:settings="updateSettings"
-      @reset="resetSettings"
-    />
-
     <ReaderWordModal
-      v-model="showWordModal"
+      :model-value="showWordModal"
+      @update:model-value="showWordModal = $event"
       :word="selectedWord"
     />
 
     <SentenceAnalysisModal
-      v-model="showAnalysisModal"
+      :model-value="showAnalysisModal"
+      @update:model-value="showAnalysisModal = $event"
       :sentence="selectedSentence"
+    />
+
+    <FeedbackModal
+      :model-value="showFeedback"
+      @update:model-value="showFeedback = $event"
+      @feedback="handleFeedback"
     />
   </div>
 </template>
 
 <script setup>
-import IconSparkles from '~icons/lucide/sparkles'
 import IconInfo from '~icons/lucide/info'
-import IconTrash from '~icons/lucide/trash-2'
 import IconX from '~icons/lucide/x'
 import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
+import IconArrowRight from '~icons/lucide/arrow-right'
+import ReaderSettingsModal from '~/components/settings/ReaderSettingsModal.vue'
+import { useReaderSettings } from '~/composables/useReaderSettings'
 
-const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText } = useJapaneseText()
+const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback } = useJapaneseText()
 const { getApiKey } = useOpenAI()
 const { loadFromStorage } = useAnki()
+const { settings, loadSettings } = useReaderSettings()
 
 const hasSeenInfo = ref(false)
 const showSettings = ref(false)
@@ -103,56 +100,21 @@ const showWordModal = ref(false)
 const selectedWord = ref(null)
 const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
+const showFeedback = ref(false)
 
-const defaultSettings = {
-  fontFamily: 'Noto Sans JP',
-  fontSize: 28,
-  fontWeight: 400,
-  lineHeight: 2.8,
-  letterSpacing: 0,
-  furiganaSize: 0.45,
-  furiganaColor: '',
-  showFurigana: false,
-  showTooltip: true,
-  tooltipSize: 'md',
-  tooltipDelay: 0,
-  alwaysShowTranslation: false,
-  translationSize: 10,
-  translationGap: 4,
-  highlightParticles: false,
-  highlightVerbs: false,
-  highlightAdjectives: false,
-  highlightOnHover: false,
-  underlineUnknown: false,
-  textColor: '',
-  backgroundColor: '',
-  textAlign: 'left',
-  maxWidth: 'full',
-  showWordSpacing: false,
-  verticalText: false,
-  showSentenceNumbers: false,
-  clickToToggle: true,
-  showPitchAccent: false,
-  showPartOfSpeech: true,
-  focusModeOpacity: 30,
-  autoScroll: false,
-  jlptLevel: 'N5',
-  highlightKnownWords: true,
-  dimKnownWords: false,
-  strikethroughKnown: false
-}
+const anyModalOpen = computed(() => {
+  return showSettings.value || showWordModal.value || showAnalysisModal.value || showFeedback.value
+})
 
-const localSettings = ref({ ...defaultSettings })
+const fabContainerClasses = computed(() => {
+  return ['bottom-[88px]', 'md:bottom-8']
+})
 
 const closeAllModals = () => {
   showSettings.value = false
   showWordModal.value = false
   showAnalysisModal.value = false
-}
-
-const openSettings = () => {
-  closeAllModals()
-  showSettings.value = true
+  showFeedback.value = false
 }
 
 const handleGenerate = async () => {
@@ -161,7 +123,15 @@ const handleGenerate = async () => {
     navigateTo('/settings')
     return
   }
-  await generateText(localSettings.value.jlptLevel)
+  const { difficulty, getLevelFromScore } = useDifficulty()
+  const level = getLevelFromScore(difficulty.value)
+  await generateText(level)
+}
+
+const handleFeedback = async (feedback) => {
+  giveFeedback(feedback)
+  clearText()
+  await handleGenerate()
 }
 
 const handleWordClick = (word) => {
@@ -183,29 +153,11 @@ const dismissInfo = () => {
   }
 }
 
-const updateSettings = (newSettings) => {
-  localSettings.value = { ...newSettings }
-  if (import.meta.client) {
-    localStorage.setItem('readerSettings', JSON.stringify(localSettings.value))
-  }
-}
-
-const resetSettings = () => {
-  localSettings.value = { ...defaultSettings }
-  if (import.meta.client) {
-    localStorage.setItem('readerSettings', JSON.stringify(localSettings.value))
-  }
-}
-
 onMounted(() => {
   const seenInfo = localStorage.getItem('hasSeenInfo')
   hasSeenInfo.value = seenInfo === 'true'
   
-  const savedSettings = localStorage.getItem('readerSettings')
-  if (savedSettings) {
-    localSettings.value = { ...defaultSettings, ...JSON.parse(savedSettings) }
-  }
-
+  loadSettings()
   loadFromStorage()
 })
 </script>

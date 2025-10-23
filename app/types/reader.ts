@@ -38,6 +38,7 @@ export interface ReaderSettings {
   focusModeOpacity: number
   highlightGrammar: boolean
   grammarTooltip: boolean
+  sentencesPerPage: number
 }
 
 export const defaultReaderSettings: ReaderSettings = {
@@ -79,5 +80,6 @@ export const defaultReaderSettings: ReaderSettings = {
   autoScroll: false,
   focusModeOpacity: 50,
   highlightGrammar: false,
-  grammarTooltip: true
+  grammarTooltip: true,
+  sentencesPerPage: 10
 }

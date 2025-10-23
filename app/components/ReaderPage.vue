@@ -35,6 +35,7 @@
         v-else
         :is-generating="isGenerating"
         @generate="handleGenerate"
+        @import-url="showUrlImport = true"
       />
     </div>
 
@@ -69,52 +70,48 @@
       @update:model-value="showFeedback = $event"
       @feedback="handleFeedback"
     />
+
+    <UrlImportModal
+      :model-value="showUrlImport"
+      @update:model-value="showUrlImport = $event"
+      @import="handleUrlImport"
+    />
   </div>
 </template>
 
 <script setup>
 import IconInfo from '~icons/lucide/info'
 import IconX from '~icons/lucide/x'
-import IconSettings from '~icons/lucide/settings'
 import IconAlertCircle from '~icons/lucide/alert-circle'
 import IconArrowRight from '~icons/lucide/arrow-right'
-import ReaderSettingsModal from '~/components/settings/ReaderSettingsModal.vue'
 import { useReaderSettings } from '~/composables/useReaderSettings'
 
-const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback } = useJapaneseText()
+const { japaneseText, isGenerating, generationError, streamingText, generateText, clearText, giveFeedback, setTextFromImport } = useJapaneseText()
 const { getApiKey } = useOpenAI()
 const { loadFromStorage } = useAnki()
 const { settings, loadSettings } = useReaderSettings()
 
 const hasSeenInfo = ref(false)
-const showSettings = ref(false)
 const showWordModal = ref(false)
 const selectedWord = ref(null)
 const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
 const showFeedback = ref(false)
+const showUrlImport = ref(false)
 
-/**
- * Hide FAB when any modal is open
- */
 const anyModalOpen = computed(() => {
-  return showSettings.value || showWordModal.value || showAnalysisModal.value || showFeedback.value
+  return showWordModal.value || showAnalysisModal.value || showFeedback.value || showUrlImport.value
 })
 
-/**
- * Keep FAB above mobile bottom tab navigation.
- * On small screens, use a larger bottom offset (e.g., 88px).
- * On md+ screens, use the original bottom-8 spacing.
- */
 const fabContainerClasses = computed(() => {
   return ['bottom-[88px]', 'md:bottom-8']
 })
 
 const closeAllModals = () => {
-  showSettings.value = false
   showWordModal.value = false
   showAnalysisModal.value = false
   showFeedback.value = false
+  showUrlImport.value = false
 }
 
 const handleGenerate = async () => {
@@ -144,6 +141,10 @@ const handleSentenceAnalyze = ({ index, sentence }) => {
   closeAllModals()
   selectedSentence.value = sentence
   showAnalysisModal.value = true
+}
+
+const handleUrlImport = async (text) => {
+  await setTextFromImport(text)
 }
 
 const dismissInfo = () => {
