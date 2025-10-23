@@ -2,16 +2,13 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-
   modules: [
     '@nuxtjs/tailwindcss',
     'unplugin-icons/nuxt',
     '@pinia/nuxt',
     '@pinia-plugin-persistedstate/nuxt',
   ],
-
   css: ['~/assets/css/main.css'],
-
   app: {
     head: {
       title: 'Japanese Reader',
@@ -21,12 +18,22 @@ export default defineNuxtConfig({
       ]
     }
   },
-
-  // IMPORTANT: your source lives under app/
   srcDir: 'app/',
-
   nitro: {
-    // Ensure Node serverless on Vercel (not edge)
     preset: 'vercel',
+    // Bundle the dict into the server output
+    serverAssets: [
+      {
+        baseName: 'dict', // will be available via assets: 'dict'
+        dir: './node_modules/kuromoji/dict'
+      }
+    ],
+    // Optional: keep static /dict for debugging/downloads
+    publicAssets: [
+      {
+        baseURL: '/dict',
+        dir: './node_modules/kuromoji/dict'
+      }
+    ]
   }
 })
