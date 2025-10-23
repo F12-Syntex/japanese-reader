@@ -28,14 +28,5 @@ export default defineNuxtConfig({
   nitro: {
     // Ensure Node serverless on Vercel (not edge)
     preset: 'vercel',
-
-    // Serve Kuromoji dict from node_modules at /dict
-    // You already confirmed /dict/base.dat.gz works with this.
-    publicAssets: [
-      {
-        baseURL: '/dict',
-        dir: './node_modules/kuromoji/dict'
-      }
-    ]
   }
 })

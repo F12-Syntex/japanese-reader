@@ -3,9 +3,9 @@ import kuromoji from 'kuromoji'
 
 let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null
 
-function buildTokenizer(): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
+function buildTokenizer(dicBaseUrl: string): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
   return new Promise((resolve, reject) => {
-    kuromoji.builder({ dicPath: '/dict/' }).build((err, t) => {
+    kuromoji.builder({ dicPath: dicBaseUrl }).build((err, t) => {
       if (err) return reject(err)
       resolve(t)
     })
@@ -14,9 +14,19 @@ function buildTokenizer(): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> 
 
 export default defineEventHandler(async (event) => {
   try {
+    const { origin } = getRequestURL(event)
+    // Important: absolute URL so Kuromoji fetches via HTTP, not fs
+    const dicBaseUrl = `${origin}/dict/`
+
     if (!tokenizer) {
-      tokenizer = await buildTokenizer()
+      // Optional quick check the static file is reachable from the server
+      const head = await fetch(`${dicBaseUrl}base.dat.gz`, { method: 'HEAD' })
+      if (!head.ok) {
+        throw new Error(`HEAD ${dicBaseUrl}base.dat.gz -> ${head.status} ${head.statusText}`)
+      }
+      tokenizer = await buildTokenizer(dicBaseUrl)
     }
+
     const text = 'すもももももももものうち'
     const tokens = tokenizer.tokenize(text)
     return {
@@ -30,7 +40,6 @@ export default defineEventHandler(async (event) => {
       }))
     }
   } catch (e: any) {
-    // Surface the exact error so we can debug quickly in production
     return {
       ok: false,
       message: e?.message || String(e),
