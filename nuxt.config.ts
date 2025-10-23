@@ -1,3 +1,4 @@
+// nuxt.config.ts
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
@@ -21,10 +22,15 @@ export default defineNuxtConfig({
     }
   },
 
+  // IMPORTANT: your source lives under app/
   srcDir: 'app/',
-  
-  nitro: { 
+
+  nitro: {
+    // Ensure Node serverless on Vercel (not edge)
     preset: 'vercel',
+
+    // Serve Kuromoji dict from node_modules at /dict
+    // You already confirmed /dict/base.dat.gz works with this.
     publicAssets: [
       {
         baseURL: '/dict',

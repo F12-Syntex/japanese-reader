@@ -1,92 +1,40 @@
-// server/api/parse.post.ts
+// app/server/api/kuromoji-health.get.ts
 import kuromoji from 'kuromoji'
-import { join } from 'path'
-import wanakana from 'wanakana'
-import { existsSync } from 'fs'
 
-let tokenizer: any = null
+let tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null
 
-const getTokenizer = (): Promise<any> => {
+function buildTokenizer(): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
   return new Promise((resolve, reject) => {
-    if (tokenizer) {
-      resolve(tokenizer)
-      return
-    }
-
-    const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
-    
-    if (!existsSync(dicPath)) {
-      console.error('Dictionary path does not exist:', dicPath)
-      reject(new Error('Kuromoji dictionary not found'))
-      return
-    }
-
-    console.log('Building tokenizer with dictionary path:', dicPath)
-    
-    kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
-      if (err) {
-        console.error('Kuromoji build error:', err)
-        reject(err)
-        return
-      }
-      console.log('Tokenizer built successfully')
-      tokenizer = _tokenizer
-      resolve(tokenizer)
+    kuromoji.builder({ dicPath: '/dict/' }).build((err, t) => {
+      if (err) return reject(err)
+      resolve(t)
     })
   })
 }
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
-    const { text, knownWords } = body
-
-    if (!text) {
-      throw createError({
-        statusCode: 400,
-        message: 'Text is required'
-      })
+    if (!tokenizer) {
+      tokenizer = await buildTokenizer()
     }
-
-    const tokenizer = await getTokenizer()
+    const text = 'すもももももももものうち'
     const tokens = tokenizer.tokenize(text)
-    
-    // console.log('Parsed tokens:', tokens.map((t: any) => ({
-    //   surface: t.surface_form,
-    //   base: t.basic_form,
-    //   reading: t.reading,
-    //   pos: t.pos
-    // })))
-    
-    const words = tokens.map((token: any) => {
-      const surface = token.surface_form
-      const baseForm = token.basic_form || surface
-      const reading = token.reading || surface
-      
-      return {
-        surface,
-        baseForm,
-        reading: wanakana.toHiragana(reading),
-        pos: mapPos(token.pos)
-      }
-    })
-
-    return { words }
-  } catch (error: any) {
-    console.error('Parse error:', error)
-    throw createError({
-      statusCode: 500,
-      message: error.message || 'Failed to parse text'
-    })
+    return {
+      ok: true,
+      count: tokens.length,
+      sample: tokens.slice(0, 6).map(t => ({
+        surface: t.surface_form,
+        base: t.basic_form && t.basic_form !== '*' ? t.basic_form : t.surface_form,
+        reading: t.reading || t.surface_form,
+        pos: t.pos
+      }))
+    }
+  } catch (e: any) {
+    // Surface the exact error so we can debug quickly in production
+    return {
+      ok: false,
+      message: e?.message || String(e),
+      stack: e?.stack
+    }
   }
 })
-
-function mapPos(pos: string): string {
-  if (!pos) return 'other'
-  if (pos.includes('名詞')) return 'noun'
-  if (pos.includes('動詞')) return 'verb'
-  if (pos.includes('形容詞')) return 'adjective'
-  if (pos.includes('助詞')) return 'particle'
-  if (pos.includes('副詞')) return 'adverb'
-  return 'other'
-}
