@@ -1,5 +1,8 @@
+// server/api/parse.post.ts
 import kuromoji from 'kuromoji'
+import { join } from 'path'
 import wanakana from 'wanakana'
+import { existsSync } from 'fs'
 
 let tokenizer: any = null
 
@@ -10,8 +13,14 @@ const getTokenizer = (): Promise<any> => {
       return
     }
 
-    const dicPath = '/dict'
+    const dicPath = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
     
+    if (!existsSync(dicPath)) {
+      console.error('Dictionary path does not exist:', dicPath)
+      reject(new Error('Kuromoji dictionary not found'))
+      return
+    }
+
     console.log('Building tokenizer with dictionary path:', dicPath)
     
     kuromoji.builder({ dicPath }).build((err: any, _tokenizer: any) => {
@@ -30,7 +39,7 @@ const getTokenizer = (): Promise<any> => {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { text } = body
+    const { text, knownWords } = body
 
     if (!text) {
       throw createError({
@@ -41,6 +50,13 @@ export default defineEventHandler(async (event) => {
 
     const tokenizer = await getTokenizer()
     const tokens = tokenizer.tokenize(text)
+    
+    // console.log('Parsed tokens:', tokens.map((t: any) => ({
+    //   surface: t.surface_form,
+    //   base: t.basic_form,
+    //   reading: t.reading,
+    //   pos: t.pos
+    // })))
     
     const words = tokens.map((token: any) => {
       const surface = token.surface_form
