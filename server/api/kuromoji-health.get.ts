@@ -1,5 +1,4 @@
 // app/server/api/kuromoji-health.get.ts
-import { fileURLToPath } from 'node:url'
 import { getTokenizer } from './utils/kuromoji'
 
 export default defineEventHandler(async () => {

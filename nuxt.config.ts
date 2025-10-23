@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     'unplugin-icons/nuxt',
     '@pinia/nuxt',
-    '@pinia-plugin-persistedstate/nuxt',
+    '@pinia-plugin-persistedstate/nuxt'
   ],
   css: ['~/assets/css/main.css'],
   app: {
@@ -21,14 +21,13 @@ export default defineNuxtConfig({
   srcDir: 'app/',
   nitro: {
     preset: 'vercel',
-    // Bundle the dict into the server output
     serverAssets: [
       {
-        baseName: 'dict', // will be available via assets: 'dict'
+        baseName: 'dict',
         dir: './node_modules/kuromoji/dict'
       }
     ],
-    // Optional: keep static /dict for debugging/downloads
+    // Optional for manual debugging/downloads; not needed for runtime
     publicAssets: [
       {
         baseURL: '/dict',
