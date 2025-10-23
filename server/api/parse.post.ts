@@ -1,38 +1,28 @@
 import kuromoji from 'kuromoji'
 import wanakana from 'wanakana'
-import { join } from 'node:path'
-import { existsSync } from 'node:fs'
 
 let tokenizerPromise: Promise<any> | null = null
 
-function getDictFsPath(event?: any): string {
-  // Prefer the copied dict in public/dict, which is bundled into .output/public
-  // Nitro provides event.node.req/resp; use runtime config or rootDir to resolve.
-  // In server runtime, process.cwd() points to the server bundle root.
-  // .output/public is mounted as a static dir, but also exists on disk relative to the server.
-  // Try a few likely locations to be robust in dev and prod.
-
-  // 1) Nuxt dev: project root/public/dict
-  const devPublicDict = join(process.cwd(), 'public', 'dict')
-  if (existsSync(devPublicDict)) return devPublicDict
-
-  // 2) Nitro output: .output/public/dict (when running preview or on Vercel)
-  const outputPublicDict = join(process.cwd(), '.output', 'public', 'dict')
-  if (existsSync(outputPublicDict)) return outputPublicDict
-
-  // 3) Fallback: node_modules (only if present at runtime; usually not on Vercel)
-  const nodeModulesDict = join(process.cwd(), 'node_modules', 'kuromoji', 'dict')
-  if (existsSync(nodeModulesDict)) return nodeModulesDict
-
-  // 4) Last resort: just return public/dict (kuromoji will try fs path)
-  return devPublicDict
+function getDicHttpBase(event: any): string {
+  // Build an absolute HTTP base to static /dict so kuromoji can fetch files in prod
+  const config = useRuntimeConfig(event)
+  // Prefer public baseURL if set (Nuxt app.baseURL). Build absolute from request.
+  const baseURL = (config.app?.baseURL as string) || '/'
+  const req = event.node?.req
+  // Derive origin from request (works on Vercel)
+  const proto = (req?.headers['x-forwarded-proto'] as string) || 'https'
+  const host = (req?.headers['x-forwarded-host'] as string) || (req?.headers['host'] as string) || ''
+  const origin = host ? `${proto}://${host}` : ''
+  const base = baseURL.endsWith('/') ? baseURL : baseURL + '/'
+  return origin ? `${origin}${base}dict` : `${base}dict`
 }
 
-function getTokenizer(event?: any): Promise<any> {
+function getTokenizer(event: any): Promise<any> {
   if (tokenizerPromise) return tokenizerPromise
 
   tokenizerPromise = new Promise((resolve, reject) => {
-    const dicPath = getDictFsPath(event)
+    // Always use HTTP path in prod so the compiled dict files are fetched correctly.
+    const dicPath = getDicHttpBase(event)
 
     kuromoji.builder({ dicPath }).build((err: any, built: any) => {
       if (err) {
