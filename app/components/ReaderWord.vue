@@ -43,6 +43,7 @@ const displayMeaning = computed(() => {
 const pos = computed(() => enrichedMeaning.value?.pos || localWord.value?.pos)
 
 const isParticle = computed(() => pos.value === 'particle')
+const isPunctuation = computed(() => pos.value === 'punctuation')
 
 const showTooltipExtras = computed(() =>
   (props.settings?.showPitchAccent && (enrichedMeaning.value?.pitchAccent || localWord.value.pitchAccent)) ||
@@ -314,7 +315,7 @@ onMounted(() => {
     @mouseleave="handleMouseLeave"
   >
     <span
-      v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle"
+      v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle && !isPunctuation"
       class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
       :style="translationStyle"
     >
@@ -323,7 +324,7 @@ onMounted(() => {
 
     <span
       class="inline-block relative transition-colors duration-150"
-      :class="{ 'rounded-md': !isParticle && word?.kanji && !disableHover }"
+      :class="{ 'rounded-md': !isParticle && !isPunctuation && word?.kanji && !disableHover }"
     >
       <ruby class="[ruby-align:center]">
         <span
@@ -336,7 +337,7 @@ onMounted(() => {
           </span>
         </span>
         <rt
-          v-if="!isParticle && settings?.showFurigana && word?.kana !== word?.kanji"
+          v-if="!isParticle && !isPunctuation&& settings?.showFurigana && word?.kana !== word?.kanji"
           class="select-none transition-opacity duration-150 opacity-70"
           :style="furiganaStyle"
         >
@@ -344,7 +345,7 @@ onMounted(() => {
         </rt>
       </ruby>
 
-      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isMobile" to="body">
+      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isPunctuation && !isMobile" to="body">
         <div
           ref="tooltipRef"
           class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
