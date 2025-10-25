@@ -19,21 +19,20 @@
       </div>
 
       <div class="flex-1 overflow-y-auto p-8">
-        <div v-if="parsedContent.length === 0" class="flex items-center justify-center h-full">
+        <div v-if="isLoading" class="flex flex-col items-center justify-center h-full gap-4">
           <span class="loading loading-spinner loading-lg"></span>
+          <p class="text-sm text-base-content/70">Loading content...</p>
         </div>
-        <div v-else class="max-w-2xl mx-auto space-y-4">
-          <div v-for="(sentence, idx) in parsedContent" :key="idx" class="leading-relaxed">
-            <ReaderWord
-              v-for="(word, widx) in sentence.words"
-              :key="widx"
-              :word="word"
-              :settings="readerSettings"
-              :disable-hover="false"
-              @click="handleWordClick"
-            />
-          </div>
+        <div v-else-if="parsedContent.length === 0" class="flex items-center justify-center h-full">
+          <p class="text-base-content/50">No text</p>
         </div>
+        <ReaderContent
+          v-else
+          :text="parsedContent"
+          :settings="readerSettings"
+          :streaming-text="''"
+          @word-highlighted="handleWordHighlight"
+        />
       </div>
 
       <div class="bg-base-100 border-t border-base-300 p-4">
@@ -72,8 +71,6 @@
         </ul>
       </div>
     </div>
-
-    <ReaderWordModal v-model="showWordModal" :word="selectedWord" />
   </div>
 </template>
 
@@ -87,7 +84,7 @@ import { useReaderSettings } from '~/composables/useReaderSettings'
 import { useKuromojiParser } from '~/composables/useKuromojiParser'
 import ePub from 'epubjs'
 import type { Book, Rendition, NavItem } from 'epubjs'
-import type { ParsedSentence, ParsedWord } from '~/types/japanese'
+import type { ParsedSentence } from '~/types/japanese'
 
 const booksStore = useBooksStore()
 const { settings: readerSettings } = useReaderSettings()
@@ -95,8 +92,7 @@ const { parseText } = useKuromojiParser()
 
 const viewerContainer = ref<HTMLElement | null>(null)
 const showToc = ref(false)
-const showWordModal = ref(false)
-const selectedWord = ref<ParsedWord | null>(null)
+const isLoading = ref(true)
 
 let book: Book | null = null
 let rendition: Rendition | null = null
@@ -116,23 +112,77 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   return bytes.buffer
 }
 
-const extractTextFromHtml = (html: string): string => {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-  return doc.body.textContent || ''
+const isVerticalText = (element: HTMLElement): boolean => {
+  const computedStyle = window.getComputedStyle(element)
+  const writingMode = computedStyle.writingMode
+  return writingMode === 'vertical-rl' || writingMode === 'vertical-lr' || writingMode === 'tb-rl'
+}
+
+const extractTextRespectingLayout = (element: HTMLElement): string => {
+  if (isVerticalText(element)) {
+    const columns: string[] = []
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    let currentColumn = ''
+    let node: Node | null
+
+    while (node = walker.nextNode()) {
+      const text = node.textContent?.trim()
+      if (!text) continue
+      
+      const parent = node.parentElement
+      if (!parent) continue
+
+      const rect = parent.getBoundingClientRect()
+      const isNewColumn = currentColumn && rect.right < element.getBoundingClientRect().right - 50
+      
+      if (isNewColumn) {
+        columns.push(currentColumn)
+        currentColumn = text
+      } else {
+        currentColumn += text
+      }
+    }
+
+    if (currentColumn) {
+      columns.push(currentColumn)
+    }
+
+    return columns.reverse().join('\n')
+  }
+
+  return element.textContent || ''
 }
 
 const parseCurrentPage = async () => {
-  if (!rendition) return
+  if (!rendition) {
+    isLoading.value = false
+    return
+  }
   
-  const contents = rendition.getContents()
-  if (contents.length === 0) return
+  isLoading.value = true
+  
+  const contents = (rendition.getContents() as unknown) as any[] || []
+  if (contents.length === 0) {
+    isLoading.value = false
+    return
+  }
 
-  const htmlContent = contents[0].document.body.innerHTML
-  const textContent = extractTextFromHtml(htmlContent)
+  const bodyElement = contents[0]?.document?.body
+  if (!bodyElement) {
+    isLoading.value = false
+    return
+  }
+
+  const textContent = extractTextRespectingLayout(bodyElement)
   
+  if (!textContent.trim()) {
+    parsedContent.value = []
+    isLoading.value = false
+    return
+  }
+
   const sentences = textContent
-    .split(/([。!?])/g)
+    .split(/([。、！？．，])/g)
     .reduce((acc: string[], curr, idx, arr) => {
       if (idx % 2 === 0 && curr.trim()) {
         const punctuation = arr[idx + 1] || ''
@@ -153,11 +203,50 @@ const parseCurrentPage = async () => {
   }
   
   parsedContent.value = parsed
+  isLoading.value = false
 }
 
-const handleWordClick = (word: ParsedWord) => {
-  selectedWord.value = word
-  showWordModal.value = true
+const highlightTextInEpub = (word: string) => {
+  if (!rendition) return
+
+  const contents = (rendition.getContents() as unknown) as any[] || []
+  if (contents.length === 0) return
+
+  const iframe = contents[0]?.document
+  if (!iframe) return
+
+  const walker = document.createTreeWalker(
+    iframe.body,
+    NodeFilter.SHOW_TEXT,
+    null
+  )
+
+  let node: Node | null
+  while (node = walker.nextNode()) {
+    const text = node.textContent
+    if (!text) continue
+
+    const index = text.indexOf(word)
+    if (index !== -1) {
+      const parent = node.parentElement
+      if (!parent) continue
+
+      const range = iframe.createRange()
+      range.setStart(node, index)
+      range.setEnd(node, index + word.length)
+
+      const mark = iframe.createElement('mark')
+      mark.style.backgroundColor = 'yellow'
+      mark.style.color = 'black'
+
+      range.surroundContents(mark)
+      break
+    }
+  }
+}
+
+const handleWordHighlight = (sentenceIndex: number, wordIndex: number, word: string) => {
+  highlightTextInEpub(word)
 }
 
 const initBook = async () => {
