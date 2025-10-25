@@ -35,7 +35,6 @@
         v-else
         :is-generating="isGenerating"
         @generate="handleGenerate"
-        @import-url="showUrlImport = true"
       />
     </div>
 
