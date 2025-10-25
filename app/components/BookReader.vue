@@ -11,6 +11,10 @@
             <h2 class="text-xl font-bold">{{ booksStore.currentBook?.title }}</h2>
             <p class="text-sm text-base-content/70">{{ booksStore.currentBook?.author }}</p>
           </div>
+          <div v-if="isVerticalText" class="badge badge-info gap-2">
+            <IconFlipVertical class="w-3 h-3" />
+            Vertical Layout
+          </div>
           <button @click="showToc = !showToc" class="btn btn-ghost btn-sm gap-2">
             <IconList class="w-4 h-4" />
             Chapters
@@ -56,8 +60,17 @@
     </div>
 
     <div class="w-1/2 flex flex-col bg-base-200">
-      <div class="flex-1 overflow-hidden flex items-center justify-center p-4">
-        <div ref="viewerContainer" class="w-full h-full bg-base-100 rounded-lg shadow-lg"></div>
+      <div class="flex-1 overflow-auto flex items-center justify-center p-8">
+        <EpubViewer
+          v-if="booksStore.currentBook"
+          ref="epubViewerRef"
+          :book-data="booksStore.currentBook.path"
+          @text-extracted="handleTextExtracted"
+          @vertical-detected="isVerticalText = $event"
+          @toc-loaded="toc = $event"
+          @progress-updated="handleProgressUpdated"
+          @ready="isViewerReady = true"
+        />
       </div>
     </div>
 
@@ -81,29 +94,29 @@ import IconArrowLeft from '~icons/lucide/arrow-left'
 import IconChevronLeft from '~icons/lucide/chevron-left'
 import IconChevronRight from '~icons/lucide/chevron-right'
 import IconList from '~icons/lucide/list'
+import IconFlipVertical from '~icons/lucide/flip-vertical'
 import { useBooksStore } from '~/stores/useBooksStore'
 import { useReaderSettings } from '~/composables/useReaderSettings'
 import { useKuromojiParser } from '~/composables/useKuromojiParser'
-import ePub from 'epubjs'
-import type { Book, Rendition, NavItem } from 'epubjs'
+import type { NavItem } from 'epubjs'
 import type { ParsedSentence, ParsedWord } from '~/types/japanese'
+import type EpubViewer from './EpubViewer.vue'
 
-const MAX_CHARS_PER_PARSE = 2000
 const CHUNK_SIZE = 500
 
 const booksStore = useBooksStore()
 const { settings: readerSettings } = useReaderSettings()
 const { parseText } = useKuromojiParser()
 
-const viewerContainer = ref<HTMLElement | null>(null)
+const epubViewerRef = ref<InstanceType<typeof EpubViewer> | null>(null)
 const showToc = ref(false)
 const isLoading = ref(true)
+const isViewerReady = ref(false)
 const showWordModal = ref(false)
 const selectedWord = ref<ParsedWord | null>(null)
 const parseProgress = ref(0)
+const isVerticalText = ref(false)
 
-let book: Book | null = null
-let rendition: Rendition | null = null
 let parseAbortController: AbortController | null = null
 
 const toc = ref<NavItem[]>([])
@@ -112,83 +125,13 @@ const canGoPrev = ref(false)
 const canGoNext = ref(true)
 const parsedContent = ref<ParsedSentence[]>([])
 
-const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
-  const binaryString = atob(base64)
-  const bytes = new Uint8Array(binaryString.length)
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
-  }
-  return bytes.buffer
+const handleProgressUpdated = (data: { progress: number; canGoPrev: boolean; canGoNext: boolean }) => {
+  progress.value = data.progress
+  canGoPrev.value = data.canGoPrev
+  canGoNext.value = data.canGoNext
 }
 
-const extractVisibleText = (iframe: Document): string => {
-  const body = iframe.body
-  if (!body) return ''
-
-  const range = iframe.createRange()
-  const windowHeight = body.clientHeight
-  
-  const textNodes: Array<{ node: Node; text: string; top: number }> = []
-  const walker = iframe.createTreeWalker(body, NodeFilter.SHOW_TEXT)
-  
-  let node: Node | null
-  while (node = walker.nextNode()) {
-    const text = node.textContent?.trim()
-    if (!text) continue
-    
-    const parent = node.parentElement
-    if (!parent) continue
-    
-    const style = iframe.defaultView?.getComputedStyle(parent)
-    if (style?.display === 'none' || style?.visibility === 'hidden') continue
-    
-    range.selectNodeContents(node)
-    const rects = range.getClientRects()
-    
-    for (let i = 0; i < rects.length; i++) {
-      const rect = rects[i]
-      if (!rect) continue
-      
-      if (rect.top >= 0 && rect.top < windowHeight) {
-        textNodes.push({
-          node,
-          text,
-          top: rect.top
-        })
-        break
-      }
-    }
-  }
-  
-  textNodes.sort((a, b) => a.top - b.top)
-  
-  return textNodes.map(n => n.text).join('')
-}
-
-const chunkText = (text: string, maxChars: number): string[] => {
-  if (text.length <= maxChars) return [text]
-  
-  const chunks: string[] = []
-  let start = 0
-  
-  while (start < text.length) {
-    let end = start + maxChars
-    
-    if (end < text.length) {
-      const sentenceEnd = text.slice(start, end).lastIndexOf('。')
-      if (sentenceEnd > maxChars * 0.5) {
-        end = start + sentenceEnd + 1
-      }
-    }
-    
-    chunks.push(text.slice(start, end))
-    start = end
-  }
-  
-  return chunks
-}
-
-const parseCurrentPage = async () => {
+const handleTextExtracted = async (text: string) => {
   if (parseAbortController) {
     parseAbortController.abort()
   }
@@ -196,41 +139,16 @@ const parseCurrentPage = async () => {
   parseAbortController = new AbortController()
   const signal = parseAbortController.signal
   
-  if (!rendition) {
-    isLoading.value = false
-    return
-  }
-  
   isLoading.value = true
   parseProgress.value = 0
   
   try {
-    const contents = (rendition.getContents() as unknown) as any[] || []
-    if (contents.length === 0) {
-      isLoading.value = false
-      return
-    }
-
-    const iframe = contents[0]?.document
-    if (!iframe) {
-      isLoading.value = false
-      return
-    }
-
-    const textContent = extractVisibleText(iframe)
-    
-    if (!textContent.trim()) {
+    if (!text.trim()) {
       parsedContent.value = []
-      isLoading.value = false
       return
     }
 
-    if (textContent.length > MAX_CHARS_PER_PARSE) {
-      const truncated = textContent.slice(0, MAX_CHARS_PER_PARSE) + '...'
-      await parseLargeText(truncated, signal)
-    } else {
-      await parseLargeText(textContent, signal)
-    }
+    await parseLargeText(text, signal)
   } catch (error: any) {
     if (error.name !== 'AbortError') {
       console.error('Parse error:', error)
@@ -243,167 +161,89 @@ const parseCurrentPage = async () => {
 }
 
 const parseLargeText = async (text: string, signal: AbortSignal) => {
-  const sentences = text
-    .split(/([。、!?])/g)
-    .reduce((acc: string[], curr, idx, arr) => {
-      if (idx % 2 === 0 && curr.trim()) {
-        const punctuation = arr[idx + 1] || ''
-        acc.push(curr + punctuation)
-      }
-      return acc
-    }, [])
-    .filter(s => s.trim())
-
-  const parsed: ParsedSentence[] = []
-  const total = sentences.length
+  const lines = text.split('\n').filter(line => line.trim())
   
+  const sentences: string[] = []
+  for (const line of lines) {
+    const lineSentences = line
+      .split(/([。!?])/g)
+      .reduce((acc: string[], curr, idx, arr) => {
+        if (idx % 2 === 0 && curr.trim()) {
+          const next = arr[idx + 1]
+          acc.push(curr + (next || ''))
+        }
+        return acc
+      }, [])
+      .filter(s => s.trim())
+    
+    sentences.push(...lineSentences)
+  }
+
+  const chunks: string[][] = []
   for (let i = 0; i < sentences.length; i += CHUNK_SIZE) {
+    chunks.push(sentences.slice(i, i + CHUNK_SIZE))
+  }
+
+  const allParsed: ParsedSentence[] = []
+
+  for (let i = 0; i < chunks.length; i++) {
     if (signal.aborted) throw new Error('AbortError')
-    
-    const chunk = sentences.slice(i, i + CHUNK_SIZE)
-    const combinedText = chunk.join('')
-    
-    const words = await parseText(combinedText)
-    
-    let wordIndex = 0
-    for (const sentence of chunk) {
-      const sentenceWords: ParsedWord[] = []
-      let charCount = 0
-      
-      while (charCount < sentence.length && wordIndex < words.length) {
-        const word = words[wordIndex]
-        if (!word) break
-        
-        sentenceWords.push(word)
-        charCount += word.kanji.length
-        wordIndex++
-      }
-      
-      parsed.push({
-        text: sentence,
-        words: sentenceWords,
+
+    const chunk = chunks[i]
+    if (!chunk) continue
+
+    const chunkText = chunk.join('')
+    const parsed = await parseText(chunkText)
+
+    let normalized: ParsedSentence[] = []
+    if (parsed.length > 0 && !((parsed as any)[0]?.words)) {
+      normalized.push({
+        text: chunkText,
+        words: parsed as ParsedWord[],
         grammar: []
       })
+    } else {
+      normalized = parsed as unknown as ParsedSentence[]
     }
-    
-    parseProgress.value = Math.round(((i + chunk.length) / total) * 100)
-    await new Promise(resolve => setTimeout(resolve, 0))
+
+    allParsed.push(...normalized)
+
+    parseProgress.value = Math.round(((i + 1) / chunks.length) * 100)
   }
-  
-  parsedContent.value = parsed
+
+  parsedContent.value = allParsed
 }
 
 const handleWordClick = (word: ParsedWord) => {
   selectedWord.value = word
   showWordModal.value = true
-  highlightTextInEpub(word.kanji)
 }
 
-const highlightTextInEpub = (word: string) => {
-  if (!rendition) return
-
-  const contents = (rendition.getContents() as unknown) as any[] || []
-  if (contents.length === 0) return
-
-  const iframe = contents[0]?.document
-  if (!iframe) return
-
-  const walker = document.createTreeWalker(
-    iframe.body,
-    NodeFilter.SHOW_TEXT,
-    null
-  )
-
-  let node: Node | null
-  while (node = walker.nextNode()) {
-    const text = node.textContent
-    if (!text) continue
-
-    const index = text.indexOf(word)
-    if (index !== -1) {
-      const parent = node.parentElement
-      if (!parent) continue
-
-      const range = iframe.createRange()
-      range.setStart(node, index)
-      range.setEnd(node, index + word.length)
-
-      const mark = iframe.createElement('mark')
-      mark.style.backgroundColor = 'yellow'
-      mark.style.color = 'black'
-
-      range.surroundContents(mark)
-      break
-    }
-  }
+const nextPage = () => {
+  if (!epubViewerRef.value) return
+  epubViewerRef.value.next()
 }
 
-const initBook = async () => {
-  if (!booksStore.currentBook || !viewerContainer.value) return
-
-  const arrayBuffer = base64ToArrayBuffer(booksStore.currentBook.path)
-  book = ePub(arrayBuffer)
-  
-  await book.ready
-
-  rendition = book.renderTo(viewerContainer.value, {
-    width: '100%',
-    height: '100%',
-    spread: 'none'
-  })
-
-  await rendition.display()
-
-  const navigation = await book.loaded.navigation
-  toc.value = navigation.toc
-
-  rendition.on('relocated', async (location: any) => {
-    if (book) {
-      const percent = book.locations.percentageFromCfi(location.start.cfi)
-      if (percent !== undefined) {
-        progress.value = percent * 100
-      }
-    }
-    
-    canGoPrev.value = !location.atStart
-    canGoNext.value = !location.atEnd
-    
-    await parseCurrentPage()
-  })
-
-  await book.locations.generate(1024)
-  await parseCurrentPage()
+const prevPage = () => {
+  if (!epubViewerRef.value) return
+  epubViewerRef.value.prev()
 }
 
-const nextPage = async () => {
-  if (rendition && !isLoading.value) {
-    await rendition.next()
-  }
-}
-
-const prevPage = async () => {
-  if (rendition && !isLoading.value) {
-    await rendition.prev()
-  }
-}
-
-const goToChapter = async (href: string) => {
-  if (rendition && !isLoading.value) {
-    await rendition.display(href)
-    showToc.value = false
-  }
+const goToChapter = (href: string) => {
+  if (!epubViewerRef.value) return
+  epubViewerRef.value.goTo(href)
+  showToc.value = false
 }
 
 onMounted(() => {
-  initBook()
+  if (!booksStore.currentBook) {
+    navigateTo('/books')
+  }
 })
 
 onUnmounted(() => {
   if (parseAbortController) {
     parseAbortController.abort()
-  }
-  if (rendition) {
-    rendition.destroy()
   }
 })
 </script>
