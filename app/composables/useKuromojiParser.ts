@@ -1,6 +1,8 @@
 import { useAnki } from '~/composables/useAnki'
 import type { ParsedSentence, ParsedWord } from '~/types/japanese'
 
+const BATCH_SIZE = 50
+
 export const useKuromojiParser = () => {
   const { knownWords, isWordKnown } = useAnki()
 
@@ -22,11 +24,9 @@ export const useKuromojiParser = () => {
       }
 
       const data = await response.json()
-
-
       const { lookupKanji } = useDictionaryStore()
 
-      const words = await Promise.all((data.words ?? []).map(async (word: any): Promise<ParsedWord> => {
+      const words = (data.words ?? []).map((word: any): ParsedWord => {
         const meaningEntries = lookupKanji(word.baseForm).join(', ')
 
         return {
@@ -40,7 +40,7 @@ export const useKuromojiParser = () => {
           pitchAccent: '',
           example: ''
         }
-      }))
+      })
 
       return words
     } catch (error) {
@@ -58,13 +58,22 @@ export const useKuromojiParser = () => {
   const parseSentences = async (sentences: Array<{ text: string; grammar?: string[] }>): Promise<ParsedSentence[]> => {
     const parsed: ParsedSentence[] = []
 
-    for (const sentence of sentences) {
-      const words = await parseText(sentence.text)
-      parsed.push({
-        text: sentence.text,
-        words,
-        grammar: sentence.grammar ?? []
-      })
+    for (let i = 0; i < sentences.length; i += BATCH_SIZE) {
+      const batch = sentences.slice(i, i + BATCH_SIZE)
+      
+      const batchResults = await Promise.all(
+        batch.map(async (sentence) => {
+          const words = await parseText(sentence.text)
+          return {
+            text: sentence.text,
+            words,
+            grammar: sentence.grammar ?? []
+          }
+        })
+      )
+      
+      parsed.push(...batchResults)
+      await new Promise(resolve => setTimeout(resolve, 0))
     }
 
     return parsed

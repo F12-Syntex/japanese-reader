@@ -21,7 +21,7 @@
       <div class="flex-1 overflow-y-auto p-8">
         <div v-if="isLoading" class="flex flex-col items-center justify-center h-full gap-4">
           <span class="loading loading-spinner loading-lg"></span>
-          <p class="text-sm text-base-content/70">Loading content...</p>
+          <p class="text-sm text-base-content/70">Parsing {{ parseProgress }}%...</p>
         </div>
         <div v-else-if="parsedContent.length === 0" class="flex items-center justify-center h-full">
           <p class="text-base-content/50">No text</p>
@@ -31,13 +31,13 @@
           :text="parsedContent"
           :settings="readerSettings"
           :streaming-text="''"
-          @word-highlighted="handleWordHighlight"
+          @word-click="handleWordClick"
         />
       </div>
 
       <div class="bg-base-100 border-t border-base-300 p-4">
         <div class="flex items-center justify-between">
-          <button @click="prevPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoPrev">
+          <button @click="prevPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoPrev || isLoading">
             <IconChevronLeft class="w-4 h-4" />
             Previous
           </button>
@@ -47,7 +47,7 @@
             <span class="text-sm">{{ Math.round(progress) }}%</span>
           </div>
           
-          <button @click="nextPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoNext">
+          <button @click="nextPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoNext || isLoading">
             Next
             <IconChevronRight class="w-4 h-4" />
           </button>
@@ -71,6 +71,8 @@
         </ul>
       </div>
     </div>
+
+    <ReaderWordModal v-model="showWordModal" :word="selectedWord" />
   </div>
 </template>
 
@@ -84,7 +86,10 @@ import { useReaderSettings } from '~/composables/useReaderSettings'
 import { useKuromojiParser } from '~/composables/useKuromojiParser'
 import ePub from 'epubjs'
 import type { Book, Rendition, NavItem } from 'epubjs'
-import type { ParsedSentence } from '~/types/japanese'
+import type { ParsedSentence, ParsedWord } from '~/types/japanese'
+
+const MAX_CHARS_PER_PARSE = 2000
+const CHUNK_SIZE = 500
 
 const booksStore = useBooksStore()
 const { settings: readerSettings } = useReaderSettings()
@@ -93,9 +98,13 @@ const { parseText } = useKuromojiParser()
 const viewerContainer = ref<HTMLElement | null>(null)
 const showToc = ref(false)
 const isLoading = ref(true)
+const showWordModal = ref(false)
+const selectedWord = ref<ParsedWord | null>(null)
+const parseProgress = ref(0)
 
 let book: Book | null = null
 let rendition: Rendition | null = null
+let parseAbortController: AbortController | null = null
 
 const toc = ref<NavItem[]>([])
 const progress = ref(0)
@@ -112,77 +121,130 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   return bytes.buffer
 }
 
-const isVerticalText = (element: HTMLElement): boolean => {
-  const computedStyle = window.getComputedStyle(element)
-  const writingMode = computedStyle.writingMode
-  return writingMode === 'vertical-rl' || writingMode === 'vertical-lr' || writingMode === 'tb-rl'
-}
+const extractVisibleText = (iframe: Document): string => {
+  const body = iframe.body
+  if (!body) return ''
 
-const extractTextRespectingLayout = (element: HTMLElement): string => {
-  if (isVerticalText(element)) {
-    const columns: string[] = []
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
-    let currentColumn = ''
-    let node: Node | null
-
-    while (node = walker.nextNode()) {
-      const text = node.textContent?.trim()
-      if (!text) continue
+  const range = iframe.createRange()
+  const windowHeight = body.clientHeight
+  
+  const textNodes: Array<{ node: Node; text: string; top: number }> = []
+  const walker = iframe.createTreeWalker(body, NodeFilter.SHOW_TEXT)
+  
+  let node: Node | null
+  while (node = walker.nextNode()) {
+    const text = node.textContent?.trim()
+    if (!text) continue
+    
+    const parent = node.parentElement
+    if (!parent) continue
+    
+    const style = iframe.defaultView?.getComputedStyle(parent)
+    if (style?.display === 'none' || style?.visibility === 'hidden') continue
+    
+    range.selectNodeContents(node)
+    const rects = range.getClientRects()
+    
+    for (let i = 0; i < rects.length; i++) {
+      const rect = rects[i]
+      if (!rect) continue
       
-      const parent = node.parentElement
-      if (!parent) continue
-
-      const rect = parent.getBoundingClientRect()
-      const isNewColumn = currentColumn && rect.right < element.getBoundingClientRect().right - 50
-      
-      if (isNewColumn) {
-        columns.push(currentColumn)
-        currentColumn = text
-      } else {
-        currentColumn += text
+      if (rect.top >= 0 && rect.top < windowHeight) {
+        textNodes.push({
+          node,
+          text,
+          top: rect.top
+        })
+        break
       }
     }
-
-    if (currentColumn) {
-      columns.push(currentColumn)
-    }
-
-    return columns.reverse().join('\n')
   }
+  
+  textNodes.sort((a, b) => a.top - b.top)
+  
+  return textNodes.map(n => n.text).join('')
+}
 
-  return element.textContent || ''
+const chunkText = (text: string, maxChars: number): string[] => {
+  if (text.length <= maxChars) return [text]
+  
+  const chunks: string[] = []
+  let start = 0
+  
+  while (start < text.length) {
+    let end = start + maxChars
+    
+    if (end < text.length) {
+      const sentenceEnd = text.slice(start, end).lastIndexOf('。')
+      if (sentenceEnd > maxChars * 0.5) {
+        end = start + sentenceEnd + 1
+      }
+    }
+    
+    chunks.push(text.slice(start, end))
+    start = end
+  }
+  
+  return chunks
 }
 
 const parseCurrentPage = async () => {
+  if (parseAbortController) {
+    parseAbortController.abort()
+  }
+  
+  parseAbortController = new AbortController()
+  const signal = parseAbortController.signal
+  
   if (!rendition) {
     isLoading.value = false
     return
   }
   
   isLoading.value = true
+  parseProgress.value = 0
   
-  const contents = (rendition.getContents() as unknown) as any[] || []
-  if (contents.length === 0) {
-    isLoading.value = false
-    return
-  }
+  try {
+    const contents = (rendition.getContents() as unknown) as any[] || []
+    if (contents.length === 0) {
+      isLoading.value = false
+      return
+    }
 
-  const bodyElement = contents[0]?.document?.body
-  if (!bodyElement) {
-    isLoading.value = false
-    return
-  }
+    const iframe = contents[0]?.document
+    if (!iframe) {
+      isLoading.value = false
+      return
+    }
 
-  const textContent = extractTextRespectingLayout(bodyElement)
-  
-  if (!textContent.trim()) {
-    parsedContent.value = []
-    isLoading.value = false
-    return
-  }
+    const textContent = extractVisibleText(iframe)
+    
+    if (!textContent.trim()) {
+      parsedContent.value = []
+      isLoading.value = false
+      return
+    }
 
-  const sentences = textContent
-    .split(/([。、！？．，])/g)
+    if (textContent.length > MAX_CHARS_PER_PARSE) {
+      const truncated = textContent.slice(0, MAX_CHARS_PER_PARSE) + '...'
+      await parseLargeText(truncated, signal)
+    } else {
+      await parseLargeText(textContent, signal)
+    }
+  } catch (error: any) {
+    if (error.name !== 'AbortError') {
+      console.error('Parse error:', error)
+      parsedContent.value = []
+    }
+  } finally {
+    isLoading.value = false
+    parseProgress.value = 0
+  }
+}
+
+const parseLargeText = async (text: string, signal: AbortSignal) => {
+  const sentences = text
+    .split(/([。、!?])/g)
     .reduce((acc: string[], curr, idx, arr) => {
       if (idx % 2 === 0 && curr.trim()) {
         const punctuation = arr[idx + 1] || ''
@@ -193,17 +255,48 @@ const parseCurrentPage = async () => {
     .filter(s => s.trim())
 
   const parsed: ParsedSentence[] = []
-  for (const sentence of sentences) {
-    const words = await parseText(sentence)
-    parsed.push({
-      text: sentence,
-      words,
-      grammar: []
-    })
+  const total = sentences.length
+  
+  for (let i = 0; i < sentences.length; i += CHUNK_SIZE) {
+    if (signal.aborted) throw new Error('AbortError')
+    
+    const chunk = sentences.slice(i, i + CHUNK_SIZE)
+    const combinedText = chunk.join('')
+    
+    const words = await parseText(combinedText)
+    
+    let wordIndex = 0
+    for (const sentence of chunk) {
+      const sentenceWords: ParsedWord[] = []
+      let charCount = 0
+      
+      while (charCount < sentence.length && wordIndex < words.length) {
+        const word = words[wordIndex]
+        if (!word) break
+        
+        sentenceWords.push(word)
+        charCount += word.kanji.length
+        wordIndex++
+      }
+      
+      parsed.push({
+        text: sentence,
+        words: sentenceWords,
+        grammar: []
+      })
+    }
+    
+    parseProgress.value = Math.round(((i + chunk.length) / total) * 100)
+    await new Promise(resolve => setTimeout(resolve, 0))
   }
   
   parsedContent.value = parsed
-  isLoading.value = false
+}
+
+const handleWordClick = (word: ParsedWord) => {
+  selectedWord.value = word
+  showWordModal.value = true
+  highlightTextInEpub(word.kanji)
 }
 
 const highlightTextInEpub = (word: string) => {
@@ -245,10 +338,6 @@ const highlightTextInEpub = (word: string) => {
   }
 }
 
-const handleWordHighlight = (sentenceIndex: number, wordIndex: number, word: string) => {
-  highlightTextInEpub(word)
-}
-
 const initBook = async () => {
   if (!booksStore.currentBook || !viewerContainer.value) return
 
@@ -287,46 +376,34 @@ const initBook = async () => {
 }
 
 const nextPage = async () => {
-  if (rendition) {
+  if (rendition && !isLoading.value) {
     await rendition.next()
   }
 }
 
 const prevPage = async () => {
-  if (rendition) {
+  if (rendition && !isLoading.value) {
     await rendition.prev()
   }
 }
 
 const goToChapter = async (href: string) => {
-  if (rendition) {
+  if (rendition && !isLoading.value) {
     await rendition.display(href)
-  }
-  showToc.value = false
-}
-
-const handleKeydown = async (e: KeyboardEvent) => {
-  if (e.key === 'ArrowLeft') {
-    e.preventDefault()
-    await prevPage()
-  } else if (e.key === 'ArrowRight') {
-    e.preventDefault()
-    await nextPage()
+    showToc.value = false
   }
 }
 
-onMounted(async () => {
-  await initBook()
-  window.addEventListener('keydown', handleKeydown)
+onMounted(() => {
+  initBook()
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleKeydown)
+onUnmounted(() => {
+  if (parseAbortController) {
+    parseAbortController.abort()
+  }
   if (rendition) {
     rendition.destroy()
-  }
-  if (book) {
-    book.destroy()
   }
 })
 </script>
