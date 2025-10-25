@@ -10,7 +10,10 @@ export const useReaderSettings = () => {
       localStorage.setItem('readerSettings', JSON.stringify(s))
     }, { deep: true })
   }
-  const settings = computed(() => store.settings)
+  const settings = computed(() => {
+    store.load();
+    return store.settings
+  })
   return {
     settings,
     loadSettings: () => store.load(),

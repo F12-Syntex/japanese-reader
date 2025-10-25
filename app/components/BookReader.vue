@@ -1,61 +1,79 @@
 <template>
-  <div class="h-full flex flex-col">
-    <div class="bg-base-100 border-b border-base-300 p-4">
-      <div class="flex items-center gap-4">
-        <button @click="navigateTo('/library')" class="btn btn-ghost btn-sm gap-2">
-          <IconArrowLeft class="w-4 h-4" />
-          Back to Library
-        </button>
-        <div class="flex-1">
-          <h2 class="text-xl font-bold">{{ booksStore.currentBook?.title }}</h2>
-          <p class="text-sm text-base-content/70">{{ booksStore.currentBook?.author }}</p>
+  <div class="h-full flex">
+    <div class="w-1/2 border-r border-base-300 flex flex-col">
+      <div class="bg-base-100 border-b border-base-300 p-4">
+        <div class="flex items-center gap-4">
+          <button @click="navigateTo('/books')" class="btn btn-ghost btn-sm gap-2">
+            <IconArrowLeft class="w-4 h-4" />
+            Back
+          </button>
+          <div class="flex-1">
+            <h2 class="text-xl font-bold">{{ booksStore.currentBook?.title }}</h2>
+            <p class="text-sm text-base-content/70">{{ booksStore.currentBook?.author }}</p>
+          </div>
+          <button @click="showToc = !showToc" class="btn btn-ghost btn-sm gap-2">
+            <IconList class="w-4 h-4" />
+            Chapters
+          </button>
         </div>
-        <button @click="showToc = !showToc" class="btn btn-ghost btn-sm gap-2">
-          <IconList class="w-4 h-4" />
-          Chapters
-        </button>
       </div>
-    </div>
 
-    <div class="drawer drawer-end flex-1">
-      <input id="toc-drawer" type="checkbox" class="drawer-toggle" v-model="showToc" />
-      <div class="drawer-content flex flex-col h-full">
-        <div class="flex-1 overflow-hidden flex items-center justify-center bg-base-200">
-          <div ref="viewerContainer" class="w-full max-w-4xl h-full bg-base-100"></div>
+      <div class="flex-1 overflow-y-auto p-8">
+        <div v-if="parsedContent.length === 0" class="flex items-center justify-center h-full">
+          <span class="loading loading-spinner loading-lg"></span>
         </div>
-        
-        <div class="bg-base-100 border-t border-base-300 p-4">
-          <div class="flex items-center justify-between max-w-4xl mx-auto">
-            <button @click="prevPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoPrev">
-              <IconChevronLeft class="w-4 h-4" />
-              Previous
-            </button>
-            
-            <div class="flex items-center gap-4">
-              <progress class="progress progress-primary w-64" :value="progress" max="100"></progress>
-              <span class="text-sm">{{ Math.round(progress) }}%</span>
-            </div>
-            
-            <button @click="nextPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoNext">
-              Next
-              <IconChevronRight class="w-4 h-4" />
-            </button>
+        <div v-else class="max-w-2xl mx-auto space-y-4">
+          <div v-for="(sentence, idx) in parsedContent" :key="idx" class="leading-relaxed">
+            <ReaderWord
+              v-for="(word, widx) in sentence.words"
+              :key="widx"
+              :word="word"
+              :settings="readerSettings"
+              :disable-hover="false"
+              @click="handleWordClick"
+            />
           </div>
         </div>
       </div>
-      
-      <div class="drawer-side z-10">
-        <label for="toc-drawer" class="drawer-overlay"></label>
-        <div class="menu p-4 w-80 min-h-full bg-base-100">
-          <h3 class="text-lg font-bold mb-4">Table of Contents</h3>
-          <ul class="menu bg-base-200 rounded-box">
-            <li v-for="(item, index) in toc" :key="index">
-              <a @click="goToChapter(item.href)" class="text-sm">{{ item.label }}</a>
-            </li>
-          </ul>
+
+      <div class="bg-base-100 border-t border-base-300 p-4">
+        <div class="flex items-center justify-between">
+          <button @click="prevPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoPrev">
+            <IconChevronLeft class="w-4 h-4" />
+            Previous
+          </button>
+          
+          <div class="flex items-center gap-4">
+            <progress class="progress progress-primary w-64" :value="progress" max="100"></progress>
+            <span class="text-sm">{{ Math.round(progress) }}%</span>
+          </div>
+          
+          <button @click="nextPage" class="btn btn-ghost btn-sm gap-2" :disabled="!canGoNext">
+            Next
+            <IconChevronRight class="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
+
+    <div class="w-1/2 flex flex-col bg-base-200">
+      <div class="flex-1 overflow-hidden flex items-center justify-center p-4">
+        <div ref="viewerContainer" class="w-full h-full bg-base-100 rounded-lg shadow-lg"></div>
+      </div>
+    </div>
+
+    <div v-if="showToc" class="fixed inset-0 bg-black/50 z-50" @click="showToc = false">
+      <div class="absolute right-0 top-0 bottom-0 w-80 bg-base-100 shadow-xl p-4" @click.stop>
+        <h3 class="text-lg font-bold mb-4">Table of Contents</h3>
+        <ul class="menu bg-base-200 rounded-box">
+          <li v-for="(item, index) in toc" :key="index">
+            <a @click="goToChapter(item.href)" class="text-sm">{{ item.label }}</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <ReaderWordModal v-model="showWordModal" :word="selectedWord" />
   </div>
 </template>
 
@@ -65,14 +83,20 @@ import IconChevronLeft from '~icons/lucide/chevron-left'
 import IconChevronRight from '~icons/lucide/chevron-right'
 import IconList from '~icons/lucide/list'
 import { useBooksStore } from '~/stores/useBooksStore'
+import { useReaderSettings } from '~/composables/useReaderSettings'
+import { useKuromojiParser } from '~/composables/useKuromojiParser'
 import ePub from 'epubjs'
 import type { Book, Rendition, NavItem } from 'epubjs'
-import { h, render } from 'vue'
-import JapaneseText from '~/components/JapaneseText.vue'
+import type { ParsedSentence, ParsedWord } from '~/types/japanese'
 
 const booksStore = useBooksStore()
+const { settings: readerSettings } = useReaderSettings()
+const { parseText } = useKuromojiParser()
+
 const viewerContainer = ref<HTMLElement | null>(null)
 const showToc = ref(false)
+const showWordModal = ref(false)
+const selectedWord = ref<ParsedWord | null>(null)
 
 let book: Book | null = null
 let rendition: Rendition | null = null
@@ -81,6 +105,7 @@ const toc = ref<NavItem[]>([])
 const progress = ref(0)
 const canGoPrev = ref(false)
 const canGoNext = ref(true)
+const parsedContent = ref<ParsedSentence[]>([])
 
 const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   const binaryString = atob(base64)
@@ -91,42 +116,48 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   return bytes.buffer
 }
 
-const wrapJapaneseText = (element: Element) => {
-  const walker = document.createTreeWalker(
-    element,
-    NodeFilter.SHOW_TEXT,
-    null
-  )
+const extractTextFromHtml = (html: string): string => {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
 
-  const nodesToReplace: { node: Node; text: string }[] = []
+const parseCurrentPage = async () => {
+  if (!rendition) return
   
-  let node
-  while (node = walker.nextNode()) {
-    if (node.textContent && node.textContent.trim()) {
-      nodesToReplace.push({ node, text: node.textContent })
-    }
-  }
+  const contents = rendition.getContents()
+  if (contents.length === 0) return
 
-  nodesToReplace.forEach(({ node, text }) => {
-    const fragment = document.createDocumentFragment()
-    
-    for (const char of text) {
-      if (char.trim()) {
-        const container = document.createElement('span')
-        const vnode = h(JapaneseText, {}, () => char)
-        render(vnode, container)
-        if (container.firstChild) {
-          fragment.appendChild(container.firstChild)
-        }
-      } else {
-        fragment.appendChild(document.createTextNode(char))
+  const htmlContent = contents[0].document.body.innerHTML
+  const textContent = extractTextFromHtml(htmlContent)
+  
+  const sentences = textContent
+    .split(/([。!?])/g)
+    .reduce((acc: string[], curr, idx, arr) => {
+      if (idx % 2 === 0 && curr.trim()) {
+        const punctuation = arr[idx + 1] || ''
+        acc.push(curr + punctuation)
       }
-    }
-    
-    if (node.parentNode) {
-      node.parentNode.replaceChild(fragment, node)
-    }
-  })
+      return acc
+    }, [])
+    .filter(s => s.trim())
+
+  const parsed: ParsedSentence[] = []
+  for (const sentence of sentences) {
+    const words = await parseText(sentence)
+    parsed.push({
+      text: sentence,
+      words,
+      grammar: []
+    })
+  }
+  
+  parsedContent.value = parsed
+}
+
+const handleWordClick = (word: ParsedWord) => {
+  selectedWord.value = word
+  showWordModal.value = true
 }
 
 const initBook = async () => {
@@ -143,19 +174,12 @@ const initBook = async () => {
     spread: 'none'
   })
 
-  rendition.hooks.content.register((contents: any) => {
-    const body = contents.document.body
-    if (body) {
-      wrapJapaneseText(body)
-    }
-  })
-
   await rendition.display()
 
   const navigation = await book.loaded.navigation
   toc.value = navigation.toc
 
-  rendition.on('relocated', (location: any) => {
+  rendition.on('relocated', async (location: any) => {
     if (book) {
       const percent = book.locations.percentageFromCfi(location.start.cfi)
       if (percent !== undefined) {
@@ -165,37 +189,40 @@ const initBook = async () => {
     
     canGoPrev.value = !location.atStart
     canGoNext.value = !location.atEnd
+    
+    await parseCurrentPage()
   })
 
   await book.locations.generate(1024)
+  await parseCurrentPage()
 }
 
-const nextPage = () => {
+const nextPage = async () => {
   if (rendition) {
-    rendition.next()
+    await rendition.next()
   }
 }
 
-const prevPage = () => {
+const prevPage = async () => {
   if (rendition) {
-    rendition.prev()
+    await rendition.prev()
   }
 }
 
-const goToChapter = (href: string) => {
+const goToChapter = async (href: string) => {
   if (rendition) {
-    rendition.display(href)
+    await rendition.display(href)
   }
   showToc.value = false
 }
 
-const handleKeydown = (e: KeyboardEvent) => {
+const handleKeydown = async (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft') {
     e.preventDefault()
-    prevPage()
+    await prevPage()
   } else if (e.key === 'ArrowRight') {
     e.preventDefault()
-    nextPage()
+    await nextPage()
   }
 }
 
