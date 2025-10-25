@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-100 border-b border-base-300 p-4">
       <div class="flex items-center gap-4">
-        <button @click="$emit('close')" class="btn btn-ghost btn-sm gap-2">
+        <button @click="navigateTo('/library')" class="btn btn-ghost btn-sm gap-2">
           <IconArrowLeft class="w-4 h-4" />
           Back to Library
         </button>
@@ -67,10 +67,8 @@ import IconList from '~icons/lucide/list'
 import { useBooksStore } from '~/stores/useBooksStore'
 import ePub from 'epubjs'
 import type { Book, Rendition, NavItem } from 'epubjs'
-
-defineEmits<{
-  close: []
-}>()
+import { h, render } from 'vue'
+import JapaneseText from '~/components/JapaneseText.vue'
 
 const booksStore = useBooksStore()
 const viewerContainer = ref<HTMLElement | null>(null)
@@ -93,6 +91,44 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
   return bytes.buffer
 }
 
+const wrapJapaneseText = (element: Element) => {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null
+  )
+
+  const nodesToReplace: { node: Node; text: string }[] = []
+  
+  let node
+  while (node = walker.nextNode()) {
+    if (node.textContent && node.textContent.trim()) {
+      nodesToReplace.push({ node, text: node.textContent })
+    }
+  }
+
+  nodesToReplace.forEach(({ node, text }) => {
+    const fragment = document.createDocumentFragment()
+    
+    for (const char of text) {
+      if (char.trim()) {
+        const container = document.createElement('span')
+        const vnode = h(JapaneseText, {}, () => char)
+        render(vnode, container)
+        if (container.firstChild) {
+          fragment.appendChild(container.firstChild)
+        }
+      } else {
+        fragment.appendChild(document.createTextNode(char))
+      }
+    }
+    
+    if (node.parentNode) {
+      node.parentNode.replaceChild(fragment, node)
+    }
+  })
+}
+
 const initBook = async () => {
   if (!booksStore.currentBook || !viewerContainer.value) return
 
@@ -107,15 +143,24 @@ const initBook = async () => {
     spread: 'none'
   })
 
+  rendition.hooks.content.register((contents: any) => {
+    const body = contents.document.body
+    if (body) {
+      wrapJapaneseText(body)
+    }
+  })
+
   await rendition.display()
 
   const navigation = await book.loaded.navigation
   toc.value = navigation.toc
 
   rendition.on('relocated', (location: any) => {
-    const percent = book?.locations.percentageFromCfi(location.start.cfi)
-    if (percent !== undefined) {
-      progress.value = percent * 100
+    if (book) {
+      const percent = book.locations.percentageFromCfi(location.start.cfi)
+      if (percent !== undefined) {
+        progress.value = percent * 100
+      }
     }
     
     canGoPrev.value = !location.atStart
@@ -126,15 +171,21 @@ const initBook = async () => {
 }
 
 const nextPage = () => {
-  rendition?.next()
+  if (rendition) {
+    rendition.next()
+  }
 }
 
 const prevPage = () => {
-  rendition?.prev()
+  if (rendition) {
+    rendition.prev()
+  }
 }
 
 const goToChapter = (href: string) => {
-  rendition?.display(href)
+  if (rendition) {
+    rendition.display(href)
+  }
   showToc.value = false
 }
 
@@ -155,7 +206,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
-  rendition?.destroy()
-  book?.destroy()
+  if (rendition) {
+    rendition.destroy()
+  }
+  if (book) {
+    book.destroy()
+  }
 })
 </script>
