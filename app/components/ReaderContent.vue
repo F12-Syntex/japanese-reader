@@ -32,7 +32,7 @@
             :key="wIndex"
             :word="word"
             :settings="settings"
-            :disable-hover="isCtrlPressed || hasSelection"
+            :disable-hover="isCtrlPressed || hasSelection || showSelectionTooltip"
             :is-grammar-highlighted="settings.highlightGrammar && isWordGrammarHighlighted(word, sentence.grammar)"
             @click="handleWordClick(word)"
           />
@@ -58,6 +58,7 @@
         ref="selectionTooltipRef"
         class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
         :style="selectionTooltipPosition"
+        @click.stop
       >
         <div
           class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
@@ -187,7 +188,7 @@ const handleSentenceClick = (index: number, sentence: ParsedSentence, event: Mou
 }
 
 const handleWordClick = (word: ParsedWord, event?: MouseEvent) => {
-  if (!isCtrlPressed.value && !hasSelection.value) {
+  if (!isCtrlPressed.value && !hasSelection.value && !showSelectionTooltip.value) {
     emit('word-click', word, event)
   }
 }
@@ -258,7 +259,7 @@ const fetchTranslation = async (text: string) => {
       }
     })
 
-    if (response && response.analysis && typeof response.analysis.translation === 'string') {
+    if (response?.analysis?.translation) {
       translationText.value = response.analysis.translation
     }
   } catch (error) {
@@ -309,63 +310,39 @@ const onSelectionTooltipMouseEnter = () => {
 
 const onSelectionTooltipMouseLeave = () => {
   keepSelectionTooltip = false
-  showSelectionTooltip.value = false
-  hasSelection.value = false
-  selectedText.value = ''
-  currentSelectionText = ''
-  translationText.value = 'Placeholder'
-  if (window.getSelection()) {
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (!showSelectionTooltip.value) return
+
+  const target = event.target as Node
+  if (selectionTooltipRef.value && !selectionTooltipRef.value.contains(target)) {
+    showSelectionTooltip.value = false
+    hasSelection.value = false
+    selectedText.value = ''
+    currentSelectionText = ''
+    keepSelectionTooltip = false
     window.getSelection()?.removeAllRanges()
   }
 }
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.ctrlKey || e.metaKey) {
-    isCtrlPressed.value = true
-  }
-}
-
-const handleKeyUp = (e: KeyboardEvent) => {
-  if (!e.ctrlKey && !e.metaKey) {
-    isCtrlPressed.value = false
-  }
-}
-
-const handleClickOutside = (e: MouseEvent) => {
-  if (showSelectionTooltip.value && !keepSelectionTooltip) {
-    const target = e.target as HTMLElement
-    if (!selectionTooltipRef.value?.contains(target)) {
-      showSelectionTooltip.value = false
-      hasSelection.value = false
-      selectedText.value = ''
-      currentSelectionText = ''
-      translationText.value = 'Placeholder'
-      if (window.getSelection()) {
-        window.getSelection()?.removeAllRanges()
-      }
-    }
-  }
-}
-
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('keyup', handleKeyUp)
-  window.addEventListener('mousedown', handleClickOutside)
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      isCtrlPressed.value = true
+    }
+  })
+
+  document.addEventListener('keyup', (e: KeyboardEvent) => {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      isCtrlPressed.value = false
+    }
+  })
+
+  document.addEventListener('mousedown', handleClickOutside)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('keyup', handleKeyUp)
-  window.removeEventListener('mousedown', handleClickOutside)
-  if (selectionTooltipTimeout) {
-    clearTimeout(selectionTooltipTimeout)
-  }
+  document.removeEventListener('mousedown', handleClickOutside)
 })
 </script>
-
-<style scoped>
-.writing-mode-vertical-rl {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-}
-</style>

@@ -1,135 +1,3 @@
-<template>
-  <span
-    ref="wrapperRef"
-    class="inline-block relative transition-all"
-    :class="{ 'mx-1': settings?.alwaysShowTranslation }"
-    :style="wordContainerStyle"
-    @click="handleClick"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
-  >
-    <span
-      v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle"
-      class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
-      :style="translationStyle"
-    >
-      {{ truncateMeaning(displayMeaning) }}
-    </span>
-
-    <span
-      class="inline-block relative transition-colors duration-150"
-      :class="{ 'rounded-md': !isParticle && word?.kanji && !disableHover }"
-    >
-      <ruby class="[ruby-align:center]">
-        <span
-          class="transition-colors duration-150 px-0.5 rounded-sm"
-          :class="highlightClass"
-          :style="[surfaceClampStyle, opacityAndDecorationStyle]"
-        >
-          <span class="align-middle leading-none">
-            {{ word?.kanji }}
-          </span>
-        </span>
-        <rt
-          v-if="!isParticle && settings?.showFurigana && word?.kana !== word?.kanji"
-          class="select-none transition-opacity duration-150 opacity-70"
-          :style="furiganaStyle"
-        >
-          {{ word?.kana }}
-        </rt>
-      </ruby>
-
-      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isMobile" to="body">
-        <div
-          ref="tooltipRef"
-          class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
-          :style="tooltipPosition"
-        >
-          <div
-            class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
-            :style="arrowStyle"
-          ></div>
-
-          <div
-            class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
-            :class="tooltipTextSize"
-            style="max-width:min(88vw,28rem)"
-            @mouseenter="onTooltipMouseEnter"
-            @mouseleave="onTooltipMouseLeave"
-          >
-            <div class="h-1.5 bg-primary"></div>
-
-            <div class="p-4 sm:p-5">
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2.5 mb-1">
-                    <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
-                      {{ localWord.kanji }}
-                    </div>
-                    <div
-                      v-if="enrichedMeaning?.jlptLevel"
-                      class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
-                    >
-                      {{ enrichedMeaning.jlptLevel }}
-                    </div>
-                  </div>
-                  <div v-if="enrichedMeaning?.reading || localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
-                    {{ enrichedMeaning?.reading || localWord.reading }}
-                  </div>
-                </div>
-
-                <div
-                  v-if="(settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)) || localWord.isKnown !== undefined"
-                  class="flex flex-col gap-2 items-end shrink-0"
-                >
-                  <span
-                    v-if="settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)"
-                    class="badge badge-neutral badge-sm font-semibold"
-                  >
-                    {{ enrichedMeaning?.pos || localWord.pos }}
-                  </span>
-                  <span
-                    v-if="localWord.isKnown !== undefined"
-                    class="badge badge-sm font-semibold"
-                    :class="localWord.isKnown
-                      ? 'badge-success badge-outline'
-                      : 'badge-warning badge-outline'"
-                  >
-                    {{ localWord.isKnown ? 'Known' : 'Learning' }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="divider my-2"></div>
-
-              <div class="mb-3">
-                <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
-                  {{ displayMeaning || 'No meaning available' }}
-                </p>
-              </div>
-
-              <div
-                v-if="showTooltipExtras"
-                class="space-y-2.5 pt-2 border-t border-base-300"
-              >
-                <div v-if="settings?.showPitchAccent && (enrichedMeaning?.pitchAccent || localWord.pitchAccent)" class="flex items-center gap-2">
-                  <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
-                  <span class="text-sm font-medium text-base-content">{{ enrichedMeaning?.pitchAccent || localWord.pitchAccent }}</span>
-                </div>
-                <div v-if="settings?.showExample && (enrichedMeaning?.example || localWord.example)" class="alert alert-info py-2 px-3">
-                  <p class="text-sm leading-relaxed italic">
-                    "{{ enrichedMeaning?.example || localWord.example }}"
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </teleport>
-    </span>
-  </span>
-</template>
-
 <script setup lang="ts">
 import { nextTick, computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import type { ParsedWord } from '~/types/japanese'
@@ -298,108 +166,271 @@ const truncateMeaning = (meaning: string): string => {
 
   if (cleaned.length > 0) {
     firstMeaning = cleaned[0] ?? ''
-  } else {
-    const words = meaning.trim().split(/\s+/)
-    firstMeaning = words[0] || ''
   }
 
   if (firstMeaning.length > maxLength) {
-    firstMeaning = firstMeaning.substring(0, maxLength) + '...'
+    return firstMeaning.substring(0, maxLength) + '...'
   }
-
   return firstMeaning
 }
 
-const calculateTooltipPosition = (): void => {
-  if (!wrapperRef.value || !tooltipRef.value) return
+const positionTooltip = () => {
+  nextTick(() => {
+    if (!wrapperRef.value || !tooltipRef.value) return
 
-  const rect = wrapperRef.value.getBoundingClientRect()
-  const tooltipRect = tooltipRef.value.getBoundingClientRect()
-  const gap = 16
+    const wordRect = wrapperRef.value.getBoundingClientRect()
+    const tooltipRect = tooltipRef.value.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
 
-  let top = rect.top - tooltipRect.height - gap
-  let bottom: number | null = null
-  arrowPosition.value = 'bottom'
+    const spaceAbove = wordRect.top
+    const spaceBelow = viewportHeight - wordRect.bottom
 
-  if (top < gap) {
-    top = rect.bottom + gap
-    arrowPosition.value = 'top'
-    bottom = null
-  }
+    let top = 0
+    if (spaceBelow >= tooltipRect.height + 20) {
+      arrowPosition.value = 'top'
+      top = wordRect.bottom + 12
+    } else if (spaceAbove >= tooltipRect.height + 20) {
+      arrowPosition.value = 'bottom'
+      top = wordRect.top - tooltipRect.height - 12
+    } else {
+      arrowPosition.value = 'bottom'
+      top = Math.max(10, wordRect.top - tooltipRect.height - 12)
+    }
 
-  let left = rect.left + rect.width / 2 - tooltipRect.width / 2
+    let left = wordRect.left + wordRect.width / 2
 
-  const minMargin = 8
-  if (left < minMargin) {
-    left = minMargin
-  } else if (left + tooltipRect.width > window.innerWidth - minMargin) {
-    left = window.innerWidth - tooltipRect.width - minMargin
-  }
+    if (left + tooltipRect.width / 2 > viewportWidth - 10) {
+      left = viewportWidth - tooltipRect.width / 2 - 10
+    }
+    if (left - tooltipRect.width / 2 < 10) {
+      left = tooltipRect.width / 2 + 10
+    }
 
-  tooltipPosition.value = {
-    top: top > 0 ? `${top}px` : 'auto',
-    bottom: bottom !== null ? `${bottom}px` : 'auto',
-    left: `${left}px`
-  }
+    tooltipPosition.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+      transform: 'translateX(-50%)'
+    }
+  })
 }
 
-const handleMouseEnter = async (): Promise<void> => {
-  if (props.disableHover || isParticle.value || isMobile.value) return
-
-  if (tooltipTimeout) clearTimeout(tooltipTimeout)
-
-  const delay = Math.max(0, Math.min(1000, props.settings?.tooltipDelay ?? 10))
-
-  tooltipTimeout = setTimeout(async () => {
-    showTooltip.value = true
-    await nextTick()
-    calculateTooltipPosition()
-  }, delay)
+const handleClick = (event: MouseEvent) => {
+  emit('click', localWord.value, event)
 }
 
-const handleMouseLeave = (): void => {
-  if (tooltipTimeout) clearTimeout(tooltipTimeout)
+const handleMouseEnter = () => {
+  if (props.disableHover) return
+  
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout)
+  }
+
+  tooltipTimeout = setTimeout(() => {
+    if (!keepTooltip && !props.disableHover) {
+      showTooltip.value = true
+      positionTooltip()
+      enrichWordData()
+    }
+  }, props.settings?.tooltipDelay || 300)
+}
+
+const handleMouseLeave = () => {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout)
+    tooltipTimeout = null
+  }
 
   if (!keepTooltip) {
     showTooltip.value = false
   }
 }
 
-const handleClick = (event: MouseEvent): void => {
-  emit('click', props.word, event)
-}
-
-const onTooltipMouseEnter = (): void => {
+const onTooltipMouseEnter = () => {
   keepTooltip = true
 }
 
-const onTooltipMouseLeave = (): void => {
+const onTooltipMouseLeave = () => {
   keepTooltip = false
   showTooltip.value = false
 }
 
-watch(() => props.word, (newWord) => {
-  if (newWord) {
-    localWord.value = { ...newWord }
+const enrichWordData = async () => {
+  const kanji = localWord.value?.kanji ?? ''
+  if (!kanji || metadataStore.hasWord(kanji)) return
+
+  try {
+    const { getApiKey } = useOpenAI()
+    const apiKey = getApiKey()
+    if (!apiKey) return
+
+    const response = await $fetch<{ data?: Record<string, any> }>('/api/word-metadata', {
+      method: 'POST',
+      body: {
+        apiKey,
+        words: [kanji],
+        model: 'gpt-4o-mini'
+      }
+    })
+
+    if (response?.data && response.data[kanji]) {
+      const metadata = { kanji, ...response.data[kanji] }
+      metadataStore.setWord(kanji, metadata)
+    }
+  } catch (error) {
+    console.error('Failed to enrich word data:', error)
   }
+}
+
+watch(() => props.word, (newWord) => {
+  localWord.value = { ...newWord }
 }, { deep: true })
 
-watch(() => tooltipRef.value, async () => {
-  if (showTooltip.value) {
-    await nextTick()
-    calculateTooltipPosition()
+watch(() => props.disableHover, (disabled) => {
+  if (disabled) {
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout)
+      tooltipTimeout = null
+    }
+    showTooltip.value = false
+    keepTooltip = false
   }
 })
 
 onMounted(() => {
   metadataStore.loadCache()
-  isMobile.value = window.innerWidth < 768
-  window.addEventListener('resize', () => {
-    isMobile.value = window.innerWidth < 768
-  })
-})
-
-onUnmounted(() => {
-  if (tooltipTimeout) clearTimeout(tooltipTimeout)
+  isMobile.value = 'ontouchstart' in window
 })
 </script>
+
+<template>
+  <span
+    ref="wrapperRef"
+    class="inline-block relative transition-all"
+    :class="{ 'mx-1': settings?.alwaysShowTranslation }"
+    :style="wordContainerStyle"
+    @click="handleClick"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+  >
+    <span
+      v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle"
+      class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
+      :style="translationStyle"
+    >
+      {{ truncateMeaning(displayMeaning) }}
+    </span>
+
+    <span
+      class="inline-block relative transition-colors duration-150"
+      :class="{ 'rounded-md': !isParticle && word?.kanji && !disableHover }"
+    >
+      <ruby class="[ruby-align:center]">
+        <span
+          class="transition-colors duration-150 px-0.5 rounded-sm"
+          :class="highlightClass"
+          :style="[surfaceClampStyle, opacityAndDecorationStyle]"
+        >
+          <span class="align-middle leading-none">
+            {{ word?.kanji }}
+          </span>
+        </span>
+        <rt
+          v-if="!isParticle && settings?.showFurigana && word?.kana !== word?.kanji"
+          class="select-none transition-opacity duration-150 opacity-70"
+          :style="furiganaStyle"
+        >
+          {{ word?.kana }}
+        </rt>
+      </ruby>
+
+      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isMobile" to="body">
+        <div
+          ref="tooltipRef"
+          class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
+          :style="tooltipPosition"
+        >
+          <div
+            class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
+            :style="arrowStyle"
+          ></div>
+
+          <div
+            class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
+            :class="tooltipTextSize"
+            style="max-width:min(88vw,28rem)"
+            @mouseenter="onTooltipMouseEnter"
+            @mouseleave="onTooltipMouseLeave"
+          >
+            <div class="h-1.5 bg-primary"></div>
+
+            <div class="p-4 sm:p-5">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2.5 mb-1">
+                    <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
+                      {{ localWord.kanji }}
+                    </div>
+                    <div
+                      v-if="enrichedMeaning?.jlptLevel"
+                      class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
+                    >
+                      {{ enrichedMeaning.jlptLevel }}
+                    </div>
+                  </div>
+                  <div v-if="enrichedMeaning?.reading || localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
+                    {{ enrichedMeaning?.reading || localWord.reading }}
+                  </div>
+                </div>
+
+                <div
+                  v-if="(settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)) || localWord.isKnown !== undefined"
+                  class="flex flex-col gap-2 items-end shrink-0"
+                >
+                  <span
+                    v-if="settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)"
+                    class="badge badge-neutral badge-sm font-semibold"
+                  >
+                    {{ enrichedMeaning?.pos || localWord.pos }}
+                  </span>
+                  <span
+                    v-if="localWord.isKnown !== undefined"
+                    class="badge badge-sm font-semibold"
+                    :class="localWord.isKnown
+                      ? 'badge-success badge-outline'
+                      : 'badge-warning badge-outline'"
+                  >
+                    {{ localWord.isKnown ? 'Known' : 'Learning' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="divider my-2"></div>
+
+              <div class="mb-3">
+                <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
+                  {{ displayMeaning || 'No meaning available' }}
+                </p>
+              </div>
+
+              <div
+                v-if="showTooltipExtras"
+                class="space-y-2.5 pt-2 border-t border-base-300"
+              >
+                <div v-if="settings?.showPitchAccent && (enrichedMeaning?.pitchAccent || localWord.pitchAccent)" class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
+                  <span class="text-sm font-medium text-base-content">{{ enrichedMeaning?.pitchAccent || localWord.pitchAccent }}</span>
+                </div>
+                <div v-if="settings?.showExample && (enrichedMeaning?.example || localWord.example)" class="alert alert-info py-2 px-3">
+                  <p class="text-sm leading-relaxed italic">
+                    "{{ enrichedMeaning?.example || localWord.example }}"
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </teleport>
+    </span>
+  </span>
+</template>
