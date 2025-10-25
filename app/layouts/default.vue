@@ -46,6 +46,7 @@ const activeTab = computed((): string => {
   if (path === '/config') return 'config'
   if (path === '/stats') return 'stats'
   if (path === '/grammar-catalog') return 'grammar'
+  if (path.startsWith('/books')) return 'books'
   return 'reader'
 })
 
@@ -53,6 +54,7 @@ const navigateToTab = (tab: string): void => {
   if (tab === 'config') navigateTo('/config')
   else if (tab === 'stats') navigateTo('/stats')
   else if (tab === 'grammar') navigateTo('/grammar-catalog')
+  else if (tab === 'books') navigateTo('/books')
   else navigateTo('/')
 }
 

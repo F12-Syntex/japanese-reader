@@ -12,6 +12,15 @@
 
       <button 
         class="tab flex items-center gap-2" 
+        :class="{ 'tab-active text-primary': activeTab === 'books' }"
+        @click="updateTab('books')"
+      >
+        <IconBookText class="w-5 h-5" />
+        <span>Books</span>
+      </button>
+
+      <button 
+        class="tab flex items-center gap-2" 
         :class="{ 'tab-active text-primary': activeTab === 'grammar' }"
         @click="updateTab('grammar')"
       >
@@ -34,6 +43,9 @@
         <button :class="{ active: activeTab === 'reader' }" @click="updateTab('reader')">
           <IconBook class="w-5 h-5" />
         </button>
+        <button :class="{ active: activeTab === 'books' }" @click="updateTab('books')">
+          <IconBooks class="w-5 h-5" />
+        </button>
         <button :class="{ active: activeTab === 'grammar' }" @click="updateTab('grammar')">
           <IconBookOpen class="w-5 h-5" />
         </button>
@@ -52,6 +64,7 @@
 <script setup lang="ts">
 import IconBook from '~icons/lucide/book-open'
 import IconBookOpen from '~icons/lucide/book'
+import IconBookText from '~icons/lucide/book-text'
 import IconSettings from '~icons/lucide/settings'
 import IconBarChart from '~icons/lucide/bar-chart-3'
 import ThemeSwitcher from '~/components/ThemeSwitcher.vue'
