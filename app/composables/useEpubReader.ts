@@ -1,26 +1,24 @@
-import ePub, { Book, type NavItem } from 'epubjs'
+import ePub, { Book, type NavItem, Rendition } from 'epubjs'
 
 interface EpubPage {
   content: string
   chapterTitle: string
   chapterHref: string
-  pageNumber: number
-  isChapterStart: boolean
+  cfi: string
 }
 
 export const useEpubReader = () => {
   const book = ref<Book | null>(null)
-  const pages = ref<EpubPage[]>([])
+  const rendition = ref<Rendition | null>(null)
+  const pages = ref<string[]>([])
   const currentPageIndex = ref(0)
   const toc = ref<NavItem[]>([])
   const isLoading = ref(false)
   const progress = ref(0)
   const totalPages = computed(() => pages.value.length)
-  const currentPage = computed(() => pages.value[currentPageIndex.value])
-  const canGoNext = computed(() => currentPageIndex.value < totalPages.value - 1)
-  const canGoPrev = computed(() => currentPageIndex.value > 0)
-
-  const CHARS_PER_PAGE = 400
+  const currentPage = ref<EpubPage | null>(null)
+  const canGoNext = ref(false)
+  const canGoPrev = ref(false)
 
   const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
     const binaryString = atob(base64)
@@ -31,31 +29,9 @@ export const useEpubReader = () => {
     return bytes.buffer
   }
 
-  const splitIntoPages = (text: string, chapterTitle: string, chapterHref: string, startPageNumber: number, isChapterStart: boolean): EpubPage[] => {
-    const cleanText = text.trim()
-    if (!cleanText) return []
-
-    const pageList: EpubPage[] = []
-    
-    for (let i = 0; i < cleanText.length; i += CHARS_PER_PAGE) {
-      const chunk = cleanText.slice(i, i + CHARS_PER_PAGE)
-      pageList.push({
-        content: chunk,
-        chapterTitle,
-        chapterHref,
-        pageNumber: startPageNumber + pageList.length,
-        isChapterStart: isChapterStart && i === 0
-      })
-    }
-    
-    return pageList
-  }
-
   const loadEpub = async (pathOrBase64: string) => {
     isLoading.value = true
     progress.value = 0
-    pages.value = []
-    currentPageIndex.value = 0
 
     try {
       const isBase64 = !pathOrBase64.startsWith('http') && !pathOrBase64.startsWith('/')
@@ -72,26 +48,33 @@ export const useEpubReader = () => {
       const navigation = await book.value.loaded.navigation
       toc.value = navigation.toc
 
-      const spine = await book.value.loaded.spine
-      const spineItems = Array.isArray(spine) ? spine : (spine as any).spineItems ?? []
+      const container = document.createElement('div')
+      container.style.width = '800px'
+      container.style.height = '600px'
+      container.style.position = 'absolute'
+      container.style.visibility = 'hidden'
+      document.body.appendChild(container)
 
-      let pageCounter = 0
+      rendition.value = book.value.renderTo(container, {
+        width: 800,
+        height: 600,
+        spread: 'none',
+        flow: 'paginated'
+      })
 
-      for (let i = 0; i < spineItems.length; i++) {
-        const item = spineItems[i]
-        if (!item) continue
+      await rendition.value.display()
 
-        const doc = await book.value.load(item.href) as Document
-        const text = doc.body?.textContent || ''
-        
-        const chapterTitle = toc.value.find(t => t.href === item.href)?.label || `Chapter ${i + 1}`
-        
-        const chapterPages = splitIntoPages(text, chapterTitle, item.href, pageCounter, true)
-        pages.value.push(...chapterPages)
-        
-        pageCounter += chapterPages.length
-        progress.value = Math.round(((i + 1) / spineItems.length) * 100)
+      const spine = book.value.spine as any
+      const locations = await book.value.locations.generate(1600)
+      pages.value = locations
+
+      document.body.removeChild(container)
+
+      if (pages.value.length > 0) {
+        await goToPage(0)
       }
+
+      progress.value = 100
     } catch (error) {
       console.error('Failed to load epub:', error)
       throw error
@@ -100,38 +83,126 @@ export const useEpubReader = () => {
     }
   }
 
-  const nextPage = () => {
-    if (canGoNext.value) {
-      currentPageIndex.value++
+  const extractPageContent = async (cfi: string): Promise<EpubPage> => {
+    if (!book.value || !rendition.value) {
+      return {
+        content: '',
+        chapterTitle: '',
+        chapterHref: '',
+        cfi
+      }
+    }
+
+    const range = await book.value.getRange(cfi)
+    if (!range) {
+      return {
+        content: '',
+        chapterTitle: '',
+        chapterHref: '',
+        cfi
+      }
+    }
+
+    const container = range.commonAncestorContainer
+    const element = container.nodeType === Node.ELEMENT_NODE 
+      ? container as HTMLElement 
+      : container.parentElement
+
+    if (!element) {
+      return {
+        content: '',
+        chapterTitle: '',
+        chapterHref: '',
+        cfi
+      }
+    }
+
+    const section = book.value.spine.get(cfi)
+    const chapterHref = section?.href || ''
+    const chapterTitle = toc.value.find(t => t.href === chapterHref)?.label || ''
+
+    const clonedElement = element.cloneNode(true) as HTMLElement
+    
+    const images = clonedElement.querySelectorAll('img')
+    for (const img of Array.from(images)) {
+      const src = img.getAttribute('src')
+      if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+        try {
+          let url: string
+          try {
+            // Use single-argument resolve to satisfy typings
+            url = book.value.resolve(src)
+          } catch {
+            // Fallback: resolve relative to the chapterHref or current location
+            url = new URL(src, chapterHref || window.location.href).toString()
+          }
+          img.setAttribute('src', url)
+        } catch (e) {
+          console.error('Failed to resolve image:', src, e)
+        }
+      }
+    }
+
+    const content = clonedElement.innerHTML || clonedElement.textContent || ''
+
+    return {
+      content,
+      chapterTitle,
+      chapterHref,
+      cfi
     }
   }
 
-  const prevPage = () => {
-    if (canGoPrev.value) {
-      currentPageIndex.value--
+  const nextPage = async () => {
+    if (currentPageIndex.value < pages.value.length - 1) {
+      await goToPage(currentPageIndex.value + 1)
     }
   }
 
-  const goToPage = (index: number) => {
-    if (index >= 0 && index < totalPages.value) {
+  const prevPage = async () => {
+    if (currentPageIndex.value > 0) {
+      await goToPage(currentPageIndex.value - 1)
+    }
+  }
+
+  const goToPage = async (index: number) => {
+    if (index >= 0 && index < pages.value.length) {
       currentPageIndex.value = index
+      const cfi = pages.value[index]
+      if (cfi) {
+        currentPage.value = await extractPageContent(cfi)
+        canGoNext.value = index < pages.value.length - 1
+        canGoPrev.value = index > 0
+      }
     }
   }
 
-  const goToChapter = (href: string) => {
-    const pageIndex = pages.value.findIndex(p => p.chapterHref === href && p.isChapterStart)
+  const goToChapter = async (href: string) => {
+    if (!book.value) return
+    
+    const section = book.value.spine.get(href)
+    if (!section) return
+
+    const cfi = section.cfiBase
+    const pageIndex = pages.value.findIndex(p => p.startsWith(cfi))
+    
     if (pageIndex !== -1) {
-      currentPageIndex.value = pageIndex
+      await goToPage(pageIndex)
     }
   }
 
   const destroy = () => {
+    if (rendition.value) {
+      rendition.value.destroy()
+      rendition.value = null
+    }
     if (book.value) {
       book.value.destroy()
       book.value = null
     }
     pages.value = []
     currentPageIndex.value = 0
+    currentPage.value = null
   }
 
   return {

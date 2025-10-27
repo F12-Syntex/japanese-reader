@@ -12,40 +12,65 @@
       ]"
       @mouseup="handleTextSelection"
     >
-      <template v-for="(sentence, sIndex) in text" :key="sIndex">
-        <span 
-          v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'left'"
-          class="inline-block mr-2 opacity-50 text-sm"
-        >
-          {{ sIndex + 1 }}.
-        </span>
-
-        <span 
-          class="inline transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
-          :class="{ 'bg-primary/10': hoveredSentence === sIndex && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === sIndex && isCtrlPressed }"
-          @mouseenter="handleSentenceHover(sIndex, $event)"
-          @mouseleave="hoveredSentence = null"
-          @click="handleSentenceClick(sIndex, sentence, $event)"
-        >
-          <ReaderWord
-            v-for="(word, wIndex) in sentence.words" 
-            :key="wIndex"
-            :word="word"
-            :settings="settings"
-            :disable-hover="isCtrlPressed || hasSelection || showSelectionTooltip"
-            :is-grammar-highlighted="settings.highlightGrammar && isWordGrammarHighlighted(word, sentence.grammar)"
-            @click="handleWordClick(word)"
+      <template v-for="(item, itemIndex) in content" :key="itemIndex">
+        <div v-if="item.type === 'image'" class="my-8 w-full flex justify-center">
+          <img 
+            :src="item.src" 
+            :alt="item.alt || ''"
+            class="max-w-full h-auto rounded-lg shadow-lg"
+            :style="imageStyles"
           />
-        </span>
+        </div>
 
-        <span 
-          v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'right'"
-          class="inline-block ml-2 opacity-50 text-sm"
-        >
-          .{{ sIndex + 1 }}
-        </span>
+        <div v-else-if="item.type === 'heading'" class="my-6">
+          <component 
+            :is="`h${item.level || 2}`"
+            class="font-bold"
+            :style="headingStyles(item.level || 2)"
+          >
+            {{ item.text }}
+          </component>
+        </div>
 
-        <span v-if="sIndex < text.length - 1" class="inline px-1">&nbsp;</span>
+        <template v-else-if="item.type === 'text'">
+          <template v-for="(sentence, sIndex) in item.sentences || []" :key="`${itemIndex}-${sIndex}`">
+            <span 
+              v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'left'"
+              class="inline-block mr-2 opacity-50 text-sm"
+            >
+              {{ sIndex + 1 }}.
+            </span>
+
+            <span 
+              class="inline transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
+              :class="{ 'bg-primary/10': hoveredSentence === `${itemIndex}-${sIndex}` && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === `${itemIndex}-${sIndex}` && isCtrlPressed }"
+              @mouseenter="handleSentenceHover(`${itemIndex}-${sIndex}`, $event)"
+              @mouseleave="hoveredSentence = null"
+              @click="handleSentenceClick(sIndex, sentence, $event)"
+            >
+              <ReaderWord
+                v-for="(word, wIndex) in sentence.words" 
+                :key="wIndex"
+                :word="word"
+                :settings="settings"
+                :disable-hover="isCtrlPressed || hasSelection || showSelectionTooltip"
+                :is-grammar-highlighted="settings.highlightGrammar && isWordGrammarHighlighted(word, sentence.grammar)"
+                @click="handleWordClick(word)"
+              />
+            </span>
+
+            <span 
+              v-if="settings.showSentenceNumbers && settings.sentenceNumberPosition === 'right'"
+              class="inline-block ml-2 opacity-50 text-sm"
+            >
+              .{{ sIndex + 1 }}
+            </span>
+
+            <span v-if="sIndex < (item.sentences || []).length - 1" class="inline px-1">&nbsp;</span>
+          </template>
+        </template>
+
+        <div v-else-if="item.type === 'raw-html'" v-html="item.html" class="my-4"></div>
       </template>
       
       <span v-if="streamingText" class="opacity-50 animate-pulse">
@@ -104,8 +129,18 @@ import type { ParsedSentence, ParsedWord } from '~/types/japanese'
 import type { ReaderSettings } from '~/types/reader'
 import type { CSSProperties } from 'vue'
 
+interface ContentItem {
+  type: 'text' | 'image' | 'heading' | 'raw-html'
+  sentences?: ParsedSentence[]
+  src?: string
+  alt?: string
+  text?: string
+  level?: number
+  html?: string
+}
+
 interface Props {
-  text: ParsedSentence[]
+  content: ContentItem[]
   settings: ReaderSettings
   streamingText: string
 }
@@ -117,7 +152,7 @@ const emit = defineEmits<{
   'sentence-analyze': [payload: { index: number; sentence: ParsedSentence }]
 }>()
 
-const hoveredSentence = ref<number | null>(null)
+const hoveredSentence = ref<string | null>(null)
 const isCtrlPressed = ref(false)
 const showSelectionTooltip = ref(false)
 const selectionTooltipRef = ref<HTMLElement | null>(null)
@@ -162,6 +197,16 @@ const textStyles = computed(() => ({
   letterSpacing: `${props.settings.letterSpacing}px`
 }))
 
+const imageStyles = computed(() => ({
+  maxHeight: '600px'
+}))
+
+const headingStyles = (level: number) => ({
+  fontSize: `${props.settings.fontSize * (2.5 - level * 0.3)}px`,
+  marginBottom: '1rem',
+  marginTop: '1.5rem'
+})
+
 const isWordGrammarHighlighted = (word: ParsedWord, grammarPoints: string[]): boolean => {
   if (!grammarPoints?.length) return false
   const wordText = word.kanji || word.kana || ''
@@ -171,10 +216,10 @@ const isWordGrammarHighlighted = (word: ParsedWord, grammarPoints: string[]): bo
   })
 }
 
-const handleSentenceHover = (index: number, event: MouseEvent) => {
+const handleSentenceHover = (key: string, event: MouseEvent) => {
   const mouseEvent = event as MouseEvent
   if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
-    hoveredSentence.value = index
+    hoveredSentence.value = key
   }
 }
 
@@ -298,8 +343,6 @@ const handleTextSelection = () => {
     if (!keepSelectionTooltip) {
       hasSelection.value = false
       showSelectionTooltip.value = false
-      selectedText.value = ''
-      currentSelectionText = ''
     }
   }
 }
@@ -310,39 +353,45 @@ const onSelectionTooltipMouseEnter = () => {
 
 const onSelectionTooltipMouseLeave = () => {
   keepSelectionTooltip = false
+  showSelectionTooltip.value = false
+  hasSelection.value = false
 }
 
-const handleClickOutside = (event: MouseEvent) => {
-  if (!showSelectionTooltip.value) return
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    isCtrlPressed.value = true
+  }
+}
 
-  const target = event.target as Node
-  if (selectionTooltipRef.value && !selectionTooltipRef.value.contains(target)) {
-    showSelectionTooltip.value = false
-    hasSelection.value = false
-    selectedText.value = ''
-    currentSelectionText = ''
-    keepSelectionTooltip = false
-    window.getSelection()?.removeAllRanges()
+const handleKeyUp = (e: KeyboardEvent) => {
+  if (e.key === 'Control' || e.key === 'Meta') {
+    isCtrlPressed.value = false
+    hoveredSentence.value = null
+  }
+}
+
+const handleClickOutside = (e: MouseEvent) => {
+  if (!keepSelectionTooltip && showSelectionTooltip.value) {
+    const target = e.target as HTMLElement
+    if (!selectionTooltipRef.value?.contains(target)) {
+      showSelectionTooltip.value = false
+      hasSelection.value = false
+    }
   }
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Control' || e.key === 'Meta') {
-      isCtrlPressed.value = true
-    }
-  })
-
-  document.addEventListener('keyup', (e: KeyboardEvent) => {
-    if (e.key === 'Control' || e.key === 'Meta') {
-      isCtrlPressed.value = false
-    }
-  })
-
-  document.addEventListener('mousedown', handleClickOutside)
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('mousedown', handleClickOutside)
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
+  document.removeEventListener('click', handleClickOutside)
+  if (selectionTooltipTimeout) {
+    clearTimeout(selectionTooltipTimeout)
+  }
 })
 </script>

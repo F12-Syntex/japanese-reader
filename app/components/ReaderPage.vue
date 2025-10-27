@@ -1,7 +1,7 @@
 <template>
   <div class="h-full bg-base-100 flex flex-col relative">
     <div class="flex-1 overflow-y-auto custom-scrollbar">
-      <div v-if="japaneseText.length > 0 || streamingText" class="w-full">
+      <div v-if="contentItems.length > 0 || streamingText" class="w-full">
         <div v-if="!hasSeenInfo" class="px-6 sm:px-12 pt-6">
           <div class="alert alert-info shadow-sm">
             <IconInfo class="w-5 h-5" />
@@ -23,7 +23,7 @@
         </div>
 
         <ReaderContent 
-          :text="japaneseText"
+          :content="contentItems"
           :settings="settings"
           :streaming-text="streamingText"
           @word-click="handleWordClick"
@@ -39,7 +39,7 @@
     </div>
 
    <div 
-      v-if="japaneseText.length > 0 && !anyModalOpen"
+      v-if="contentItems.length > 0 && !anyModalOpen"
       class="fixed right-8 z-40"
       :class="fabContainerClasses"
     >
@@ -97,6 +97,14 @@ const showAnalysisModal = ref(false)
 const selectedSentence = ref(null)
 const showFeedback = ref(false)
 const showUrlImport = ref(false)
+
+const contentItems = computed(() => {
+  if (japaneseText.value.length === 0) return []
+  return [{
+    type: 'text',
+    sentences: japaneseText.value
+  }]
+})
 
 const anyModalOpen = computed(() => {
   return showWordModal.value || showAnalysisModal.value || showFeedback.value || showUrlImport.value
