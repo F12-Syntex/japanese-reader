@@ -96,7 +96,8 @@ function copyToClipboard(text, fileList) {
   child.stdin.end();
 }
 
-function buildOutput(files) {
+function buildOutput(files, options = {}) {
+  const { noTruncate = false } = options;
   let output = '';
 
   files.forEach(filePath => {
@@ -105,13 +106,15 @@ function buildOutput(files) {
     const content = fs.readFileSync(filePath, 'utf8');
     let finalContent = content;
 
-    if (filePath.endsWith('.csv')) {
-      const lines = content.split(/\r?\n/).slice(0, 3);
-      finalContent = lines.join('\n') + '\n... (truncated CSV preview)\n';
-    } else {
-      const lines = content.split(/\r?\n/);
-      if (lines.length > 300)
-        finalContent = lines.slice(0, 300).join('\n') + '\n... (truncated after 300 lines)\n';
+    if (!noTruncate) {
+      if (filePath.endsWith('.csv')) {
+        const lines = content.split(/\r?\n/).slice(0, 3);
+        finalContent = lines.join('\n') + '\n... (truncated CSV preview)\n';
+      } else {
+        const lines = content.split(/\r?\n/);
+        if (lines.length > 300)
+          finalContent = lines.slice(0, 300).join('\n') + '\n... (truncated after 300 lines)\n';
+      }
     }
 
     output += `File: ${filePath}\n`;
@@ -157,30 +160,45 @@ function showHelp() {
 📚 Code Helper - Smart Codebase Navigator
 
 Commands:
-  tree        Show dot-notation absolute file paths (src.a.b.c)
-  name ...    Search filenames containing substring(s)
-  content ... Search files by content term
-  ext ...     Filter by extension
-  recent ...  Show recently modified files
-  list        Copy all relevant files
-  ? or help   Show this help message
+  tree             Show dot-notation absolute file paths (src.a.b.c)
+  name ...         Search filenames containing substring(s)
+  content <term>   Search files by content term
+  ext <ext>        Filter by extension
+  recent [hours]   Show recently modified files
+  list             Copy all relevant files
+  ? or help        Show this help message
 
-Example:
+Options:
+  --full           Do not truncate file contents in output
+
+Examples:
   node helper tree
-  node helper name service
+  node helper name service --full
+  node helper content "TODO" --full
+  node helper recent 4
 `;
   console.log(text);
   copyToClipboard(text.trim());
 }
 
+function parseArgs(argv) {
+  // Returns { command, params: string[], flags: Set<string> }
+  const args = argv.slice(2);
+  const flags = new Set(args.filter(a => a.startsWith('--')).map(a => a.toLowerCase()));
+  const positional = args.filter(a => !a.startsWith('--'));
+  const command = positional[0]?.toLowerCase();
+  const params = positional.slice(1);
+  return { command, params, flags };
+}
+
 function main() {
   try {
     const currentDir = process.cwd();
-    const args = process.argv.slice(2);
-    const command = args[0]?.toLowerCase();
-    const argument = args[1];
+    const { command, params, flags } = parseArgs(process.argv);
+    const noTruncate = flags.has('--full');
+    const argument = params[0];
 
-    if (command === '?' || command === 'help') {
+    if (command === '?' || command === 'help' || (!command && flags.has('--help'))) {
       showHelp();
       return;
     }
@@ -198,35 +216,35 @@ function main() {
     let selectedFiles = allFiles;
     let output = '';
 
-    if (command === 'name' && args.length > 1) {
-      selectedFiles = searchFilesByName(allFiles, ...args.slice(1));
-      console.log(`🔍 Searching filenames: ${args.slice(1).join(', ')}`);
+    if (command === 'name' && params.length > 0) {
+      selectedFiles = searchFilesByName(allFiles, ...params);
+      console.log(`🔍 Searching filenames: ${params.join(', ')}`);
       const structure = buildTreeOutput(currentDir);
-      const files = buildOutput(selectedFiles);
+      const files = buildOutput(selectedFiles, { noTruncate });
       output = `<structure>\n${structure}\n\n<files>\n${files}`;
     } else if (command === 'content' && argument) {
       selectedFiles = searchFilesByContent(allFiles, argument);
       console.log(`🔍 Searching for content "${argument}"...`);
-      output = buildOutput(selectedFiles);
+      output = buildOutput(selectedFiles, { noTruncate });
     } else if (command === 'ext' && argument) {
       selectedFiles = getFilesByExtension(allFiles, argument);
       console.log(`🔍 Files with extension "${argument}"...`);
-      output = buildOutput(selectedFiles);
+      output = buildOutput(selectedFiles, { noTruncate });
     } else if (command === 'recent') {
       const hours = argument ? parseInt(argument, 10) : 24;
       selectedFiles = getRecentlyModified(allFiles, hours);
       console.log(`⏰ Files modified in last ${hours}h...`);
-      output = buildOutput(selectedFiles);
+      output = buildOutput(selectedFiles, { noTruncate });
     } else if (command === 'list') {
       console.log('📋 Listing all files...');
-      output = buildOutput(selectedFiles);
+      output = buildOutput(selectedFiles, { noTruncate });
     } else if (command && command !== 'name') {
       console.log(`⚠️ Unknown command: "${command}"`);
       console.log('💡 Use "node helper ?" for help');
       return;
     } else {
-      console.log('📋 Copying all files (with truncation rules)...');
-      output = buildOutput(selectedFiles);
+      console.log(`📋 Copying all files${noTruncate ? ' (no truncation)' : ' (with truncation rules)'}...`);
+      output = buildOutput(selectedFiles, { noTruncate });
     }
 
     if (selectedFiles.length === 0) {

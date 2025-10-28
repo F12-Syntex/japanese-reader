@@ -30,12 +30,13 @@
         <div>Page: {{ pageWidth }}x{{ pageHeight }}</div>
         <div>Text Items: {{ textItems.length }}</div>
         <div>Images: {{ pageImages.length }}</div>
+        <div v-if="isProcessing" class="text-primary">Processing text with Kuromoji...</div>
       </div>
 
       <!-- Reconstructed Page -->
       <div 
         v-if="numPages > 0" 
-        class="relative mx-auto shadow-xl bg-white"
+        class="relative mx-auto shadow-xl bg-white overflow-hidden"
         :style="{ 
           width: pageWidth * zoom + 'px', 
           height: pageHeight * zoom + 'px' 
@@ -56,15 +57,19 @@
           class="pointer-events-none"
         />
 
-        <!-- Interactive Text Layer -->
+        <!-- Interactive Text Layer with Parsed Words -->
         <span
           v-for="(item, idx) in textItems"
           :key="`text-${idx}`"
           :style="item.style"
-          class="absolute pointer-events-auto hover:bg-yellow-200/70 transition-colors cursor-pointer"
-          @click="handleTextClick(item)"
+          class="absolute pointer-events-auto select-none"
         >
-          {{ item.text }}
+          <span
+            v-for="(word, wordIdx) in item.words"
+            :key="`word-${idx}-${wordIdx}`"
+            class="hover:bg-yellow-200/70 transition-colors cursor-pointer"
+            @click="handleWordClick(word)"
+          >{{ word.kanji }}</span>
         </span>
       </div>
     </div>
@@ -72,6 +77,11 @@
 </template>
 
 <script setup lang="ts">
+import { useKuromojiParser } from '~/composables/useKuromojiParser'
+import type { ParsedWord } from '~/types/japanese'
+
+const { parseText } = useKuromojiParser()
+
 const currentPage = ref(1)
 const numPages = ref(0)
 const zoom = ref(1)
@@ -79,6 +89,7 @@ const textItems = ref<any[]>([])
 const pageImages = ref<any[]>([])
 const pageWidth = ref(0)
 const pageHeight = ref(0)
+const isProcessing = ref(false)
 
 let pdfDoc: any = null
 let pdfjsLib: any = null
@@ -110,6 +121,7 @@ const loadPDF = async (event: Event) => {
 const renderPage = async () => {
   if (!pdfDoc) return
 
+  isProcessing.value = true
   console.log('Rendering page', currentPage.value)
   const page = await pdfDoc.getPage(currentPage.value)
   const viewport = page.getViewport({ scale: 1.0 })
@@ -120,12 +132,32 @@ const renderPage = async () => {
   console.log('Viewport:', viewport.width, 'x', viewport.height)
 
   // Extract images
-  await extractImages(page, viewport)
+  const images = await extractImages(page, viewport)
   
   // Extract text
   const textContent = await page.getTextContent()
   console.log('Text items:', textContent.items.length)
-  extractText(textContent, viewport)
+  const items = await extractText(textContent, viewport)
+  
+  // Check if page is empty
+  if (images.length === 0 && items.length === 0) {
+    console.log('Page', currentPage.value, 'is empty, skipping...')
+    if (currentPage.value < numPages.value) {
+      currentPage.value++
+      await renderPage()
+    } else {
+      if (currentPage.value > 1) {
+        currentPage.value--
+        await renderPage()
+      }
+    }
+    isProcessing.value = false
+    return
+  }
+  
+  pageImages.value = images
+  textItems.value = items
+  isProcessing.value = false
 }
 
 const extractImages = async (page: any, viewport: any) => {
@@ -133,7 +165,6 @@ const extractImages = async (page: any, viewport: any) => {
   
   try {
     const ops = await page.getOperatorList()
-    console.log('Operator list length:', ops.fnArray.length)
     
     let transformStack: number[][] = [[1, 0, 0, 1, 0, 0]]
     
@@ -141,7 +172,6 @@ const extractImages = async (page: any, viewport: any) => {
       const fn = ops.fnArray[i]
       const args = ops.argsArray[i]
       
-      // Track transform matrix changes
       if (fn === pdfjsLib.OPS.transform) {
         const current = transformStack[transformStack.length - 1]
         transformStack.push(multiplyMatrices(current, args))
@@ -153,29 +183,21 @@ const extractImages = async (page: any, viewport: any) => {
         const imageName = args[0]
         const transform = transformStack[transformStack.length - 1]
         
-        console.log('Found image:', imageName, 'transform:', transform)
-        
         try {
           const image = await new Promise<any>((resolve) => {
             page.objs.get(imageName, resolve)
           })
 
-          if (!image) {
-            console.log('Image not found:', imageName)
-            continue
-          }
+          if (!image) continue
 
           const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')!
           canvas.width = image.width
           canvas.height = image.height
           
-          // Handle different image data formats
           if (image.bitmap) {
-            // Already a bitmap
             ctx.drawImage(image.bitmap, 0, 0)
           } else if (image.data) {
-            // Raw pixel data
             const imageData = new ImageData(
               new Uint8ClampedArray(image.data),
               image.width,
@@ -183,11 +205,9 @@ const extractImages = async (page: any, viewport: any) => {
             )
             ctx.putImageData(imageData, 0, 0)
           } else {
-            console.log('Unknown image format:', image)
             continue
           }
           
-          // Calculate position from transform matrix
           const scaleX = Math.sqrt(transform[0] * transform[0] + transform[1] * transform[1])
           const scaleY = Math.sqrt(transform[2] * transform[2] + transform[3] * transform[3])
           
@@ -200,7 +220,6 @@ const extractImages = async (page: any, viewport: any) => {
           }
           
           images.push(imgData)
-          console.log('Image added:', imgData.x, imgData.y, imgData.width, imgData.height)
           
         } catch (error) {
           console.error('Error processing image:', imageName, error)
@@ -212,7 +231,7 @@ const extractImages = async (page: any, viewport: any) => {
   }
   
   console.log('Total images:', images.length)
-  pageImages.value = images
+  return images
 }
 
 const multiplyMatrices = (m1: number[], m2: number[]) => {
@@ -226,46 +245,62 @@ const multiplyMatrices = (m1: number[], m2: number[]) => {
   ]
 }
 
-const extractText = (textContent: any, viewport: any) => {
+const extractText = async (textContent: any, viewport: any) => {
   const items: any[] = []
 
   for (const item of textContent.items) {
     if (!item.str || !item.str.trim()) continue
     
     const tx = item.transform
-    const fontSize = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3])
+    const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3])
     const rotation = Math.atan2(tx[1], tx[0])
+    const baselineX = tx[4]
+    const baselineY = viewport.height - tx[5]
+    const descent = fontHeight * 0.2
+    const topY = baselineY - fontHeight + descent
     
-    // Convert from bottom-left to top-left origin
-    const x = tx[4]
-    const y = viewport.height - tx[5]
+    // Parse the text with Kuromoji
+    const parsedWords = await parseText(item.str)
     
     items.push({
       text: item.str,
-      baseX: x,
-      baseY: y - fontSize,
-      baseFontSize: fontSize,
+      words: parsedWords,
+      baseX: baselineX,
+      baseY: topY,
+      baseFontHeight: fontHeight,
       baseRotation: rotation,
       fontName: item.fontName,
+      width: item.width,
       style: {
-        left: x * zoom.value + 'px',
-        top: (y - fontSize) * zoom.value + 'px',
-        fontSize: fontSize * zoom.value + 'px',
+        left: baselineX * zoom.value + 'px',
+        top: topY * zoom.value + 'px',
+        fontSize: fontHeight * zoom.value + 'px',
         transform: `rotate(${rotation}rad)`,
         transformOrigin: '0 0',
-        whiteSpace: 'nowrap',
+        whiteSpace: 'pre',
         lineHeight: '1',
-        fontFamily: 'serif',
+        fontFamily: 'sans-serif',
+        letterSpacing: '0px',
+        margin: '0',
+        padding: '0',
       }
     })
   }
 
   console.log('Extracted text items:', items.length)
-  textItems.value = items
+  return items
 }
 
-const handleTextClick = (item: any) => {
-  console.log('Clicked:', item.text)
+const handleWordClick = (word: ParsedWord) => {
+  console.log('Clicked word:', {
+    kanji: word.kanji,
+    kana: word.kana,
+    meaning: word.meaning,
+    pos: word.pos,
+    isKnown: word.isKnown
+  })
+  
+  alert(`${word.kanji}\n${word.kana}\n${word.meaning}`)
 }
 
 const prevPage = async () => {
@@ -283,14 +318,13 @@ const nextPage = async () => {
 }
 
 watch(zoom, () => {
-  // Update text positions
   textItems.value = textItems.value.map(item => ({
     ...item,
     style: {
       ...item.style,
       left: item.baseX * zoom.value + 'px',
       top: item.baseY * zoom.value + 'px',
-      fontSize: item.baseFontSize * zoom.value + 'px',
+      fontSize: item.baseFontHeight * zoom.value + 'px',
     }
   }))
 })
