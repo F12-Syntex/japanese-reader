@@ -10,7 +10,7 @@
 
     <div
       v-if="showDropdown && !isMobile"
-      class="dropdown-content absolute right-0 z-[100] mt-2 w-72 sm:w-80 bg-base-200 shadow-2xl rounded-box p-4 border border-base-content/20 dark:border-base-content/40"
+      class="dropdown-content absolute right-0 z-[100] mt-2 w-[500px] bg-base-200 shadow-2xl rounded-box p-4 border border-base-content/20 dark:border-base-content/40"
     >
       <div class="flex justify-between items-center mb-3 text-xs opacity-70">
         <span class="flex items-center gap-2">
@@ -20,35 +20,52 @@
         <button class="btn btn-ghost btn-xs" @click="resetTheme">System</button>
       </div>
 
-      <div
-        class="overflow-y-auto overscroll-contain snap-y snap-mandatory scroll-smooth pb-2 max-h-[24rem] flex flex-col gap-2 pr-1 rounded-box"
-      >
-        <button
-          v-for="theme in allThemes"
-          :key="theme"
-          class="flex items-center justify-between p-3 rounded-lg bg-base-100 border border-transparent hover:border-primary hover:shadow transition-all snap-start"
-          @click="applyTheme(theme)"
-          :data-theme="theme"
-        >
-          <div class="flex items-center gap-2">
-            <span class="capitalize font-medium text-sm">{{ theme }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <span
-              v-for="(color, idx) in themePalettes.get(theme) || []"
-              :key="idx"
-              class="w-3 h-3 rounded-full border border-base-content/20"
-              :style="{ backgroundColor: color }"
-            ></span>
-            <IconCheck v-if="theme === currentTheme" class="w-4 h-4 text-primary ml-1" />
-          </div>
-        </button>
-        <div class="w-full h-2 shrink-0"></div>
+      <div class="mb-3">
+        <input 
+          v-model="searchQuery"
+          type="text" 
+          placeholder="Search themes..." 
+          class="input input-bordered input-sm w-full"
+        />
       </div>
 
-      <div class="flex justify-between items-center mt-4">
-        <button class="btn btn-ghost btn-sm w-1/2" @click="showDropdown = false">Close</button>
-        <button class="btn btn-primary btn-sm w-1/2" @click="randomizeTheme">Random</button>
+      <div class="overflow-y-auto max-h-[400px] px-1">
+        <div class="grid grid-cols-3 gap-3 pb-2">
+          <button
+            v-for="theme in filteredThemes"
+            :key="theme"
+            @click="applyTheme(theme)"
+            :data-theme="theme"
+            class="relative group overflow-hidden rounded-xl transition-all duration-300 hover:scale-105"
+            :class="currentTheme === theme ? 'ring-4 ring-primary shadow-xl' : 'hover:shadow-lg'"
+          >
+            <div class="bg-base-100 p-3 h-full flex flex-col gap-2 border border-base-300">
+              <div class="flex gap-1.5 mb-1">
+                <div class="w-2 h-2 rounded-full bg-primary"></div>
+                <div class="w-2 h-2 rounded-full bg-secondary"></div>
+                <div class="w-2 h-2 rounded-full bg-accent"></div>
+              </div>
+              <div class="space-y-1 flex-1">
+                <div class="h-1.5 bg-base-content/20 rounded w-3/4"></div>
+                <div class="h-1.5 bg-base-content/10 rounded w-1/2"></div>
+              </div>
+              <div class="pt-2 border-t border-base-300">
+                <p class="text-xs font-semibold text-base-content capitalize truncate">{{ theme }}</p>
+              </div>
+              <div 
+                v-if="currentTheme === theme" 
+                class="absolute top-2 right-2 bg-primary text-primary-content rounded-full p-1"
+              >
+                <IconCheck class="h-3 w-3" />
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-ghost btn-sm flex-1" @click="showDropdown = false">Close</button>
+        <button class="btn btn-primary btn-sm flex-1" @click="randomizeTheme">Random</button>
       </div>
     </div>
 
@@ -62,28 +79,47 @@
           <button class="btn btn-ghost btn-xs" @click="resetTheme">System</button>
         </div>
 
-        <div
-          class="overflow-y-auto overscroll-contain snap-y snap-mandatory scroll-smooth pb-3 max-h-[60vh] flex flex-col gap-3 rounded-box"
-        >
-          <button
-            v-for="theme in allThemes"
-            :key="theme"
-            class="flex items-center justify-between p-4 rounded-xl bg-base-100 border border-transparent hover:border-primary hover:shadow-md transition-all snap-start"
-            :data-theme="theme"
-            @click="applyTheme(theme)"
-          >
-            <span class="capitalize font-semibold">{{ theme }}</span>
-            <div class="flex items-center gap-2">
-              <span
-                v-for="(color, idx) in themePalettes.get(theme) || []"
-                :key="idx"
-                class="w-4 h-4 rounded-full border border-base-content/20"
-                :style="{ backgroundColor: color }"
-              ></span>
-              <IconCheck v-if="theme === currentTheme" class="w-5 h-5 text-primary" />
-            </div>
-          </button>
-          <div class="w-full h-3 shrink-0"></div>
+        <div class="mb-2">
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search themes..." 
+            class="input input-bordered w-full"
+          />
+        </div>
+
+        <div class="overflow-y-auto max-h-[60vh] px-1">
+          <div class="grid grid-cols-2 gap-3 pb-3">
+            <button
+              v-for="theme in filteredThemes"
+              :key="theme"
+              @click="applyTheme(theme)"
+              :data-theme="theme"
+              class="relative group overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105"
+              :class="currentTheme === theme ? 'ring-4 ring-primary shadow-xl' : 'hover:shadow-lg'"
+            >
+              <div class="bg-base-100 p-4 h-full flex flex-col gap-2 border border-base-300">
+                <div class="flex gap-1.5 mb-2">
+                  <div class="w-2 h-2 rounded-full bg-primary"></div>
+                  <div class="w-2 h-2 rounded-full bg-secondary"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent"></div>
+                </div>
+                <div class="space-y-1.5 flex-1">
+                  <div class="h-2 bg-base-content/20 rounded w-3/4"></div>
+                  <div class="h-2 bg-base-content/10 rounded w-1/2"></div>
+                </div>
+                <div class="pt-2 border-t border-base-300">
+                  <p class="text-sm font-semibold text-base-content capitalize truncate">{{ theme }}</p>
+                </div>
+                <div 
+                  v-if="currentTheme === theme" 
+                  class="absolute top-2 right-2 bg-primary text-primary-content rounded-full p-1"
+                >
+                  <IconCheck class="h-4 w-4" />
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -102,7 +138,7 @@
 <script setup lang="ts">
 import IconPalette from '~icons/lucide/palette'
 import IconCheck from '~icons/lucide/check'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTheme } from '~/composables/useTheme'
 import BaseModal from '~/components/BaseModal.vue'
 
@@ -110,14 +146,19 @@ const { currentTheme, setTheme, resetTheme, loadTheme } = useTheme()
 const showDropdown = ref(false)
 const showMobileModal = ref(false)
 const allThemes = ref<string[]>([])
-const themePalettes = ref<Map<string, string[]>>(new Map())
 const isMobile = ref(false)
+const searchQuery = ref('')
 
 const defaultThemes = [
   'light','dark','cupcake','bumblebee','emerald','corporate','synthwave','retro','cyberpunk','valentine',
   'halloween','garden','forest','aqua','lofi','pastel','fantasy','wireframe','black','luxury',
   'dracula','cmyk','autumn','business','acid','lemonade','night','coffee','winter'
 ]
+
+const filteredThemes = computed(() => {
+  if (!searchQuery.value) return allThemes.value
+  return allThemes.value.filter(t => t.toLowerCase().includes(searchQuery.value.toLowerCase()))
+})
 
 onMounted(() => {
   loadTheme()
@@ -126,17 +167,25 @@ onMounted(() => {
   if (typeof window !== 'undefined') {
     const daisyThemes = (window as any).daisyUIThemes
     allThemes.value = Array.isArray(daisyThemes) && daisyThemes.length ? daisyThemes : defaultThemes
-    generateThemeSamples()
   }
 })
 
-function openModal() { showMobileModal.value = true }
-function checkMobile() { isMobile.value = window.innerWidth < 768 }
+function openModal() { 
+  showMobileModal.value = true 
+  searchQuery.value = ''
+}
+
+function checkMobile() { 
+  isMobile.value = window.innerWidth < 768 
+}
+
 function applyTheme(theme: string) {
   setTheme(theme)
   showDropdown.value = false
   showMobileModal.value = false
+  searchQuery.value = ''
 }
+
 function randomizeTheme() {
   const list = allThemes.value
   if (!list.length) return
@@ -144,22 +193,6 @@ function randomizeTheme() {
   if (pick) setTheme(pick)
   showDropdown.value = false
   showMobileModal.value = false
-}
-function generateThemeSamples() {
-  const temp = document.createElement('div')
-  document.body.appendChild(temp)
-  for (const theme of allThemes.value) {
-    temp.setAttribute('data-theme', theme)
-    const style = getComputedStyle(temp)
-    const colors = [
-      style.getPropertyValue('oklch(var(--p))'),
-      style.getPropertyValue('oklch(var(--s))'),
-      style.getPropertyValue('oklch(var(--a))'),
-      style.getPropertyValue('oklch(var(--n))'),
-      style.getPropertyValue('oklch(var(--b1))')
-    ].filter(c => c.trim() !== '')
-    themePalettes.value.set(theme, colors)
-  }
-  temp.remove()
+  searchQuery.value = ''
 }
 </script>

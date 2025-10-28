@@ -12,11 +12,7 @@
       />
     </div>
 
-    <div v-if="loading" class="flex justify-center items-center p-8">
-      <span class="loading loading-spinner loading-lg"></span>
-    </div>
-
-    <div v-if="!loading && booksStore.books.length === 0" class="alert alert-info">
+    <div v-if="booksStore.books.length === 0" class="alert alert-info">
       <span>No PDFs imported yet. Upload some PDF files to get started.</span>
     </div>
 
@@ -64,18 +60,13 @@ definePageMeta({
 
 const booksStore = useBooksStore()
 const fileInput = ref<HTMLInputElement | null>(null)
-const loading = ref(false)
 
 let pdfjsLib: any = null
 
 onMounted(async () => {
-  try {
-    pdfjsLib = await import('pdfjs-dist')
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs?url')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
-  } catch (error) {
-    console.error('Failed to load PDF.js:', error)
-  }
+  pdfjsLib = await import('pdfjs-dist')
+  const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs?url')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
 })
 
 const handleFileUpload = async (event: Event) => {
@@ -84,50 +75,41 @@ const handleFileUpload = async (event: Event) => {
   
   if (!files || !pdfjsLib) return
   
-  loading.value = true
+  for (const file of Array.from(files)) {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    
+    let coverImage = ''
+    try {
+      const page = await pdf.getPage(1)
+      const viewport = page.getViewport({ scale: 1.0 })
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      
+      if (context) {
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        await page.render({ canvasContext: context, viewport }).promise
+        coverImage = canvas.toDataURL()
+      }
+    } catch (error) {
+      console.error('Error generating cover:', error)
+    }
+    
+    const base64 = arrayBufferToBase64(arrayBuffer)
+    
+    const bookData: BookData = {
+      path: base64,
+      title: file.name.replace('.pdf', ''),
+      author: 'Unknown Author',
+      cover: coverImage
+    }
+    
+    booksStore.addBook(bookData)
+  }
   
-  try {
-    for (const file of Array.from(files)) {
-      const arrayBuffer = await file.arrayBuffer()
-      const arrayBufferCopy = arrayBuffer.slice(0)
-      
-      const pdf = await pdfjsLib.getDocument({ data: arrayBufferCopy }).promise
-      
-      let coverImage = ''
-      try {
-        const page = await pdf.getPage(1)
-        const viewport = page.getViewport({ scale: 1.0 })
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
-        
-        if (context) {
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-          await page.render({ canvasContext: context, viewport }).promise
-          coverImage = canvas.toDataURL()
-        }
-      } catch (error) {
-        console.error('Error generating cover:', error)
-      }
-      
-      const base64 = arrayBufferToBase64(arrayBuffer)
-      
-      const bookData: BookData = {
-        path: base64,
-        title: file.name.replace('.pdf', ''),
-        author: 'Unknown Author',
-        cover: coverImage
-      }
-      
-      booksStore.addBook(bookData)
-    }
-  } catch (error) {
-    console.error('Error processing PDFs:', error)
-  } finally {
-    loading.value = false
-    if (fileInput.value) {
-      fileInput.value.value = ''
-    }
+  if (fileInput.value) {
+    fileInput.value.value = ''
   }
 }
 
