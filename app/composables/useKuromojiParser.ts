@@ -6,27 +6,70 @@ const BATCH_SIZE = 50
 export const useKuromojiParser = () => {
   const { knownWords, isWordKnown } = useAnki()
 
+  const sanitizeText = (text: string): string => {
+    return text
+      // Remove null bytes
+      .replace(/\x00/g, '')
+      // Convert vertical punctuation to horizontal
+      .replace(/︒/g, '。')
+      .replace(/﹁/g, '「')
+      .replace(/﹂/g, '」')
+      .replace(/︑/g, '、')
+      // Normalize other vertical forms
+      .replace(/︙/g, '…')
+      .replace(/︰/g, '：')
+      .replace(/︱/g, '|')
+      .replace(/︓/g, '：')
+      // Remove any other control characters
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+  }
+
   const parseText = async (text: string): Promise<ParsedWord[]> => {
     try {
+      const sanitized = sanitizeText(text)
+      
+      if (!sanitized.trim()) {
+        console.warn('Text is empty after sanitization')
+        return []
+      }
+
+      console.log('Parsing text:', sanitized.substring(0, 100) + '...')
+      
       const response = await fetch('/api/parse', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text,
+          text: sanitized,
           knownWords: Array.from(knownWords.value.keys())
         })
       })
 
       if (!response.ok) {
-        throw new Error('Failed to parse text')
+        const errorText = await response.text()
+        console.error('Server error:', response.status, errorText)
+        throw new Error(`Failed to parse text: ${response.status}`)
       }
 
       const data = await response.json()
+      
+      // Validate the response
+      if (!data.words || !Array.isArray(data.words)) {
+        console.error('Invalid response from server:', data)
+        throw new Error('Invalid response format')
+      }
+
+      if (data.words.length === 0) {
+        console.warn('Server returned no words for text:', sanitized.substring(0, 100))
+        throw new Error('No words parsed')
+      }
+
+      console.log('Successfully parsed', data.words.length, 'words')
+
       const { lookupKanji } = useDictionaryStore()
 
-      const words = (data.words ?? []).map((word: any): ParsedWord => {
+      const words = data.words.map((word: any): ParsedWord => {
         const meaningEntries = lookupKanji(word.baseForm).join(', ')
 
         return {
@@ -45,7 +88,12 @@ export const useKuromojiParser = () => {
       return words
     } catch (error) {
       console.error('parseText error:', error)
-      return text.split('').map((char): ParsedWord => ({
+      console.error('Original text length:', text.length)
+      console.error('First 200 chars:', text.substring(0, 200))
+      
+      // Return character-by-character fallback
+      const sanitized = sanitizeText(text)
+      return sanitized.split('').map((char): ParsedWord => ({
         kanji: char,
         kana: char,
         meaning: '',
@@ -81,6 +129,7 @@ export const useKuromojiParser = () => {
 
   return {
     parseText,
-    parseSentences
+    parseSentences,
+    sanitizeText
   }
 }
