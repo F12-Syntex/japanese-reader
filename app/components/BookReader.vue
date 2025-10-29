@@ -1,6 +1,6 @@
 <template>
-  <div class="h-screen flex flex-col">
-    <div class="navbar bg-base-100 shadow-lg">
+  <div class="h-screen flex flex-col bg-base-100">
+    <div class="navbar bg-base-200 shadow-lg">
       <div class="flex-1">
         <button @click="navigateTo('/books')" class="btn btn-ghost btn-sm">
           ← Back
@@ -21,6 +21,13 @@
           <span class="text-xs">{{ Math.round(pdfReader.zoom.value * 100) }}%</span>
         </div>
 
+        <div class="flex items-center gap-2 border-r border-base-300 pr-4">
+          <label class="label cursor-pointer gap-2">
+            <span class="text-xs">Bounds</span>
+            <input v-model="showBounds" type="checkbox" class="toggle toggle-xs toggle-primary" />
+          </label>
+        </div>
+
         <div class="flex items-center gap-2">
           <button @click="pdfReader.prevPage()" :disabled="!pdfReader.canGoPrev.value" class="btn btn-sm btn-primary">
             ←
@@ -33,7 +40,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto flex items-start justify-center p-4">
+    <div class="flex-1 overflow-auto flex items-start justify-center p-4 bg-base-300">
       <div v-if="pdfReader.isLoading.value" class="flex flex-col items-center gap-4 p-8">
         <span class="loading loading-spinner loading-lg text-primary"></span>
         <p class="text-base-content">Loading page {{ pdfReader.currentPageIndex.value + 1 }}...</p>
@@ -42,7 +49,7 @@
 
       <div
         v-else-if="pdfReader.pageCanvasUrl.value"
-        class="relative mx-auto shadow-2xl rounded-lg overflow-hidden bg-base-100"
+        class="relative mx-auto shadow-2xl rounded-lg overflow-hidden bg-white"
         :style="{
           width: pdfReader.pageWidth.value * pdfReader.zoom.value + 'px',
           height: pdfReader.pageHeight.value * pdfReader.zoom.value + 'px'
@@ -55,9 +62,7 @@
             left: '0',
             top: '0',
             width: pdfReader.pageWidth.value * pdfReader.zoom.value + 'px',
-            height: pdfReader.pageHeight.value * pdfReader.zoom.value + 'px',
-            filter: 'invert(var(--pdf-invert, 0)) hue-rotate(var(--pdf-hue, 0deg))',
-            mixBlendMode: 'multiply'
+            height: pdfReader.pageHeight.value * pdfReader.zoom.value + 'px'
           }"
           class="pointer-events-none"
           alt="PDF Page"
@@ -72,14 +77,13 @@
             top: word.y * pdfReader.zoom.value + 'px',
             width: word.width * pdfReader.zoom.value + 'px',
             height: word.height * pdfReader.zoom.value + 'px',
-            border: `2px solid ${word.color}`,
-            backgroundColor: `${word.color}33`,
+            border: showBounds ? `2px solid ${word.color}` : 'none',
+            backgroundColor: hoveredWordIndex === idx ? 'hsl(var(--p) / 0.5)' : (showBounds ? `${word.color}33` : 'transparent'),
             pointerEvents: 'auto',
             cursor: 'pointer',
-            transition: 'all 0.2s',
+            transition: 'background-color 0.15s ease',
             zIndex: hoveredWordIndex === idx ? 50 : idx
           }"
-          class="hover:scale-105 hover:shadow-lg"
           @mouseenter="handleWordMouseEnter(word.parsedWord, $event, idx)"
           @mouseleave="handleWordMouseLeave"
           @click="word.parsedWord ? handleWordClick(word.parsedWord) : null"
@@ -115,6 +119,8 @@ const pdfReader = usePdfReader()
 const readerSettingsStore = useReaderSettingsStore()
 const currentBook = computed(() => booksStore.currentBook)
 const readerSettings = computed(() => readerSettingsStore.settings)
+
+const showBounds = ref(false)
 
 const tooltip = ref<{
   visible: boolean
@@ -164,7 +170,7 @@ const handleWordMouseLeave = () => {
     tooltip.value.visible = false
     tooltip.value.anchorElement = null
     hoveredWordIndex.value = null
-  }, 100)
+  }, 300)
 }
 
 const handleTooltipMouseEnter = () => {
