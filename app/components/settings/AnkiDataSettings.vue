@@ -113,7 +113,7 @@ onMounted(async () => {
 const wordDefinitions = computed(() => {
   const map = new Map<string, string[]>()
   for (const word of knownWords.value) {
-    const meanings = dictionaryStore.lookupKanji(word)
+    const meanings = dictionaryStore.lookupWord(word).split(',');
     map.set(word, meanings)
   }
   return map
