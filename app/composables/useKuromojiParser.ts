@@ -67,11 +67,10 @@ export const useKuromojiParser = () => {
 
       console.log('Successfully parsed', data.words.length, 'words')
 
-      const { lookupKanji } = useDictionaryStore()
+      const { lookupWord } = useDictionaryStore()
 
       const words = data.words.map((word: any): ParsedWord => {
-        const meaningEntries = lookupKanji(word.baseForm).join(', ')
-
+        const meaningEntries = lookupWord(word.baseForm);
         return {
           kanji: word.surface ?? '',
           kana: word.reading ?? '',

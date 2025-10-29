@@ -9,22 +9,49 @@
       @mouseleave="onMouseLeave"
     >
       <div
-        class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
+        class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-primary/30"
         :style="arrowStyle"
       ></div>
 
       <div
-        class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden w-80"
+        class="rounded-2xl shadow-2xl border-2 bg-base-100 border-primary/30 overflow-hidden"
+        :class="{
+          'w-64': settings.tooltipSize === 'sm',
+          'w-80': settings.tooltipSize === 'md',
+          'w-96': settings.tooltipSize === 'lg'
+        }"
       >
-        <div class="h-1.5 bg-primary"></div>
+        <div class="h-1.5 bg-gradient-to-r from-primary to-secondary"></div>
 
-        <div class="p-4 sm:p-5 h-64 overflow-y-auto">
+        <div 
+          class="p-4 sm:p-5 overflow-y-auto"
+          :class="{
+            'h-48': settings.tooltipSize === 'sm',
+            'h-64': settings.tooltipSize === 'md',
+            'h-80': settings.tooltipSize === 'lg'
+          }"
+        >
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0 flex-1">
-              <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight break-words">
+              <div 
+                class="font-bold text-base-content leading-tight break-words"
+                :class="{
+                  'text-lg': settings.tooltipSize === 'sm',
+                  'text-xl sm:text-2xl': settings.tooltipSize === 'md',
+                  'text-2xl sm:text-3xl': settings.tooltipSize === 'lg'
+                }"
+              >
                 {{ word?.kanji || word?.kana }}
               </div>
-              <div v-if="word?.kana && word?.kanji" class="text-base sm:text-lg text-primary mt-1">
+              <div 
+                v-if="word?.kana && word?.kanji" 
+                class="text-primary mt-1"
+                :class="{
+                  'text-sm': settings.tooltipSize === 'sm',
+                  'text-base sm:text-lg': settings.tooltipSize === 'md',
+                  'text-lg sm:text-xl': settings.tooltipSize === 'lg'
+                }"
+              >
                 {{ word.kana }}
               </div>
             </div>
@@ -33,34 +60,82 @@
           <div class="divider my-2"></div>
 
           <div class="mb-3">
-            <p class="text-sm sm:text-base text-base-content/80 leading-relaxed">
+            <div v-if="loading" class="flex flex-col gap-2">
+              <div class="skeleton h-4 w-full"></div>
+              <div class="skeleton h-4 w-3/4"></div>
+            </div>
+            <p 
+              v-else
+              class="text-base-content/80 leading-relaxed"
+              :class="{
+                'text-xs': settings.tooltipSize === 'sm',
+                'text-sm sm:text-base': settings.tooltipSize === 'md',
+                'text-base sm:text-lg': settings.tooltipSize === 'lg'
+              }"
+            >
               {{ word?.meaning || 'No translation available' }}
             </p>
           </div>
 
-          <div v-if="word?.pos" class="mb-3">
-            <span class="badge badge-primary badge-sm">{{ formatPos(word.pos) }}</span>
+          <div v-if="!loading && settings.showPartOfSpeech && word?.pos" class="mb-3">
+            <span 
+              class="badge badge-primary"
+              :class="{
+                'badge-xs': settings.tooltipSize === 'sm',
+                'badge-sm': settings.tooltipSize === 'md',
+                'badge-md': settings.tooltipSize === 'lg'
+              }"
+            >
+              {{ formatPos(word.pos) }}
+            </span>
           </div>
 
-          <div v-if="showExtras && word?.pitchAccent" class="mb-3">
+          <div v-if="!loading && settings.showJLPTLevel && word?.jlptLevel" class="mb-3">
+            <span 
+              class="badge badge-secondary"
+              :class="{
+                'badge-xs': settings.tooltipSize === 'sm',
+                'badge-sm': settings.tooltipSize === 'md',
+                'badge-md': settings.tooltipSize === 'lg'
+              }"
+            >
+              JLPT {{ word.jlptLevel }}
+            </span>
+          </div>
+
+          <div v-if="!loading && settings.showPitchAccent && word?.pitchAccent" class="mb-3">
             <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide block mb-1">
               Pitch Accent
             </label>
-            <div class="text-xs sm:text-sm font-mono bg-base-200 rounded-lg p-2">
+            <div 
+              class="font-mono bg-base-200 rounded-lg p-2"
+              :class="{
+                'text-xs': settings.tooltipSize === 'sm',
+                'text-xs sm:text-sm': settings.tooltipSize === 'md',
+                'text-sm sm:text-base': settings.tooltipSize === 'lg'
+              }"
+            >
               {{ word.pitchAccent }}
             </div>
           </div>
 
-          <div v-if="showExtras && word?.example" class="mb-3">
+          <div v-if="!loading && settings.showExample && word?.example" class="mb-3">
             <label class="text-xs font-semibold text-base-content/60 uppercase tracking-wide block mb-1">
               Example
             </label>
-            <div class="text-xs sm:text-sm bg-base-200 rounded-lg p-2 italic">
+            <div 
+              class="bg-base-200 rounded-lg p-2 italic"
+              :class="{
+                'text-xs': settings.tooltipSize === 'sm',
+                'text-xs sm:text-sm': settings.tooltipSize === 'md',
+                'text-sm sm:text-base': settings.tooltipSize === 'lg'
+              }"
+            >
               {{ word.example }}
             </div>
           </div>
 
-          <div v-if="word?.isKnown" class="flex items-center gap-2 text-xs text-success">
+          <div v-if="!loading && word?.isKnown" class="flex items-center gap-2 text-xs text-success">
             <span>✓</span>
             <span>Known word</span>
           </div>
@@ -72,6 +147,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { useReaderSettingsStore } from '~/stores/useReaderSettingsStore'
 import type { ParsedWord } from '~/types/japanese'
 import type { CSSProperties } from 'vue'
 
@@ -81,13 +157,11 @@ interface Props {
   anchorElement?: HTMLElement | null
   loading?: boolean
   showExtras?: boolean
-  maxWidth?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
-  showExtras: false,
-  maxWidth: 'min(88vw,28rem)'
+  showExtras: false
 })
 
 const emit = defineEmits<{
@@ -96,12 +170,15 @@ const emit = defineEmits<{
   'mouse-leave': []
 }>()
 
+const readerSettingsStore = useReaderSettingsStore()
+const settings = computed(() => readerSettingsStore.settings)
+
 const tooltipRef = ref<HTMLElement | null>(null)
 const tooltipPosition = ref<CSSProperties>({})
 const arrowStyle = ref<CSSProperties>({})
 
 const shouldShow = computed(() => {
-  return props.visible && !props.loading && props.word?.meaning
+  return props.visible && props.word
 })
 
 const formatPos = (pos: string): string => {
