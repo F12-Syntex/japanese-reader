@@ -5,7 +5,7 @@
         <h3 class="text-base font-bold">Anki Data</h3>
         <p class="text-xs text-base-content/60 mt-1">View your imported Anki vocabulary</p>
       </div>
-      <button @click="$emit('back')" class="btn btn-ghost btn-sm gap-2">
+      <button @click="navigateTo('/settings')" class="btn btn-ghost btn-sm gap-2">
         <IconArrowLeft class="w-4 h-4" />
         Back
       </button>
@@ -18,7 +18,8 @@
       </div>
       <div class="stat">
         <div class="stat-title">With Definitions</div>
-        <div class="stat-value text-secondary">{{ wordsWithDefinitions }}</div>
+        <div class="stat-value text-secondary">{{ totalWordsWithDefinitions }}</div>
+        <div class="stat-desc">{{ loadingDefinitionsCount ? 'Calculating...' : '' }}</div>
       </div>
     </div>
 
@@ -47,8 +48,8 @@
           <div class="flex justify-between items-start gap-4">
             <div class="flex-1">
               <h4 class="text-xl font-bold mb-2">{{ word }}</h4>
-              <div v-if="wordDefinitions.get(word) && wordDefinitions.get(word)!.length > 0" class="text-sm">
-                {{ wordDefinitions.get(word)!.join('; ') }}
+              <div v-if="currentPageDefinitions.get(word) && currentPageDefinitions.get(word)!.length > 0" class="text-sm">
+                {{ currentPageDefinitions.get(word)!.join('; ') }}
               </div>
               <div v-else class="text-sm text-base-content/40 italic">
                 No definition found
@@ -102,47 +103,40 @@ const dictionaryStore = useDictionaryStore()
 const knownWords = computed(() => ankiStore.knownWords)
 const searchQuery = ref('')
 const currentPage = ref(1)
-const itemsPerPage = 20
+const itemsPerPage = 10
+const totalWordsWithDefinitions = ref(0)
+const loadingDefinitionsCount = ref(false)
 
 onMounted(async () => {
   if (!dictionaryStore.isLoaded) {
     await dictionaryStore.loadDictionary()
   }
+  calculateTotalWithDefinitions()
 })
 
-const wordDefinitions = computed(() => {
-  const map = new Map<string, string[]>()
-  for (const word of knownWords.value) {
-    const meanings = dictionaryStore.lookupWord(word).split(',');
-    map.set(word, meanings)
-  }
-  return map
-})
-
-const wordsWithDefinitions = computed(() => {
+const calculateTotalWithDefinitions = async () => {
+  loadingDefinitionsCount.value = true
   let count = 0
-  for (const [_, meanings] of wordDefinitions.value) {
-    if (meanings && meanings.length > 0) {
-      count++
+  const batchSize = itemsPerPage
+  const wordsArray = Array.from(knownWords.value)
+  
+  for (let i = 0; i < wordsArray.length; i += batchSize) {
+    const batch = wordsArray.slice(i, i + batchSize)
+    for (const word of batch) {
+      const meanings = dictionaryStore.lookupWord(word)
+      if (meanings && meanings.trim().length > 0) {
+        count++
+      }
     }
+    await new Promise(resolve => setTimeout(resolve, 0))
   }
-  return count
-})
+  
+  totalWordsWithDefinitions.value = count
+  loadingDefinitionsCount.value = false
+}
 
 const sortedWords = computed(() => {
-  const words = Array.from(knownWords.value)
-  if (searchQuery.value.trim()) {
-    return words.sort((a, b) => a.localeCompare(b, 'ja'))
-  }
-  return words.sort((a, b) => {
-    const aDefs = wordDefinitions.value.get(a)
-    const bDefs = wordDefinitions.value.get(b)
-    const aHasDef = aDefs && aDefs.length > 0
-    const bHasDef = bDefs && bDefs.length > 0
-    if (aHasDef && !bHasDef) return -1
-    if (!aHasDef && bHasDef) return 1
-    return a.localeCompare(b, 'ja')
-  })
+  return Array.from(knownWords.value).sort((a, b) => a.localeCompare(b, 'ja'))
 })
 
 const filteredWords = computed(() => {
@@ -150,11 +144,7 @@ const filteredWords = computed(() => {
     return sortedWords.value
   }
   const query = searchQuery.value.toLowerCase()
-  return sortedWords.value.filter(word => {
-    if (word.toLowerCase().includes(query)) return true
-    const meanings = wordDefinitions.value.get(word)
-    return meanings?.some(m => m.toLowerCase().includes(query)) ?? false
-  })
+  return sortedWords.value.filter(word => word.toLowerCase().includes(query))
 })
 
 const totalPages = computed(() => {
@@ -167,11 +157,18 @@ const paginatedWords = computed(() => {
   return filteredWords.value.slice(start, end)
 })
 
+const currentPageDefinitions = computed(() => {
+  const map = new Map<string, string[]>()
+  for (const word of paginatedWords.value) {
+    const meanings = dictionaryStore.lookupWord(word)
+    if (meanings) {
+      map.set(word, meanings.split(','))
+    }
+  }
+  return map
+})
+
 watch(filteredWords, () => {
   currentPage.value = 1
 })
-
-defineEmits<{
-  back: []
-}>()
 </script>
