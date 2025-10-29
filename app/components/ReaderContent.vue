@@ -320,7 +320,6 @@ const fetchTranslation = async (text: string) => {
       body: {
         apiKey,
         text,
-        model: 'gpt-4o-mini'
       }
     })
 

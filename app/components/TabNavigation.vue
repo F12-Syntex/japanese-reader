@@ -44,7 +44,7 @@
           <IconBook class="w-5 h-5" />
         </button>
         <button :class="{ active: activeTab === 'books' }" @click="updateTab('books')">
-          <IconBooks class="w-5 h-5" />
+          <IconBookText class="w-5 h-5" />
         </button>
         <button :class="{ active: activeTab === 'grammar' }" @click="updateTab('grammar')">
           <IconBookOpen class="w-5 h-5" />

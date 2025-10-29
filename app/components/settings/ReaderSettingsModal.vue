@@ -2,6 +2,21 @@
   <BaseModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" title="Settings" subtitle="Customize your experience" size="4xl" fixed-height="85vh">
     <template #default>
       <div class="flex flex-col md:flex-row h-full gap-4 md:gap-6">
+        <div class="md:hidden bg-base-100 border-b border-base-300 pb-2 -mt-4 -mx-4 px-4 mb-2">
+          <div class="flex justify-around items-center p-2 w-full max-w-full overflow-x-hidden">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              :title="tab.label"
+              class="p-3 rounded-lg transition-colors flex-shrink-0"
+              :class="activeTab === tab.id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-200'"
+            >
+              <component :is="tab.icon" class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
         <div class="hidden md:flex md:flex-col md:w-48 lg:w-56 flex-shrink-0 gap-2 overflow-y-auto pr-2 ">
           <button 
             v-for="tab in tabs" 
@@ -10,12 +25,12 @@
             class="btn justify-start gap-3 w-full flex-shrink-0"
             :class="activeTab === tab.id ? 'btn-primary' : 'btn-ghost'"
           >
-            <component :is="tab.icon" class="w-5 h-5 " />
+            <component :is="tab.icon" class="w-5 h-5" />
             <span class="text-sm">{{ tab.label }}</span>
           </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto pr-2 pb-20 md:pb-0 min-h-0">
+        <div class="flex-1 overflow-x-hidden overflow-y-auto pr-2 min-h-0">
           <AccountSettings v-show="activeTab === 'account'" @open-anki-data="activeTab = 'ankidata'" />
           <TypographySettings v-show="activeTab === 'typography'" :settings="readerStore.settings" @open-marketplace="activeTab = 'marketplace'" />
           <MarketplaceSettings 
@@ -32,21 +47,6 @@
             <StorageSettings v-show="activeTab === 'storage'" />
             <AnkiDataSettings v-show="activeTab === 'ankidata'" @back="activeTab = 'account'" />
           </ClientOnly>
-        </div>
-
-        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 z-50 ">
-          <div class="flex justify-around items-center p-2 w-full max-w-full overflow-x-auto">
-            <button 
-              v-for="tab in tabs" 
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :title="tab.label"
-              class="p-3 rounded-lg transition-colors flex-shrink-0"
-              :class="activeTab === tab.id ? 'bg-primary text-primary-content' : 'text-base-content hover:bg-base-200'"
-            >
-              <component :is="tab.icon" class="w-5 h-5" />
-            </button>
-          </div>
         </div>
       </div>
     </template>

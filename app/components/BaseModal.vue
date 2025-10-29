@@ -13,7 +13,7 @@
           enter-from-class="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
           leave-to-class="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0"
         >
-          <div v-if="modelValue" class="bg-base-100 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col" :class="sizeClass" :style="dimensionStyle">
+          <div v-if="modelValue" class="bg-base-100 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col h-[85vh] sm:h-auto" :class="sizeClass" :style="dimensionStyle">
             <div class="flex-shrink-0 p-4 sm:p-6 border-b border-base-200 bg-base-100 flex items-center justify-between">
               <div class="flex-1 min-w-0">
                 <h2 class="text-lg sm:text-2xl font-bold">{{ title }}</h2>
@@ -24,7 +24,7 @@
               </button>
             </div>
 
-            <div class="flex-1 overflow-hidden px-4 sm:px-6 py-4 sm:py-6 min-h-0">
+            <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 min-h-0">
               <slot />
             </div>
 
