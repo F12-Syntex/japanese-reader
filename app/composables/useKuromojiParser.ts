@@ -5,22 +5,19 @@ const BATCH_SIZE = 50
 
 export const useKuromojiParser = () => {
   const { knownWords, isWordKnown } = useAnki()
+  const { lookupWord } = useDictionaryStore()
 
   const sanitizeText = (text: string): string => {
     return text
-      // Remove null bytes
       .replace(/\x00/g, '')
-      // Convert vertical punctuation to horizontal
       .replace(/︒/g, '。')
       .replace(/﹁/g, '「')
       .replace(/﹂/g, '」')
       .replace(/︑/g, '、')
-      // Normalize other vertical forms
       .replace(/︙/g, '…')
       .replace(/︰/g, '：')
       .replace(/︱/g, '|')
       .replace(/︓/g, '：')
-      // Remove any other control characters
       .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
   }
 
@@ -54,7 +51,6 @@ export const useKuromojiParser = () => {
 
       const data = await response.json()
       
-      // Validate the response
       if (!data.words || !Array.isArray(data.words)) {
         console.error('Invalid response from server:', data)
         throw new Error('Invalid response format')
@@ -67,14 +63,14 @@ export const useKuromojiParser = () => {
 
       console.log('Successfully parsed', data.words.length, 'words')
 
-      const { lookupWord } = useDictionaryStore()
-
       const words = data.words.map((word: any): ParsedWord => {
-        const meaningEntries = lookupWord(word.baseForm);
+        const meaningEntries = lookupWord(word.baseForm)
+        const meaning = meaningEntries || ''
+        
         return {
           kanji: word.surface ?? '',
           kana: word.reading ?? '',
-          meaning: meaningEntries ?? '',
+          meaning,
           pos: word.pos ?? 'other',
           isKnown: isWordKnown(word.surface),
           reading: word.reading ?? '',
@@ -90,14 +86,17 @@ export const useKuromojiParser = () => {
       console.error('Original text length:', text.length)
       console.error('First 200 chars:', text.substring(0, 200))
       
-      // Return character-by-character fallback
       const sanitized = sanitizeText(text)
       return sanitized.split('').map((char): ParsedWord => ({
         kanji: char,
         kana: char,
         meaning: '',
         pos: 'other',
-        isKnown: false
+        isKnown: false,
+        reading: char,
+        jlptLevel: '',
+        pitchAccent: '',
+        example: ''
       }))
     }
   }
