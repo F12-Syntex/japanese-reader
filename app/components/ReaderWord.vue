@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { nextTick, computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import type { ParsedWord } from '~/types/japanese'
 import type { ReaderSettings } from '~/types/reader'
 import type { CSSProperties } from 'vue'
 import { useWordMetadataStore } from '~/stores/useWordMetadataStore'
+import WordToolTip from './WordToolTip.vue'
 
 interface Props {
   word: ParsedWord
@@ -22,18 +23,30 @@ const emit = defineEmits<{
 
 const metadataStore = useWordMetadataStore()
 const showTooltip = ref(false)
-const tooltipRef = ref<HTMLElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
 const localWord = ref<ParsedWord>({ ...props.word })
-const arrowPosition = ref<'top' | 'bottom'>('top')
-const tooltipPosition = ref<CSSProperties>({})
 const isMobile = ref(false)
+const isLoadingMetadata = ref(false)
 let tooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let keepTooltip = false
 
 const enrichedMeaning = computed(() => {
   const kanji = localWord.value?.kanji ?? ''
   return kanji ? metadataStore.getWord(kanji) : null
+})
+
+const enrichedWord = computed((): ParsedWord => {
+  const enriched = enrichedMeaning.value
+  if (!enriched) return localWord.value
+
+  return {
+    ...localWord.value,
+    meaning: enriched.meaning || localWord.value.meaning,
+    pos: enriched.pos || localWord.value.pos,
+    pitchAccent: enriched.pitchAccent || localWord.value.pitchAccent,
+    example: enriched.example || localWord.value.example,
+    jlptLevel: enriched.jlptLevel || localWord.value.jlptLevel
+  }
 })
 
 const displayMeaning = computed(() => {
@@ -45,10 +58,11 @@ const pos = computed(() => enrichedMeaning.value?.pos || localWord.value?.pos)
 const isParticle = computed(() => pos.value === 'particle')
 const isPunctuation = computed(() => pos.value === 'punctuation')
 
-const showTooltipExtras = computed(() =>
-  (props.settings?.showPitchAccent && (enrichedMeaning.value?.pitchAccent || localWord.value.pitchAccent)) ||
-  (props.settings?.showExample && (enrichedMeaning.value?.example || localWord.value.example))
-)
+const showTooltipExtras = computed(() => {
+  const hasPitchAccent = props.settings?.showPitchAccent && (enrichedMeaning.value?.pitchAccent || localWord.value.pitchAccent)
+  const hasExample = props.settings?.showExample && (enrichedMeaning.value?.example || localWord.value.example)
+  return !!(hasPitchAccent || hasExample)
+})
 
 const highlightClass = computed(() => {
   if (isGrammarHighlighted.value && props.settings?.highlightGrammar) {
@@ -94,24 +108,6 @@ const opacityAndDecorationStyle = computed((): CSSProperties => {
   return style
 })
 
-const arrowStyle = computed((): CSSProperties => {
-  const baseStyle: CSSProperties = { zIndex: -1 }
-
-  if (arrowPosition.value === 'bottom') {
-    return {
-      ...baseStyle,
-      top: '-6px',
-      left: '50%',
-      marginLeft: '-6px'
-    }
-  }
-  return {
-    ...baseStyle,
-    bottom: '-6px',
-    left: '50%',
-    marginLeft: '-6px'
-  }
-})
 
 const surfaceClampStyle = computed((): CSSProperties => ({
   maxWidth: '24ch',
@@ -148,11 +144,6 @@ const furiganaStyle = computed((): CSSProperties => {
   }
 })
 
-const tooltipTextSize = computed(() => {
-  if (props.settings?.tooltipSize === 'sm') return 'text-xs'
-  if (props.settings?.tooltipSize === 'lg') return 'text-base'
-  return 'text-sm'
-})
 
 const isGrammarHighlighted = computed(() => props.isGrammarHighlighted)
 
@@ -175,54 +166,14 @@ const truncateMeaning = (meaning: string): string => {
   return firstMeaning
 }
 
-const positionTooltip = () => {
-  nextTick(() => {
-    if (!wrapperRef.value || !tooltipRef.value) return
-
-    const wordRect = wrapperRef.value.getBoundingClientRect()
-    const tooltipRect = tooltipRef.value.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
-    const viewportWidth = window.innerWidth
-
-    const spaceAbove = wordRect.top
-    const spaceBelow = viewportHeight - wordRect.bottom
-
-    let top = 0
-    if (spaceBelow >= tooltipRect.height + 20) {
-      arrowPosition.value = 'top'
-      top = wordRect.bottom + 12
-    } else if (spaceAbove >= tooltipRect.height + 20) {
-      arrowPosition.value = 'bottom'
-      top = wordRect.top - tooltipRect.height - 12
-    } else {
-      arrowPosition.value = 'bottom'
-      top = Math.max(10, wordRect.top - tooltipRect.height - 12)
-    }
-
-    let left = wordRect.left + wordRect.width / 2
-
-    if (left + tooltipRect.width / 2 > viewportWidth - 10) {
-      left = viewportWidth - tooltipRect.width / 2 - 10
-    }
-    if (left - tooltipRect.width / 2 < 10) {
-      left = tooltipRect.width / 2 + 10
-    }
-
-    tooltipPosition.value = {
-      top: `${top}px`,
-      left: `${left}px`,
-      transform: 'translateX(-50%)'
-    }
-  })
-}
 
 const handleClick = (event: MouseEvent) => {
   emit('click', localWord.value, event)
 }
 
 const handleMouseEnter = () => {
-  if (props.disableHover) return
-  
+  if (props.disableHover || isMobile.value) return
+
   if (tooltipTimeout) {
     clearTimeout(tooltipTimeout)
   }
@@ -230,7 +181,6 @@ const handleMouseEnter = () => {
   tooltipTimeout = setTimeout(() => {
     if (!keepTooltip && !props.disableHover) {
       showTooltip.value = true
-      positionTooltip()
       enrichWordData()
     }
   }, props.settings?.tooltipDelay || 300)
@@ -260,10 +210,14 @@ const enrichWordData = async () => {
   const kanji = localWord.value?.kanji ?? ''
   if (!kanji || metadataStore.hasWord(kanji)) return
 
+  isLoadingMetadata.value = true
   try {
     const { getApiKey } = useOpenAI()
     const apiKey = getApiKey()
-    if (!apiKey) return
+    if (!apiKey) {
+      isLoadingMetadata.value = false
+      return
+    }
 
     const response = await $fetch<{ data?: Record<string, any> }>('/api/word-metadata', {
       method: 'POST',
@@ -280,6 +234,8 @@ const enrichWordData = async () => {
     }
   } catch (error) {
     console.error('Failed to enrich word data:', error)
+  } finally {
+    isLoadingMetadata.value = false
   }
 }
 
@@ -316,8 +272,9 @@ onMounted(() => {
   >
     <span
       v-if="settings?.alwaysShowTranslation && displayMeaning && !isParticle && !isPunctuation"
-      class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none"
+      class="block text-center text-base-content/70 whitespace-nowrap mb-1 pointer-events-none select-none leading-none user-select-none"
       :style="translationStyle"
+      aria-hidden="true"
     >
       {{ truncateMeaning(displayMeaning) }}
     </span>
@@ -338,100 +295,41 @@ onMounted(() => {
         </span>
         <rt
           v-if="!isParticle && !isPunctuation&& settings?.showFurigana && word?.kana !== word?.kanji"
-          class="select-none transition-opacity duration-150 opacity-70"
+          class="select-none transition-opacity duration-150 opacity-70 user-select-none"
           :style="furiganaStyle"
+          aria-hidden="true"
         >
           {{ word?.kana }}
         </rt>
       </ruby>
 
-      <teleport v-if="showTooltip && settings?.showTooltip && !isParticle && !isPunctuation && !isMobile" to="body">
-        <div
-          ref="tooltipRef"
-          class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
-          :style="tooltipPosition"
-        >
-          <div
-            class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
-            :style="arrowStyle"
-          ></div>
-
-          <div
-            class="rounded-2xl shadow-2xl border-2 bg-base-100 border-base-300 overflow-hidden"
-            :class="tooltipTextSize"
-            style="max-width:min(88vw,28rem)"
-            @mouseenter="onTooltipMouseEnter"
-            @mouseleave="onTooltipMouseLeave"
-          >
-            <div class="h-1.5 bg-primary"></div>
-
-            <div class="p-4 sm:p-5">
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2.5 mb-1">
-                    <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight">
-                      {{ localWord.kanji }}
-                    </div>
-                    <div
-                      v-if="enrichedMeaning?.jlptLevel"
-                      class="px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 badge badge-primary"
-                    >
-                      {{ enrichedMeaning.jlptLevel }}
-                    </div>
-                  </div>
-                  <div v-if="enrichedMeaning?.reading || localWord.reading" class="text-base sm:text-lg text-base-content/70 font-medium">
-                    {{ enrichedMeaning?.reading || localWord.reading }}
-                  </div>
-                </div>
-
-                <div
-                  v-if="(settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)) || localWord.isKnown !== undefined"
-                  class="flex flex-col gap-2 items-end shrink-0"
-                >
-                  <span
-                    v-if="settings?.showPartOfSpeech && (enrichedMeaning?.pos || localWord.pos)"
-                    class="badge badge-neutral badge-sm font-semibold"
-                  >
-                    {{ enrichedMeaning?.pos || localWord.pos }}
-                  </span>
-                  <span
-                    v-if="localWord.isKnown !== undefined"
-                    class="badge badge-sm font-semibold"
-                    :class="localWord.isKnown
-                      ? 'badge-success badge-outline'
-                      : 'badge-warning badge-outline'"
-                  >
-                    {{ localWord.isKnown ? 'Known' : 'Learning' }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="divider my-2"></div>
-
-              <div class="mb-3">
-                <p class="text-sm sm:text-base text-base-content/80 leading-relaxed line-clamp-4">
-                  {{ displayMeaning || 'No meaning available' }}
-                </p>
-              </div>
-
-              <div
-                v-if="showTooltipExtras"
-                class="space-y-2.5 pt-2 border-t border-base-300"
-              >
-                <div v-if="settings?.showPitchAccent && (enrichedMeaning?.pitchAccent || localWord.pitchAccent)" class="flex items-center gap-2">
-                  <span class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Pitch:</span>
-                  <span class="text-sm font-medium text-base-content">{{ enrichedMeaning?.pitchAccent || localWord.pitchAccent }}</span>
-                </div>
-                <div v-if="settings?.showExample && (enrichedMeaning?.example || localWord.example)" class="alert alert-info py-2 px-3">
-                  <p class="text-sm leading-relaxed italic">
-                    "{{ enrichedMeaning?.example || localWord.example }}"
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </teleport>
+      <WordToolTip
+        v-if="settings?.showTooltip && !isParticle && !isPunctuation"
+        :visible="showTooltip"
+        :word="enrichedWord"
+        :anchor-element="wrapperRef"
+        :loading="isLoadingMetadata"
+        :show-extras="showTooltipExtras"
+        @mouse-enter="onTooltipMouseEnter"
+        @mouse-leave="onTooltipMouseLeave"
+      />
     </span>
   </span>
 </template>
+
+<style scoped>
+.user-select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Ensure furigana (rt) is not selectable */
+rt {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+</style>

@@ -238,6 +238,27 @@ const handleWordClick = (word: ParsedWord, event?: MouseEvent) => {
   }
 }
 
+// Extract only the actual Japanese text from the selection
+const extractJapaneseText = (selection: Selection): string => {
+  const range = selection.getRangeAt(0)
+  const container = range.cloneContents()
+  
+  // Remove all ruby annotations (furigana)
+  container.querySelectorAll('rt').forEach(rt => rt.remove())
+  
+  // Remove translation spans (those with user-select-none or specific classes)
+  container.querySelectorAll('[aria-hidden="true"]').forEach(el => el.remove())
+  container.querySelectorAll('.user-select-none').forEach(el => el.remove())
+  
+  // Get the text content
+  let text = container.textContent || ''
+  
+  // Clean up whitespace
+  text = text.replace(/\s+/g, '').trim()
+  
+  return text
+}
+
 const positionSelectionTooltip = (rect: DOMRect) => {
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
@@ -298,9 +319,8 @@ const fetchTranslation = async (text: string) => {
       method: 'POST',
       body: {
         apiKey,
-        sentence: text,
-        words: [],
-        allSentences: [],
+        text,
+        model: 'gpt-4o-mini'
       }
     })
 
@@ -308,43 +328,54 @@ const fetchTranslation = async (text: string) => {
       translationText.value = response.analysis.translation
     }
   } catch (error) {
-    translationText.value = 'Translation failed'
+    console.error('Translation error:', error)
+    translationText.value = 'Failed to load translation'
   } finally {
     translationLoading.value = false
   }
 }
 
 const handleTextSelection = () => {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed) {
+    hasSelection.value = false
+    if (selectionTooltipTimeout) {
+      clearTimeout(selectionTooltipTimeout)
+      selectionTooltipTimeout = null
+    }
+    if (!keepSelectionTooltip) {
+      showSelectionTooltip.value = false
+      selectedText.value = ''
+      currentSelectionText = ''
+    }
+    return
+  }
+
+  const text = extractJapaneseText(selection)
+  
+  if (text.length < 2) {
+    hasSelection.value = false
+    return
+  }
+
+  hasSelection.value = true
+  selectedText.value = text
+  currentSelectionText = text
+
+  const range = selection.getRangeAt(0)
+  const rect = range.getBoundingClientRect()
+
   if (selectionTooltipTimeout) {
     clearTimeout(selectionTooltipTimeout)
-    selectionTooltipTimeout = null
   }
 
-  const selection = window.getSelection()
-  if (!selection) return
-
-  const text = selection.toString().trim()
-  if (text.length > 0) {
-    const range = selection.getRangeAt(0)
-    const rect = range.getBoundingClientRect()
-    
-    selectedText.value = text
-    hasSelection.value = true
-    currentSelectionText = text
-    
-    selectionTooltipTimeout = setTimeout(() => {
-      if (!keepSelectionTooltip) {
-        showSelectionTooltip.value = true
-        positionSelectionTooltip(rect)
-        fetchTranslation(text)
-      }
-    }, props.settings?.tooltipDelay || 10)
-  } else {
-    if (!keepSelectionTooltip) {
-      hasSelection.value = false
-      showSelectionTooltip.value = false
+  selectionTooltipTimeout = setTimeout(() => {
+    if (!keepSelectionTooltip && currentSelectionText === text) {
+      positionSelectionTooltip(rect)
+      showSelectionTooltip.value = true
+      fetchTranslation(text)
     }
-  }
+  }, 300)
 }
 
 const onSelectionTooltipMouseEnter = () => {
@@ -354,44 +385,45 @@ const onSelectionTooltipMouseEnter = () => {
 const onSelectionTooltipMouseLeave = () => {
   keepSelectionTooltip = false
   showSelectionTooltip.value = false
+  selectedText.value = ''
+  currentSelectionText = ''
   hasSelection.value = false
 }
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Control' || e.key === 'Meta') {
-    isCtrlPressed.value = true
+onMounted(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      isCtrlPressed.value = true
+    }
   }
-}
 
-const handleKeyUp = (e: KeyboardEvent) => {
-  if (e.key === 'Control' || e.key === 'Meta') {
-    isCtrlPressed.value = false
-    hoveredSentence.value = null
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      isCtrlPressed.value = false
+      hoveredSentence.value = null
+    }
   }
-}
 
-const handleClickOutside = (e: MouseEvent) => {
-  if (!keepSelectionTooltip && showSelectionTooltip.value) {
-    const target = e.target as HTMLElement
-    if (!selectionTooltipRef.value?.contains(target)) {
+  const handleClickOutside = () => {
+    if (!keepSelectionTooltip) {
       showSelectionTooltip.value = false
+      selectedText.value = ''
+      currentSelectionText = ''
       hasSelection.value = false
     }
   }
-}
 
-onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
   document.addEventListener('click', handleClickOutside)
-})
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('keyup', handleKeyUp)
-  document.removeEventListener('click', handleClickOutside)
-  if (selectionTooltipTimeout) {
-    clearTimeout(selectionTooltipTimeout)
-  }
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+    document.removeEventListener('click', handleClickOutside)
+    if (selectionTooltipTimeout) {
+      clearTimeout(selectionTooltipTimeout)
+    }
+  })
 })
 </script>

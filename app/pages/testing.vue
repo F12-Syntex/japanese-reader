@@ -479,8 +479,9 @@ const calculateWordBounds = (
   const charToWord: (ParsedWord | null)[] = new Array(fullText.length).fill(null)
   let currentPos = 0
   let mappedWords = 0
-  let unmappedWords: string[] = []
+  let unmappedWords: ParsedWord[] = []
 
+  // First pass: map words sequentially
   for (const word of parsedWords) {
     const wordText = word.kanji
     const startPos = fullText.indexOf(wordText, currentPos)
@@ -492,19 +493,53 @@ const calculateWordBounds = (
       currentPos = startPos + wordText.length
       mappedWords++
     } else {
-      unmappedWords.push(wordText)
-      console.warn(`Could not map word "${wordText}" in text`)
+      unmappedWords.push(word)
+    }
+  }
+
+  // Second pass: try to map unmapped words anywhere in the text
+  const stillUnmapped: string[] = []
+  for (const word of unmappedWords) {
+    const wordText = word.kanji
+    let found = false
+
+    // Search for any occurrence of this word in the text
+    for (let i = 0; i < fullText.length; i++) {
+      if (fullText.substring(i, i + wordText.length) === wordText) {
+        // Check if this position is not already mapped
+        let canMap = true
+        for (let j = 0; j < wordText.length; j++) {
+          if (charToWord[i + j] !== null) {
+            canMap = false
+            break
+          }
+        }
+
+        if (canMap) {
+          for (let j = 0; j < wordText.length; j++) {
+            charToWord[i + j] = word
+          }
+          mappedWords++
+          found = true
+          break
+        }
+      }
+    }
+
+    if (!found) {
+      stillUnmapped.push(wordText)
+      console.warn(`Could not map word "${wordText}" anywhere in text`)
     }
   }
 
   console.log('Character to word mapping created:', {
     totalWords: parsedWords.length,
     mappedWords,
-    unmappedWords: unmappedWords.length
+    unmappedWords: stillUnmapped.length
   })
 
-  if (unmappedWords.length > 0 && unmappedWords.length <= 10) {
-    console.log('Unmapped words:', unmappedWords)
+  if (stillUnmapped.length > 0 && stillUnmapped.length <= 10) {
+    console.log('Unmapped words:', stillUnmapped)
   }
 
   // Track character rectangles for each word
