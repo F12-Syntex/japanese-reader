@@ -1,25 +1,26 @@
 <template>
   <div class="h-screen flex flex-col bg-base-100">
-    <div class="navbar bg-base-200 shadow-lg">
+    <div class="navbar bg-base-200 shadow-lg sticky top-0 z-50">
       <div class="flex-1">
-        <button @click="navigateTo('/books')" class="btn btn-ghost btn-sm">
-          ← Back
+        <button @click="navigateTo('/books')" class="btn btn-ghost btn-sm gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
         </button>
-        <h1 class="text-xl font-bold ml-4">{{ currentBook?.title }}</h1>
+        <h1 class="text-xl font-bold ml-2">{{ currentBook?.title }}</h1>
       </div>
       <div class="flex-none gap-2">
         <div class="flex items-center gap-2 border-r border-base-300 pr-4">
-          <label class="label cursor-pointer gap-2">
-            <span class="text-xs">View:</span>
-            <select v-model="viewMode" class="select select-xs select-bordered">
-              <option value="pdf">PDF Parser</option>
-              <option value="reader">Reader Content</option>
-            </select>
-          </label>
+          <label class="text-xs font-medium">View:</label>
+          <select v-model="viewMode" class="select select-xs select-bordered w-32">
+            <option value="pdf">PDF Parser</option>
+            <option value="reader">Reader Content</option>
+          </select>
         </div>
 
         <div v-if="viewMode === 'pdf'" class="flex items-center gap-2 border-r border-base-300 pr-4">
-          <label class="text-xs">Zoom:</label>
+          <label class="text-xs font-medium">Zoom:</label>
           <input
             v-model.number="pdfReader.zoom.value"
             type="range"
@@ -28,23 +29,39 @@
             step="0.1"
             class="range range-xs range-primary w-24"
           />
-          <span class="text-xs">{{ Math.round(pdfReader.zoom.value * 100) }}%</span>
+          <span class="text-xs min-w-[2.5rem]">{{ Math.round(pdfReader.zoom.value * 100) }}%</span>
         </div>
 
         <div v-if="viewMode === 'pdf'" class="flex items-center gap-2 border-r border-base-300 pr-4">
           <label class="label cursor-pointer gap-2">
-            <span class="text-xs">Bounds</span>
+            <span class="text-xs font-medium">Bounds</span>
             <input v-model="showBounds" type="checkbox" class="toggle toggle-xs toggle-primary" />
           </label>
         </div>
 
         <div class="flex items-center gap-2">
-          <button @click="pdfReader.prevPage()" :disabled="!pdfReader.canGoPrev.value" class="btn btn-sm btn-primary">
-            ←
+          <button 
+            @click="pdfReader.prevPage()" 
+            :disabled="!pdfReader.canGoPrev.value" 
+            class="btn btn-sm btn-primary btn-square"
+            title="Previous page"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <span class="text-sm">{{ pdfReader.currentPageIndex.value + 1 }} / {{ pdfReader.totalPages.value }}</span>
-          <button @click="pdfReader.nextPage()" :disabled="!pdfReader.canGoNext.value" class="btn btn-sm btn-primary">
-            →
+          <span class="text-sm font-medium min-w-[4rem] text-center">
+            {{ pdfReader.currentPageIndex.value + 1 }} / {{ pdfReader.totalPages.value }}
+          </span>
+          <button 
+            @click="pdfReader.nextPage()" 
+            :disabled="!pdfReader.canGoNext.value" 
+            class="btn btn-sm btn-primary btn-square"
+            title="Next page"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
       </div>
@@ -129,7 +146,6 @@
 import { useBooksStore } from '~/stores/useBooksStore'
 import { usePdfReader } from '~/composables/usePdfReader'
 import { useReaderSettingsStore } from '~/stores/useReaderSettingsStore'
-import { getFileHandle } from '~/utils/fileHandleStorage'
 import WordToolTip from './WordToolTip.vue'
 import ReaderContent from './ReaderContent.vue'
 import type { ParsedWord, ParsedSentence } from '~/types/japanese'
@@ -243,17 +259,7 @@ onMounted(async () => {
   }
 
   try {
-    let pdfSource: string | FileSystemFileHandle = currentBook.value.path
-    
-    // Try to load from file handle if available
-    if (currentBook.value.bookId) {
-      const fileHandle = await getFileHandle(currentBook.value.bookId)
-      if (fileHandle) {
-        pdfSource = fileHandle
-      }
-    }
-    
-    await pdfReader.loadPdf(pdfSource)
+    await pdfReader.loadPdf(currentBook.value.path)
   } catch (error) {
     console.error('Error loading PDF:', error)
   }

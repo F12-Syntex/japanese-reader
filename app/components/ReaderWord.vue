@@ -171,22 +171,27 @@ const handleClick = (event: MouseEvent) => {
   emit('click', localWord.value, event)
 }
 
+const isHovered = ref(false)
+
 const handleMouseEnter = () => {
   if (props.disableHover || isMobile.value) return
+
+  isHovered.value = true
 
   if (tooltipTimeout) {
     clearTimeout(tooltipTimeout)
   }
 
-  tooltipTimeout = setTimeout(() => {
-    if (!keepTooltip && !props.disableHover) {
-      showTooltip.value = true
-      enrichWordData()
-    }
-  }, props.settings?.tooltipDelay || 300)
+  // Show tooltip immediately with existing data
+  showTooltip.value = true
+  
+  // Fetch enhanced metadata in background (non-blocking)
+  enrichWordData()
 }
 
 const handleMouseLeave = () => {
+  isHovered.value = false
+  
   if (tooltipTimeout) {
     clearTimeout(tooltipTimeout)
     tooltipTimeout = null
@@ -281,12 +286,15 @@ onMounted(() => {
 
     <span
       class="inline-block relative transition-colors duration-150"
-      :class="{ 'rounded-md': !isParticle && !isPunctuation && word?.kanji && !disableHover }"
+      :class="{ 
+        'rounded-md': !isParticle && !isPunctuation && word?.kanji && !disableHover,
+        'bg-primary/15': isHovered && !isParticle && !isPunctuation && !disableHover
+      }"
     >
       <ruby class="[ruby-align:center]">
         <span
           class="transition-colors duration-150 px-0.5 rounded-sm"
-          :class="highlightClass"
+          :class="[highlightClass, { 'bg-primary/10': isHovered && !isParticle && !isPunctuation && !disableHover }]"
           :style="[surfaceClampStyle, opacityAndDecorationStyle]"
         >
           <span class="align-middle leading-none">

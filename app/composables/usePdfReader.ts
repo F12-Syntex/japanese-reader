@@ -251,7 +251,7 @@ export const usePdfReader = () => {
     return bounds
   }
 
-  const loadPdf = async (base64DataOrFileHandle: string | FileSystemFileHandle) => {
+  const loadPdf = async (base64Data: string) => {
     isLoading.value = true
     
     try {
@@ -261,21 +261,11 @@ export const usePdfReader = () => {
         pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
       }
 
-      let bytes: Uint8Array
-
-      if (base64DataOrFileHandle instanceof FileSystemFileHandle) {
-        // Load from file handle
-        const file = await base64DataOrFileHandle.getFile()
-        const arrayBuffer = await file.arrayBuffer()
-        bytes = new Uint8Array(arrayBuffer)
-      } else {
-        // Load from base64
-        const binaryString = atob(base64DataOrFileHandle)
-        const len = binaryString.length
-        bytes = new Uint8Array(len)
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
+      const binaryString = atob(base64Data)
+      const len = binaryString.length
+      const bytes = new Uint8Array(len)
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
       }
 
       pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise

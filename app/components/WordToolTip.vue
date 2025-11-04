@@ -13,7 +13,7 @@
         :style="arrowStyle"
       ></div>
 
-      <div class="rounded-xl shadow-xl border border-base-300 bg-base-100 overflow-hidden backdrop-blur-sm w-80">
+      <div class="rounded-xl shadow-xl border border-base-300 bg-base-100 overflow-hidden backdrop-blur-sm w-80 max-w-[90vw]">
         <div class="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 px-4 pt-4 pb-3">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
@@ -78,7 +78,7 @@
           </div>
         </div>
 
-        <div class="px-4 py-3 space-y-3 h-48 overflow-y-auto">
+        <div class="px-4 py-3 space-y-3 max-h-64 overflow-y-auto">
           <div>
             <div class="flex items-center gap-2 mb-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/60" viewBox="0 0 20 20" fill="currentColor">
@@ -88,16 +88,15 @@
                 Translation
               </span>
             </div>
-            <div v-if="loading" class="flex flex-col gap-2">
-              <div class="skeleton h-4 w-full"></div>
-              <div class="skeleton h-4 w-3/4"></div>
-            </div>
             <p 
-              v-else
-              class="text-base-content leading-relaxed text-base line-clamp-3"
+              class="text-base-content leading-relaxed text-base"
             >
               {{ word?.meaning || 'No translation available' }}
             </p>
+            <div v-if="loading" class="mt-2 flex items-center gap-2 text-xs text-base-content/50">
+              <span class="loading loading-spinner loading-xs"></span>
+              <span>Loading enhanced details...</span>
+            </div>
           </div>
 
           <div v-if="!loading && settings.showPitchAccent && word?.pitchAccent" class="bg-base-200/50 rounded-lg p-3">
