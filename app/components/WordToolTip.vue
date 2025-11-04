@@ -37,24 +37,31 @@
               </div>
             </div>
             
-            <div class="flex flex-col gap-1.5 flex-shrink-0">
-              <button
-                @click="toggleAlignment"
-                class="btn btn-md btn-primary gap-2 flex-nowrap whitespace-nowrap pointer-events-auto"
-              >
-                <svg v-if="textOrientation === 'horizontal'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="4" y1="6" x2="20" y2="6"/>
-                  <line x1="4" y1="12" x2="20" y2="12"/>
-                  <line x1="4" y1="18" x2="20" y2="18"/>
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="6" y1="4" x2="6" y2="20"/>
-                  <line x1="12" y1="4" x2="12" y2="20"/>
-                  <line x1="18" y1="4" x2="18" y2="20"/>
-                </svg>
-                <span class="text-sm font-semibold">{{ textOrientation === 'horizontal' ? '⬍⬍' : '⬍⬍' }}</span>
-              </button>
-            </div>
+            <button
+              @click.stop="toggleAlignment"
+              class="btn btn-xs btn-ghost btn-circle opacity-50 hover:opacity-100 transition-opacity flex-shrink-0"
+              title="Toggle alignment (A)"
+            >
+              <svg v-if="alignment === 'auto'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H4a2 2 0 0 0-2 2v4m18-6h-4a2 2 0 0 0-2 2v4m0 0v8a2 2 0 0 0 2 2h4M8 21h4a2 2 0 0 0 2-2v-8M8 3v8m0 0H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              </svg>
+              <svg v-else-if="alignment === 'top'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <polyline points="19 12 12 5 5 12"/>
+              </svg>
+              <svg v-else-if="alignment === 'bottom'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <polyline points="5 12 12 19 19 12"/>
+              </svg>
+              <svg v-else-if="alignment === 'left'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
           </div>
 
           <div v-if="!loading && (word?.pos || word?.jlptLevel)" class="flex flex-wrap gap-2 mt-3">
@@ -167,7 +174,7 @@ const arrowStyle = ref<CSSProperties>({})
 const isHoveringTooltip = ref(false)
 const hoverTimeout = ref<NodeJS.Timeout | null>(null)
 
-const textOrientation = useState<'vertical' | 'horizontal'>('tooltip-text-orientation', () => 'horizontal')
+const alignment = useState<'auto' | 'top' | 'bottom' | 'left' | 'right'>('tooltip-alignment', () => 'auto')
 
 const shouldShow = computed(() => {
   return props.visible && props.word
@@ -189,7 +196,9 @@ const formatPos = (pos: string): string => {
 }
 
 const toggleAlignment = () => {
-  textOrientation.value = textOrientation.value === 'vertical' ? 'horizontal' : 'vertical'
+  const alignments: Array<'auto' | 'top' | 'bottom' | 'left' | 'right'> = ['auto', 'top', 'bottom', 'left', 'right']
+  const currentIndex = alignments.indexOf(alignment.value)
+  alignment.value = alignments[(currentIndex + 1) % alignments.length]!
   nextTick(() => {
     positionTooltip()
   })
@@ -212,35 +221,13 @@ const positionTooltip = () => {
     let left = 0
     let arrowPos: 'top' | 'bottom' | 'left' | 'right' = 'bottom'
 
-    if (textOrientation.value === 'vertical') {
-      const spaceRight = viewportWidth - anchorRect.right
-      const spaceLeft = anchorRect.left
-
-      if (spaceRight >= tooltipRect.width + HORIZONTAL_OFFSET + PADDING) {
-        arrowPos = 'left'
-        left = anchorRect.right + HORIZONTAL_OFFSET
-        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
-      } else if (spaceLeft >= tooltipRect.width + HORIZONTAL_OFFSET + PADDING) {
-        arrowPos = 'right'
-        left = anchorRect.left - tooltipRect.width - HORIZONTAL_OFFSET
-        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
-      } else {
-        const spaceBelow = viewportHeight - anchorRect.bottom
-        const spaceAbove = anchorRect.top
-
-        if (spaceBelow >= tooltipRect.height + ARROW_OFFSET + PADDING) {
-          arrowPos = 'top'
-          top = anchorRect.bottom + ARROW_OFFSET
-          left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
-        } else {
-          arrowPos = 'bottom'
-          top = anchorRect.top - tooltipRect.height - ARROW_OFFSET
-          left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
-        }
-      }
-    } else {
+    // Determine preferred position based on alignment setting
+    if (alignment.value === 'auto') {
+      // Auto-detect best position
       const spaceAbove = anchorRect.top
       const spaceBelow = viewportHeight - anchorRect.bottom
+      const spaceRight = viewportWidth - anchorRect.right
+      const spaceLeft = anchorRect.left
 
       if (spaceAbove >= tooltipRect.height + ARROW_OFFSET + PADDING) {
         arrowPos = 'bottom'
@@ -250,22 +237,40 @@ const positionTooltip = () => {
         arrowPos = 'top'
         top = anchorRect.bottom + ARROW_OFFSET
         left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
+      } else if (spaceRight >= tooltipRect.width + HORIZONTAL_OFFSET + PADDING) {
+        arrowPos = 'left'
+        left = anchorRect.right + HORIZONTAL_OFFSET
+        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
+      } else if (spaceLeft >= tooltipRect.width + HORIZONTAL_OFFSET + PADDING) {
+        arrowPos = 'right'
+        left = anchorRect.left - tooltipRect.width - HORIZONTAL_OFFSET
+        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
       } else {
-        const spaceRight = viewportWidth - anchorRect.right
-        const spaceLeft = anchorRect.left
-
-        if (spaceRight >= tooltipRect.width + HORIZONTAL_OFFSET + PADDING) {
-          arrowPos = 'left'
-          left = anchorRect.right + HORIZONTAL_OFFSET
-          top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
-        } else {
-          arrowPos = 'right'
-          left = anchorRect.left - tooltipRect.width - HORIZONTAL_OFFSET
-          top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
-        }
+        // Fallback to bottom if no space anywhere
+        arrowPos = 'top'
+        top = anchorRect.bottom + ARROW_OFFSET
+        left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
+      }
+    } else {
+      // Use fixed alignment
+      arrowPos = alignment.value
+      
+      if (arrowPos === 'top') {
+        top = anchorRect.bottom + ARROW_OFFSET
+        left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
+      } else if (arrowPos === 'bottom') {
+        top = anchorRect.top - tooltipRect.height - ARROW_OFFSET
+        left = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2
+      } else if (arrowPos === 'left') {
+        left = anchorRect.right + HORIZONTAL_OFFSET
+        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
+      } else { // right
+        left = anchorRect.left - tooltipRect.width - HORIZONTAL_OFFSET
+        top = anchorRect.top + anchorRect.height / 2 - tooltipRect.height / 2
       }
     }
 
+    // Ensure tooltip stays within viewport
     top = Math.max(PADDING, Math.min(top, viewportHeight - tooltipRect.height - PADDING))
     left = Math.max(PADDING, Math.min(left, viewportWidth - tooltipRect.width - PADDING))
 
@@ -274,6 +279,7 @@ const positionTooltip = () => {
       left: `${left}px`
     }
 
+    // Position arrow
     const anchorCenterX = anchorRect.left + anchorRect.width / 2
     const anchorCenterY = anchorRect.top + anchorRect.height / 2
 
@@ -328,6 +334,22 @@ const onMouseLeave = () => {
     emit('mouse-leave')
   }, 300)
 }
+
+// Keyboard shortcut for alignment toggle
+onMounted(() => {
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (shouldShow.value && (e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+      const activeElement = document.activeElement
+      if (activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA') return
+      e.preventDefault()
+      toggleAlignment()
+    }
+  }
+  window.addEventListener('keydown', handleKeyPress)
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyPress)
+  })
+})
 
 watch(shouldShow, (show) => {
   if (show) {

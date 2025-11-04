@@ -186,7 +186,14 @@ const handleMouseEnter = () => {
   showTooltip.value = true
   
   // Fetch enhanced metadata in background (non-blocking)
-  enrichWordData()
+  // Only fetch if word has no meaning
+  const hasMeaning = localWord.value?.meaning && localWord.value.meaning.trim() !== ''
+  if (!hasMeaning) {
+    enrichWordData()
+  } else {
+    // Still try to enrich for other metadata (pitch accent, example, etc.)
+    enrichWordData()
+  }
 }
 
 const handleMouseLeave = () => {
@@ -213,7 +220,21 @@ const onTooltipMouseLeave = () => {
 
 const enrichWordData = async () => {
   const kanji = localWord.value?.kanji ?? ''
-  if (!kanji || metadataStore.hasWord(kanji)) return
+  if (!kanji) return
+
+  // Check if we already have metadata for this word
+  if (metadataStore.hasWord(kanji)) {
+    const cached = metadataStore.getWord(kanji)
+    if (cached?.meaning) {
+      return // Already have meaning, no need to fetch
+    }
+  }
+
+  // Only fetch if word has no meaning
+  const hasMeaning = localWord.value?.meaning && localWord.value.meaning.trim() !== ''
+  if (hasMeaning && metadataStore.hasWord(kanji)) {
+    return // Already have meaning from dictionary
+  }
 
   isLoadingMetadata.value = true
   try {
@@ -235,7 +256,20 @@ const enrichWordData = async () => {
 
     if (response?.data && response.data[kanji]) {
       const metadata = { kanji, ...response.data[kanji] }
+      // Preserve existing meaning if new one is empty
+      if (!metadata.meaning || metadata.meaning.trim() === '') {
+        metadata.meaning = localWord.value?.meaning || ''
+      }
       metadataStore.setWord(kanji, metadata)
+      // Update local word with new metadata
+      localWord.value = {
+        ...localWord.value,
+        meaning: metadata.meaning || localWord.value.meaning,
+        pos: metadata.pos || localWord.value.pos,
+        pitchAccent: metadata.pitchAccent || localWord.value.pitchAccent,
+        example: metadata.example || localWord.value.example,
+        jlptLevel: metadata.jlptLevel || localWord.value.jlptLevel
+      }
     }
   } catch (error) {
     console.error('Failed to enrich word data:', error)
