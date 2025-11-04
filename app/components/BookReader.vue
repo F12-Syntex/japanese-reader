@@ -9,6 +9,16 @@
       </div>
       <div class="flex-none gap-2">
         <div class="flex items-center gap-2 border-r border-base-300 pr-4">
+          <label class="label cursor-pointer gap-2">
+            <span class="text-xs">View:</span>
+            <select v-model="viewMode" class="select select-xs select-bordered">
+              <option value="pdf">PDF Parser</option>
+              <option value="reader">Reader Content</option>
+            </select>
+          </label>
+        </div>
+
+        <div v-if="viewMode === 'pdf'" class="flex items-center gap-2 border-r border-base-300 pr-4">
           <label class="text-xs">Zoom:</label>
           <input
             v-model.number="pdfReader.zoom.value"
@@ -21,7 +31,7 @@
           <span class="text-xs">{{ Math.round(pdfReader.zoom.value * 100) }}%</span>
         </div>
 
-        <div class="flex items-center gap-2 border-r border-base-300 pr-4">
+        <div v-if="viewMode === 'pdf'" class="flex items-center gap-2 border-r border-base-300 pr-4">
           <label class="label cursor-pointer gap-2">
             <span class="text-xs">Bounds</span>
             <input v-model="showBounds" type="checkbox" class="toggle toggle-xs toggle-primary" />
@@ -47,8 +57,9 @@
         <p v-if="pdfReader.isProcessing.value" class="text-sm text-primary">Processing text with Kuromoji...</p>
       </div>
 
+      <!-- PDF Parser View -->
       <div
-        v-else-if="pdfReader.pageCanvasUrl.value"
+        v-else-if="viewMode === 'pdf' && pdfReader.pageCanvasUrl.value"
         class="relative mx-auto shadow-2xl rounded-lg overflow-hidden bg-white"
         :style="{
           width: pdfReader.pageWidth.value * pdfReader.zoom.value + 'px',
@@ -89,6 +100,17 @@
           @click="word.parsedWord ? handleWordClick(word.parsedWord) : null"
         />
       </div>
+
+      <!-- Reader Content View -->
+      <div v-else-if="viewMode === 'reader'" class="w-full">
+        <ReaderContent
+          :content="readerContent"
+          :settings="readerSettings"
+          :streaming-text="''"
+          @word-click="handleWordClick"
+          @sentence-analyze="handleSentenceAnalyze"
+        />
+      </div>
     </div>
 
     <WordToolTip
@@ -107,8 +129,10 @@
 import { useBooksStore } from '~/stores/useBooksStore'
 import { usePdfReader } from '~/composables/usePdfReader'
 import { useReaderSettingsStore } from '~/stores/useReaderSettingsStore'
+import { getFileHandle } from '~/utils/fileHandleStorage'
 import WordToolTip from './WordToolTip.vue'
-import type { ParsedWord } from '~/types/japanese'
+import ReaderContent from './ReaderContent.vue'
+import type { ParsedWord, ParsedSentence } from '~/types/japanese'
 
 definePageMeta({
   ssr: false
@@ -120,7 +144,19 @@ const readerSettingsStore = useReaderSettingsStore()
 const currentBook = computed(() => booksStore.currentBook)
 const readerSettings = computed(() => readerSettingsStore.settings)
 
+const viewMode = ref<'pdf' | 'reader'>('pdf')
 const showBounds = ref(false)
+
+// Convert PDF page sentences to ReaderContent format
+const readerContent = computed(() => {
+  if (pdfReader.pageSentences.value.length === 0) {
+    return []
+  }
+  return [{
+    type: 'text' as const,
+    sentences: pdfReader.pageSentences.value
+  }]
+})
 
 const tooltip = ref<{
   visible: boolean
@@ -196,6 +232,10 @@ const handleWordClick = (word: ParsedWord) => {
   })
 }
 
+const handleSentenceAnalyze = (payload: { index: number; sentence: ParsedSentence }) => {
+  console.log('Sentence analyze:', payload)
+}
+
 onMounted(async () => {
   if (!currentBook.value) {
     navigateTo('/books')
@@ -203,7 +243,17 @@ onMounted(async () => {
   }
 
   try {
-    await pdfReader.loadPdf(currentBook.value.path)
+    let pdfSource: string | FileSystemFileHandle = currentBook.value.path
+    
+    // Try to load from file handle if available
+    if (currentBook.value.bookId) {
+      const fileHandle = await getFileHandle(currentBook.value.bookId)
+      if (fileHandle) {
+        pdfSource = fileHandle
+      }
+    }
+    
+    await pdfReader.loadPdf(pdfSource)
   } catch (error) {
     console.error('Error loading PDF:', error)
   }

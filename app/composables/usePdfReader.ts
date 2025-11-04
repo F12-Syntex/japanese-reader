@@ -1,8 +1,8 @@
 import { useKuromojiParser } from './useKuromojiParser'
-import type { ParsedWord } from '~/types/japanese'
+import type { ParsedWord, ParsedSentence } from '~/types/japanese'
 
 export const usePdfReader = () => {
-  const { parseText } = useKuromojiParser()
+  const { parseText, parseSentences } = useKuromojiParser()
 
   const currentPageIndex = ref(0)
   const totalPages = ref(0)
@@ -15,6 +15,7 @@ export const usePdfReader = () => {
   const pageCanvasUrl = ref('')
   const wordBounds = ref<any[]>([])
   const parsedWords = ref<ParsedWord[]>([])
+  const pageSentences = ref<ParsedSentence[]>([])
   const pageWidth = ref(0)
   const pageHeight = ref(0)
   const zoom = ref(1)
@@ -250,7 +251,7 @@ export const usePdfReader = () => {
     return bounds
   }
 
-  const loadPdf = async (base64Data: string) => {
+  const loadPdf = async (base64DataOrFileHandle: string | FileSystemFileHandle) => {
     isLoading.value = true
     
     try {
@@ -260,11 +261,21 @@ export const usePdfReader = () => {
         pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
       }
 
-      const binaryString = atob(base64Data)
-      const len = binaryString.length
-      const bytes = new Uint8Array(len)
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
+      let bytes: Uint8Array
+
+      if (base64DataOrFileHandle instanceof FileSystemFileHandle) {
+        // Load from file handle
+        const file = await base64DataOrFileHandle.getFile()
+        const arrayBuffer = await file.arrayBuffer()
+        bytes = new Uint8Array(arrayBuffer)
+      } else {
+        // Load from base64
+        const binaryString = atob(base64DataOrFileHandle)
+        const len = binaryString.length
+        bytes = new Uint8Array(len)
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
       }
 
       pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
@@ -376,6 +387,32 @@ export const usePdfReader = () => {
       const parsed = await parseText(pageText)
       parsedWords.value = parsed
 
+      // Parse text into sentences for ReaderContent view
+      // Split by common Japanese sentence endings
+      const sentenceEndings = /([。！？\n]+)/g
+      const textParts = pageText.split(sentenceEndings).filter(p => p.trim())
+      const sentences: Array<{ text: string; grammar?: string[] }> = []
+      
+      for (let i = 0; i < textParts.length; i += 2) {
+        const text = textParts[i]?.trim() || ''
+        const ending = textParts[i + 1] || ''
+        if (text) {
+          sentences.push({ text: text + ending, grammar: [] })
+        }
+      }
+      
+      // If no sentence endings found, treat entire text as one sentence
+      if (sentences.length === 0 && pageText.trim()) {
+        sentences.push({ text: pageText, grammar: [] })
+      }
+      
+      // Parse sentences with Kuromoji
+      if (sentences.length > 0) {
+        pageSentences.value = await parseSentences(sentences)
+      } else {
+        pageSentences.value = []
+      }
+
       // Calculate word bounding boxes
       const bounds = calculateWordBounds(filteredItems, parsed, pageText, viewport)
       wordBounds.value = bounds
@@ -421,6 +458,7 @@ export const usePdfReader = () => {
     pageCanvasUrl,
     wordBounds,
     parsedWords,
+    pageSentences,
     pageWidth,
     pageHeight,
     zoom,

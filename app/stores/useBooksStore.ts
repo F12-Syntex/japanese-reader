@@ -2,7 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export interface BookData {
-  path: string
+  path: string // base64 data (for backward compatibility)
+  fileHandle?: FileSystemFileHandle | null // File System Access API handle
+  fileName?: string // Original file name for permission re-request
+  bookId?: string // Unique identifier for IndexedDB storage
   title: string
   author: string
   cover: string
@@ -50,6 +53,25 @@ export const useBooksStore = defineStore(
     }
   },
   {
-    persist: true,
+    persist: {
+      serializer: {
+        serialize: (value: any) => {
+          // Serialize books but exclude file handles (they can't be serialized)
+          const serializable = {
+            ...value,
+            books: value.books.map((book: BookData) => ({
+              ...book,
+              fileHandle: undefined, // Don't serialize file handles
+            })),
+          }
+          return JSON.stringify(serializable)
+        },
+        deserialize: (value: string) => {
+          const parsed = JSON.parse(value)
+          // File handles will be undefined after deserialization
+          return parsed
+        },
+      },
+    },
   }
 )
