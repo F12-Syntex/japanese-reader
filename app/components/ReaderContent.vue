@@ -42,10 +42,11 @@
             </span>
 
             <span 
+              ref="el => setSentenceRef(`${itemIndex}-${sIndex}`, el)"
               class="inline transition-all duration-200 rounded px-1 leading-relaxed cursor-pointer"
               :class="{ 'bg-primary/10': hoveredSentence === `${itemIndex}-${sIndex}` && isCtrlPressed, 'underline decoration-2 underline-offset-[6px]': hoveredSentence === `${itemIndex}-${sIndex}` && isCtrlPressed }"
-              @mouseenter="handleSentenceHover(`${itemIndex}-${sIndex}`, $event)"
-              @mouseleave="hoveredSentence = null"
+              @mouseenter="handleSentenceHover(`${itemIndex}-${sIndex}`, sentence, $event)"
+              @mouseleave="handleSentenceLeave"
               @click="handleSentenceClick(sIndex, sentence, $event)"
             >
               <ReaderWord
@@ -77,6 +78,51 @@
         {{ streamingText }}
       </span>
     </div>
+
+    <!-- Sentence Translation Tooltip (Ctrl+Hover) -->
+    <teleport v-if="showSentenceTooltip" to="body">
+      <div
+        ref="sentenceTooltipRef"
+        class="fixed z-[100] pointer-events-auto animate-in fade-in duration-100"
+        :style="sentenceTooltipPosition"
+        @click.stop
+      >
+        <div
+          class="absolute w-3 h-3 bg-base-100 transform rotate-45 border-l border-t border-base-300"
+          :style="sentenceTooltipArrowStyle"
+        ></div>
+
+        <div
+          class="rounded-2xl shadow-2xl border-2 bg-base-100 border-primary/30 overflow-hidden"
+          style="max-width:min(88vw,28rem)"
+          @mouseenter="onSentenceTooltipMouseEnter"
+          @mouseleave="onSentenceTooltipMouseLeave"
+        >
+          <div class="h-1.5 bg-primary"></div>
+
+          <div class="p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-base-content text-xl sm:text-2xl leading-tight break-words">
+                  {{ hoveredSentenceText }}
+                </div>
+              </div>
+            </div>
+
+            <div class="divider my-2"></div>
+
+            <div class="mb-3">
+              <p v-if="sentenceTranslationLoading" class="text-sm sm:text-base text-base-content/80 leading-relaxed">
+                <span class="loading loading-dots loading-sm"></span>
+              </p>
+              <p v-else class="text-sm sm:text-base text-base-content/80 leading-relaxed">
+                {{ sentenceTranslationText }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
 
     <teleport v-if="showSelectionTooltip" to="body">
       <div
@@ -153,8 +199,15 @@ const emit = defineEmits<{
 }>()
 
 const hoveredSentence = ref<string | null>(null)
+const hoveredSentenceObj = ref<ParsedSentence | null>(null)
+const hoveredSentenceText = ref('')
+const sentenceRefs = new Map<string, HTMLElement>()
 const isCtrlPressed = ref(false)
 const showSelectionTooltip = ref(false)
+const showSentenceTooltip = ref(false)
+const sentenceTooltipRef = ref<HTMLElement | null>(null)
+const sentenceTooltipPosition = ref<CSSProperties>({})
+const sentenceTooltipArrowStyle = ref<CSSProperties>({})
 const selectionTooltipRef = ref<HTMLElement | null>(null)
 const selectionTooltipPosition = ref<CSSProperties>({})
 const selectionArrowStyle = ref<CSSProperties>({})
@@ -162,8 +215,12 @@ const selectedText = ref('')
 const hasSelection = ref(false)
 const translationLoading = ref(false)
 const translationText = ref('Placeholder')
+const sentenceTranslationLoading = ref(false)
+const sentenceTranslationText = ref('')
 let selectionTooltipTimeout: ReturnType<typeof setTimeout> | null = null
+let sentenceTooltipTimeout: ReturnType<typeof setTimeout> | null = null
 let keepSelectionTooltip = false
+let keepSentenceTooltip = false
 let currentSelectionText = ''
 
 const maxWidthClass = computed(() => {
@@ -216,10 +273,67 @@ const isWordGrammarHighlighted = (word: ParsedWord, grammarPoints: string[]): bo
   })
 }
 
-const handleSentenceHover = (key: string, event: MouseEvent) => {
+const setSentenceRef = (key: string, el: HTMLElement | null) => {
+  if (el) {
+    sentenceRefs.set(key, el)
+  } else {
+    sentenceRefs.delete(key)
+  }
+}
+
+const handleSentenceHover = (key: string, sentence: ParsedSentence, event: MouseEvent) => {
   const mouseEvent = event as MouseEvent
   if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
     hoveredSentence.value = key
+    hoveredSentenceObj.value = sentence
+    
+    // Get sentence text from words
+    const sentenceText = sentence.words.map((w: ParsedWord) => w.kanji || w.kana).join('')
+    hoveredSentenceText.value = sentenceText
+    
+    // Clear any existing timeout
+    if (sentenceTooltipTimeout) {
+      clearTimeout(sentenceTooltipTimeout)
+      sentenceTooltipTimeout = null
+    }
+    
+    // Get the element position
+    const element = sentenceRefs.get(key)
+    if (element) {
+      const rect = element.getBoundingClientRect()
+      
+      // Show tooltip after a short delay
+      sentenceTooltipTimeout = setTimeout(() => {
+        if (hoveredSentence.value === key && !keepSentenceTooltip) {
+          positionSentenceTooltip(rect)
+          showSentenceTooltip.value = true
+          fetchSentenceTranslation(sentenceText, sentence)
+        }
+      }, 200)
+    }
+  } else {
+    hoveredSentence.value = null
+    hoveredSentenceObj.value = null
+  }
+}
+
+const handleSentenceLeave = () => {
+  if (!keepSentenceTooltip) {
+    hoveredSentence.value = null
+    hoveredSentenceObj.value = null
+    
+    if (sentenceTooltipTimeout) {
+      clearTimeout(sentenceTooltipTimeout)
+      sentenceTooltipTimeout = null
+    }
+    
+    // Delay hiding tooltip slightly to allow moving to it
+    setTimeout(() => {
+      if (!keepSentenceTooltip) {
+        showSentenceTooltip.value = false
+        sentenceTranslationText.value = ''
+      }
+    }, 100)
   }
 }
 
@@ -228,6 +342,9 @@ const handleSentenceClick = (index: number, sentence: ParsedSentence, event: Mou
   if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
     mouseEvent.preventDefault()
     mouseEvent.stopPropagation()
+    // Hide tooltip when clicking
+    showSentenceTooltip.value = false
+    keepSentenceTooltip = false
     emit('sentence-analyze', { index, sentence })
   }
 }
@@ -257,6 +374,94 @@ const extractJapaneseText = (selection: Selection): string => {
   text = text.replace(/\s+/g, '').trim()
   
   return text
+}
+
+const positionSentenceTooltip = (rect: DOMRect) => {
+  const viewportHeight = window.innerHeight
+  const viewportWidth = window.innerWidth
+  const tooltipWidth = 448
+  const tooltipHeight = 200
+  const arrowSize = 6
+
+  let top = rect.top - tooltipHeight - arrowSize - 8
+  let left = rect.left + rect.width / 2
+  let arrowPos: 'top' | 'bottom' = 'bottom'
+
+  if (top < 10) {
+    top = rect.bottom + arrowSize + 8
+    arrowPos = 'top'
+  }
+
+  if (left + tooltipWidth / 2 > viewportWidth - 10) {
+    left = viewportWidth - tooltipWidth / 2 - 10
+  }
+  if (left - tooltipWidth / 2 < 10) {
+    left = tooltipWidth / 2 + 10
+  }
+
+  sentenceTooltipPosition.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    transform: 'translateX(-50%)'
+  }
+
+  if (arrowPos === 'top') {
+    sentenceTooltipArrowStyle.value = {
+      top: '-6px',
+      left: '50%',
+      marginLeft: '-6px',
+      zIndex: -1
+    }
+  } else {
+    sentenceTooltipArrowStyle.value = {
+      bottom: '-6px',
+      left: '50%',
+      marginLeft: '-6px',
+      zIndex: -1
+    }
+  }
+}
+
+const fetchSentenceTranslation = async (text: string, sentence: ParsedSentence) => {
+  const { getApiKey } = useOpenAI()
+  const apiKey = getApiKey()
+  
+  if (!apiKey) return
+
+  sentenceTranslationLoading.value = true
+  sentenceTranslationText.value = ''
+
+  try {
+    const response = await $fetch<{ analysis?: { translation?: string } }>('/api/literal-translation', {
+      method: 'POST',
+      body: {
+        apiKey,
+        sentence: text,
+        words: sentence.words
+      }
+    })
+
+    if (response?.analysis?.translation) {
+      sentenceTranslationText.value = response.analysis.translation
+    }
+  } catch (error) {
+    console.error('Sentence translation error:', error)
+    sentenceTranslationText.value = 'Failed to load translation'
+  } finally {
+    sentenceTranslationLoading.value = false
+  }
+}
+
+const onSentenceTooltipMouseEnter = () => {
+  keepSentenceTooltip = true
+}
+
+const onSentenceTooltipMouseLeave = () => {
+  keepSentenceTooltip = false
+  showSentenceTooltip.value = false
+  hoveredSentence.value = null
+  hoveredSentenceObj.value = null
+  sentenceTranslationText.value = ''
 }
 
 const positionSelectionTooltip = (rect: DOMRect) => {
@@ -400,6 +605,15 @@ onMounted(() => {
     if (e.key === 'Control' || e.key === 'Meta') {
       isCtrlPressed.value = false
       hoveredSentence.value = null
+      hoveredSentenceObj.value = null
+      if (!keepSentenceTooltip) {
+        showSentenceTooltip.value = false
+        sentenceTranslationText.value = ''
+      }
+      if (sentenceTooltipTimeout) {
+        clearTimeout(sentenceTooltipTimeout)
+        sentenceTooltipTimeout = null
+      }
     }
   }
 
@@ -422,6 +636,9 @@ onMounted(() => {
     document.removeEventListener('click', handleClickOutside)
     if (selectionTooltipTimeout) {
       clearTimeout(selectionTooltipTimeout)
+    }
+    if (sentenceTooltipTimeout) {
+      clearTimeout(sentenceTooltipTimeout)
     }
   })
 })

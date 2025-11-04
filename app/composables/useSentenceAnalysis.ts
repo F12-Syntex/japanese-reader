@@ -40,7 +40,45 @@ export const useSentenceAnalysis = () => {
   }
 
   const formatAnalysis = (aiAnalysis: any, sentence: any, COLORS: any): AnalysisResult => {
-    const words = sentence.words
+    // Use AI-provided words if available, otherwise fall back to parser words
+    const aiWords = aiAnalysis.words || []
+    const parserWords = sentence.words || []
+    
+    // Create a map of AI words by kanji for quick lookup (exact match)
+    const aiWordMap = new Map(aiWords.map((w: any) => [w.kanji, w]))
+    
+    // Also create a map by reading for fuzzy matching
+    const aiWordMapByReading = new Map(aiWords.map((w: any) => [w.reading, w]))
+    
+    // Merge AI data with parser data, prioritizing AI data
+    const words = parserWords.map((pw: any, index: number) => {
+      // Try exact kanji match first
+      let aiWord = aiWordMap.get(pw.kanji)
+      
+      // If no exact match, try matching by position (AI should return words in order)
+      if (!aiWord && index < aiWords.length) {
+        aiWord = aiWords[index]
+      }
+      
+      // If still no match, try matching by reading
+      if (!aiWord && pw.kana) {
+        aiWord = aiWordMapByReading.get(pw.kana)
+      }
+      
+      // Use AI data if available, otherwise fall back to parser data
+      return {
+        kanji: pw.kanji,
+        kana: aiWord?.reading || pw.kana || '',
+        meaning: aiWord?.meaning || pw.meaning || '',
+        pos: aiWord?.pos || pw.pos || 'other',
+        // Keep original parser data as fallback
+        originalKana: pw.kana,
+        originalMeaning: pw.meaning,
+        originalPos: pw.pos
+      }
+    })
+    
+    // Create colored words array using AI data
     const coloredWords = words.map((w: any) => ({
       word: w.kanji,
       reading: w.kana,
@@ -48,13 +86,17 @@ export const useSentenceAnalysis = () => {
       pos: w.pos,
       color: getColorForPos(w.pos, COLORS)
     }))
+    
+    // Build connections using AI-provided data
     const connections = (aiAnalysis.connections || []).map((conn: any) => {
       const particleIndex = words.findIndex((w: any) => w.kanji === conn.particle)
       const contextBefore = words.slice(Math.max(0, particleIndex - 3), particleIndex).map((w: any) => w.kanji).join('')
       const contextAfter = words.slice(particleIndex + 2, Math.min(words.length, particleIndex + 5)).map((w: any) => w.kanji).join('')
+      
       const fromWord = words.find((w: any) => w.kanji === conn.from)
       const toWord = words.find((w: any) => w.kanji === conn.to)
       const particleWord = words.find((w: any) => w.kanji === conn.particle)
+      
       return {
         order: particleIndex,
         contextBefore,
@@ -73,9 +115,11 @@ export const useSentenceAnalysis = () => {
       }
     }).sort((a: any, b: any) => a.order - b.order)
 
-    const verb = words.find((w: any) => w.pos === 'verb')
+    // Find verb using AI-provided POS tags
+    const verb = words.find((w: any) => w.pos?.toLowerCase().includes('verb'))
     const steps = words.map((w: any) => ({ word: w.kanji, reading: w.kana, explanation: w.meaning || w.pos }))
-    const translation = aiAnalysis.translation || words.map((w: any) => w.meaning).filter(Boolean).join(' ')
+    const translation = aiAnalysis.translation || ''
+    
     return {
       translation,
       storyContext: aiAnalysis.storyContext || '',

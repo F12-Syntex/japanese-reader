@@ -12,12 +12,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const systemPrompt = `You are a Japanese grammar expert. Analyze the given sentence and provide a detailed breakdown.
+  const systemPrompt = `You are a Japanese grammar expert. Analyze the given sentence and provide a detailed breakdown including word meanings, readings, and parts of speech.
 
 Return your response in this exact JSON format:
 {
   "translation": "English translation of the sentence",
   "storyContext": "Brief context if this is part of a story (empty if not applicable)",
+  "words": [
+    {
+      "kanji": "漢字",
+      "reading": "かな",
+      "meaning": "English meaning (only the most relevant meaning for this context)",
+      "pos": "noun/verb/adjective/adverb/particle/conjunction/etc"
+    }
+  ],
   "connections": [
     {
       "from": "word before particle",
@@ -38,6 +46,9 @@ Return your response in this exact JSON format:
 
 Rules:
 - Output ONLY a single JSON object. No markdown, no comments, no extra text.
+- For "words" array, include ALL words in the sentence in order, with accurate readings, meanings, and parts of speech.
+- For meanings, provide only the most relevant meaning for this sentence context (not all dictionary meanings).
+- For parts of speech, use: noun, verb, adjective, adverb, particle, conjunction, prefix, suffix, interjection, etc.
 - Focus on particles and their connections. Explain each particle's role clearly.
 - If no story context is available, set "storyContext" to an empty string.`
 
@@ -45,7 +56,14 @@ Rules:
 
 Sentence: ${sentence}
 
-Words breakdown: ${JSON.stringify(words?.slice(0, 30) ?? [])}
+Parser words breakdown (may be incomplete or incorrect, especially for conjunctions):
+${JSON.stringify(words?.slice(0, 30) ?? [])}
+
+Important: 
+- Provide ALL words in the sentence in the "words" array, including conjunctions and particles that the parser might have missed.
+- Match words by their position in the sentence as closely as possible.
+- For each word, provide the most accurate reading (hiragana/katakana) and the most relevant meaning for this sentence context.
+- Ensure parts of speech are accurate (e.g., identify conjunctions, particles, etc. correctly).
 
 ${Array.isArray(allSentences) && allSentences.length > 0 ? `Story context: ${allSentences.join(', ')}` : ''}`
 
@@ -54,7 +72,7 @@ ${Array.isArray(allSentences) && allSentences.length > 0 ? `Story context: ${all
     const content = await client.request({
       system: systemPrompt,
       user: userPrompt,
-      maxTokens: 2500
+      maxTokens: 3500
     })
 
     const analysis = parseJSON(content)
